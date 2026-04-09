@@ -41,6 +41,8 @@ class PageCategoriesGroups extends StatefulWidget {
   final List<String> sharedContents;
   final bool isDarkMode;
   final VoidCallback onThemeToggle;
+  final bool useDynamicColor;
+  final VoidCallback onDynamicColorToggle;
   final bool runningOnDesktop;
   final Function(PageType, bool, PageParams)? setShowHidePage;
   final ModelGroup? selectedGroup;
@@ -50,6 +52,8 @@ class PageCategoriesGroups extends StatefulWidget {
       required this.sharedContents,
       required this.isDarkMode,
       required this.onThemeToggle,
+      required this.useDynamicColor,
+      required this.onDynamicColorToggle,
       required this.runningOnDesktop,
       required this.setShowHidePage,
       this.selectedGroup});
@@ -252,10 +256,13 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
     setState(() {});
     try {
       if (ModelSetting.get("local_auth", "no") == "no") {
+        isAuthenticated = true;
+        AuthGuard.isLocked.value = false;
         await loadCategoriesGroups();
       } else {
         logger.info("Requires authentication");
         requiresAuthentication = true;
+        AuthGuard.isLocked.value = true;
         await _authenticateOnStart();
       }
     } catch (e, s) {
@@ -307,6 +314,7 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
         _exitApp();
       } else {
         isAuthenticated = true;
+        AuthGuard.isLocked.value = false;
         loadCategoriesGroups();
       }
     } catch (e, s) {
@@ -717,6 +725,8 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
                       setShowHidePage: widget.setShowHidePage,
                       isDarkMode: widget.isDarkMode,
                       onThemeToggle: widget.onThemeToggle,
+                      useDynamicColor: widget.useDynamicColor,
+                      onDynamicColorToggle: widget.onDynamicColorToggle,
                       canShowBackupRestore:
                           !requiresAuthentication || isAuthenticated,
                     ),
@@ -1072,7 +1082,7 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
                               ),
                             ),
                           )
-                : const SizedBox.shrink(),
+                : const Center(child: CircularProgressIndicator()),
         floatingActionButton: !requiresAuthentication || isAuthenticated
             ? FloatingActionButton(
                 heroTag: "add_group_or_mark_reordering_complete",

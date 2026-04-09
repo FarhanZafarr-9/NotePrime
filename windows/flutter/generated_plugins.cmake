@@ -5,6 +5,7 @@
 list(APPEND FLUTTER_PLUGIN_LIST
   app_links
   audioplayers_windows
+  dynamic_color
   file_selector_windows
   firebase_core
   flutter_secure_storage_windows

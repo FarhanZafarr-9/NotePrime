@@ -4,6 +4,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
 import 'package:ntsapp/services/service_events.dart';
 import 'package:ntsapp/utils/auth_guard.dart';
@@ -25,14 +26,14 @@ import 'services/service_notification.dart';
 import 'models/model_setting.dart';
 import 'storage/storage_secure.dart';
 import 'ui/themes.dart';
-import 'package:firebase_core/firebase_core.dart';
+// import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:workmanager/workmanager.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+  // await Firebase.initializeApp();
   // Process the sync message
   if (message.data['type'] == 'Sync') {
     final String sentryDsn = const String.fromEnvironment("SENTRY_DSN");
@@ -139,10 +140,10 @@ Future<void> initializeRestInParallel() async {
 Future<void> initializeFirebase() async {
   if (runningOnMobile) {
     //initialize notificatins
-    await Firebase.initializeApp();
-    logger.info("initialized firebase");
-    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-    logger.info("initialized firebase background handler");
+    // await Firebase.initializeApp();
+    logger.info("skipped firebase initialization (offline mode)");
+    // FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+    // logger.info("initialized firebase background handler");
     if (await SyncUtils.canSync()) {
       await NotificationService.instance.initialize();
       logger.info("initialized notification service");
@@ -199,6 +200,7 @@ class MainApp extends StatefulWidget {
 class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
   ThemeMode _themeMode = ThemeMode.system;
   late bool _isDarkMode;
+  bool _useDynamicColor = false;
 
   // sharing intent
   StreamSubscription? _intentSub;
@@ -227,6 +229,12 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
         _isDarkMode =
             PlatformDispatcher.instance.platformBrightness == Brightness.dark;
         break;
+    }
+    // Load dynamic color setting
+    _useDynamicColor = ModelSetting.get("use_dynamic_color", "no") == "yes";
+    // Initialize lock state for cold start
+    if (ModelSetting.get("local_auth", "no") == "yes") {
+      AuthGuard.isLocked.value = true;
     }
     //sharing intent
     if (runningOnMobile) {
@@ -265,15 +273,24 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
       return;
     }
     logger.info("App State:$state");
+
     if (Platform.isIOS || Platform.isAndroid) {
       if (state == AppLifecycleState.resumed) {
-        if (DateTime.now().difference(AuthGuard.lastActiveAt).inSeconds > 60) {
-          AuthGuard.lastActiveAt = DateTime.now();
-          EventStream().publish(AppEvent(type: EventType.authorise));
+        if (ModelSetting.get("local_auth", "no") == "yes") {
+          if (DateTime.now().difference(AuthGuard.lastActiveAt).inSeconds > 60) {
+            AuthGuard.lastActiveAt = DateTime.now();
+            EventStream().publish(AppEvent(type: EventType.authorise));
+          } else {
+            // Re-unlock if returning within the grace period
+            AuthGuard.isLocked.value = false;
+          }
         }
         SyncUtils().startAutoSync();
         logger.info("Started Foreground Sync");
       } else if (state == AppLifecycleState.paused) {
+        if (ModelSetting.get("local_auth", "no") == "yes") {
+          AuthGuard.isLocked.value = true;
+        }
         AuthGuard.lastActiveAt = DateTime.now();
         SyncUtils().stopAutoSync();
         logger.info("Stopped Foreground Sync");
@@ -297,6 +314,14 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
     await ModelSetting.set("theme", _isDarkMode ? "dark" : "light");
   }
 
+  // Toggle dynamic coloring
+  Future<void> _onDynamicColorToggle() async {
+    setState(() {
+      _useDynamicColor = !_useDynamicColor;
+    });
+    await ModelSetting.set("use_dynamic_color", _useDynamicColor ? "yes" : "no");
+  }
+
   @override
   Widget build(BuildContext context) {
     bool isLargeScreen = false;
@@ -312,12 +337,17 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
       sharedContents: _sharedContents,
       isDarkMode: _isDarkMode,
       onThemeToggle: _onThemeToggle,
+      useDynamicColor: _useDynamicColor,
+      onDynamicColorToggle: _onDynamicColorToggle,
     );
     if (isLargeScreen) {
       page = PageCategoriesGroupsPane(
-          sharedContents: _sharedContents,
-          isDarkMode: _isDarkMode,
-          onThemeToggle: _onThemeToggle);
+        sharedContents: _sharedContents,
+        isDarkMode: _isDarkMode,
+        onThemeToggle: _onThemeToggle,
+        useDynamicColor: _useDynamicColor,
+        onDynamicColorToggle: _onDynamicColorToggle,
+      );
     }
     String processMedia = ModelSetting.get("process_media", "no");
     if (processMedia == "yes") {
@@ -325,32 +355,54 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
         runningOnDesktop: !runningOnMobile,
         isDarkMode: _isDarkMode,
         onThemeToggle: _onThemeToggle,
+        useDynamicColor: _useDynamicColor,
+        onDynamicColorToggle: _onDynamicColorToggle,
       );
     }
     return ChangeNotifierProvider(
       create: (_) => FontSizeController(),
-      child: Builder(builder: (context) {
-        return MaterialApp(
-          builder: (context, child) {
-            final textScaler =
-                Provider.of<FontSizeController>(context).textScaler;
-            return MediaQuery(
-              data: MediaQuery.of(context).copyWith(
-                textScaler: textScaler,
-              ),
-              child: child!,
-            );
-          },
-          theme: AppThemes.lightTheme,
-          darkTheme: AppThemes.darkTheme,
-          themeMode: _themeMode,
-          // Uses system theme by default
-          home: page,
-          navigatorObservers: [
-            SentryNavigatorObserver(),
-          ],
-          debugShowCheckedModeBanner: false,
-        );
+      child: DynamicColorBuilder(builder: (lightDynamic, darkDynamic) {
+        ColorScheme? lightColorScheme;
+        ColorScheme? darkColorScheme;
+
+        if (_useDynamicColor) {
+          lightColorScheme = lightDynamic;
+          darkColorScheme = darkDynamic;
+        }
+
+        return Builder(builder: (context) {
+          return MaterialApp(
+            builder: (context, child) {
+              final textScaler =
+                  Provider.of<FontSizeController>(context).textScaler;
+              return MediaQuery(
+                data: MediaQuery.of(context).copyWith(
+                  textScaler: textScaler,
+                ),
+                child: ValueListenableBuilder<bool>(
+                  valueListenable: AuthGuard.isLocked,
+                  builder: (context, isLocked, _) {
+                    return Stack(
+                      children: [
+                        Positioned.fill(child: child!),
+                        if (isLocked) const PrivacyShield(),
+                      ],
+                    );
+                  },
+                ),
+              );
+            },
+            theme: AppThemes.getTheme(Brightness.light, lightColorScheme),
+            darkTheme: AppThemes.getTheme(Brightness.dark, darkColorScheme),
+            themeMode: _themeMode,
+            // Uses system theme by default
+            home: page,
+            navigatorObservers: [
+              SentryNavigatorObserver(),
+            ],
+            debugShowCheckedModeBanner: false,
+          );
+        });
       }),
     );
   }
@@ -386,5 +438,49 @@ class DataSync {
       backoffPolicyDelay: Duration(minutes: 15),
     );
     logger.info("Background Task Registered");
+  }
+}
+
+class PrivacyShield extends StatelessWidget {
+  const PrivacyShield({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: Icon(
+                  Icons.lock_rounded,
+                  size: 48,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                "Note Safe Locked",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

@@ -1,9 +1,9 @@
-import 'dart:io';
+
 
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:ntsapp/utils/enums.dart';
-import 'package:path/path.dart' as path;
+
 import 'package:sodium_libs/sodium_libs_sumo.dart';
 
 import '../utils/common.dart';
@@ -20,26 +20,36 @@ class ItemWidgetDate extends StatelessWidget {
   Widget build(BuildContext context) {
     String dateText = getReadableDate(
         DateTime.fromMillisecondsSinceEpoch(item.at!, isUtc: true));
+    return ItemWidgetTimePill(timeText: dateText);
+  }
+}
+
+class ItemWidgetTimePill extends StatelessWidget {
+  final String timeText;
+
+  const ItemWidgetTimePill({super.key, required this.timeText});
+
+  @override
+  Widget build(BuildContext context) {
     return Center(
       child: Row(
         mainAxisSize: MainAxisSize.min, // Shrinks to fit the text width
         children: [
           Container(
             margin: const EdgeInsets.symmetric(vertical: 10),
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
+              color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(18),
             ),
-            child: Opacity(
-                opacity: 0.3,
-                child: Text(
-                  dateText,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                )),
+            child: Text(
+              timeText,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+              ),
+            ),
           ),
         ],
       ),
@@ -50,9 +60,13 @@ class ItemWidgetDate extends StatelessWidget {
 class WidgetTimeStampPinnedStarred extends StatelessWidget {
   final ModelItem item;
   final bool showTimestamp;
+  final double? revealOffset;
 
   const WidgetTimeStampPinnedStarred(
-      {super.key, required this.item, required this.showTimestamp});
+      {super.key,
+      required this.item,
+      required this.showTimestamp,
+      this.revealOffset});
 
   Widget itemStateIcon(ModelItem item) {
     if (item.state == SyncState.uploading.value) {
@@ -94,11 +108,16 @@ class WidgetTimeStampPinnedStarred extends StatelessWidget {
         itemStateIcon(item),
         const SizedBox(width: 4),
         if (showTimestamp)
-          Opacity(
-            opacity: 0.6,
-            child: Text(
-              getFormattedTime(item.at!),
-              style: const TextStyle(fontSize: 10),
+          Transform.translate(
+            offset: Offset(60 - (revealOffset ?? 0), 0),
+            child: Opacity(
+              opacity: (revealOffset ?? 0) > 0 ? 1.0 : 0.6,
+              child: Text(
+                getFormattedTime(item.at!),
+                style: const TextStyle(
+                  fontSize: 10,
+                ),
+              ),
             ),
           ),
       ],
@@ -110,8 +129,13 @@ class ItemWidgetText extends StatefulWidget {
   final ModelItem item;
   final bool showTimestamp;
 
+  final double? revealOffset;
+
   const ItemWidgetText(
-      {super.key, required this.item, required this.showTimestamp});
+      {super.key,
+      required this.item,
+      required this.showTimestamp,
+      this.revealOffset});
 
   @override
   State<ItemWidgetText> createState() => _ItemWidgetTextState();
@@ -129,6 +153,7 @@ class _ItemWidgetTextState extends State<ItemWidgetText> {
         WidgetTimeStampPinnedStarred(
           item: widget.item,
           showTimestamp: widget.showTimestamp,
+          revealOffset: widget.revealOffset,
         ),
       ],
     );
@@ -139,8 +164,13 @@ class ItemWidgetTask extends StatefulWidget {
   final ModelItem item;
   final bool showTimestamp;
 
+  final double? revealOffset;
+
   const ItemWidgetTask(
-      {super.key, required this.item, required this.showTimestamp});
+      {super.key,
+      required this.item,
+      required this.showTimestamp,
+      this.revealOffset});
 
   @override
   State<ItemWidgetTask> createState() => _ItemWidgetTaskState();
@@ -172,7 +202,10 @@ class _ItemWidgetTaskState extends State<ItemWidgetTask> {
           ),
         ),
         WidgetTimeStampPinnedStarred(
-            item: widget.item, showTimestamp: widget.showTimestamp)
+          item: widget.item,
+          showTimestamp: widget.showTimestamp,
+          revealOffset: widget.revealOffset,
+        )
       ],
     );
   }
@@ -183,11 +216,14 @@ class ItemWidgetImage extends StatefulWidget {
   final Function(ModelItem) onTap;
   final bool showTimestamp;
 
+  final double? revealOffset;
+
   const ItemWidgetImage(
       {super.key,
       required this.item,
       required this.onTap,
-      required this.showTimestamp});
+      required this.showTimestamp,
+      this.revealOffset});
 
   @override
   State<ItemWidgetImage> createState() => _ItemWidgetImageState();
@@ -264,6 +300,7 @@ class _ItemWidgetImageState extends State<ItemWidgetImage> {
           WidgetTimeStampPinnedStarred(
             item: widget.item,
             showTimestamp: widget.showTimestamp,
+            revealOffset: widget.revealOffset,
           ),
         ],
       ),
@@ -276,11 +313,14 @@ class ItemWidgetVideo extends StatefulWidget {
   final Function(ModelItem) onTap;
   final bool showTimestamp;
 
+  final double? revealOffset;
+
   const ItemWidgetVideo(
       {super.key,
       required this.item,
       required this.onTap,
-      required this.showTimestamp});
+      required this.showTimestamp,
+      this.revealOffset});
 
   @override
   State<ItemWidgetVideo> createState() => _ItemWidgetVideoState();
@@ -386,11 +426,10 @@ class ItemWidgetAudio extends StatefulWidget {
   final ModelItem item;
   final bool showTimestamp;
 
-  const ItemWidgetAudio({
-    super.key,
-    required this.item,
-    required this.showTimestamp,
-  });
+  final double? revealOffset;
+
+  const ItemWidgetAudio(
+      {super.key, required this.item, required this.showTimestamp, this.revealOffset});
 
   @override
   State<ItemWidgetAudio> createState() => _ItemWidgetAudioState();
@@ -403,9 +442,18 @@ class _ItemWidgetAudioState extends State<ItemWidgetAudio> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         WidgetAudio(item: widget.item),
-        widgetAudioDetails(widget.item, widget.showTimestamp),
+        widgetAudioDetails(widget.item, widget.showTimestamp, widget.revealOffset),
       ],
     );
+  }
+}
+
+Widget widgetAudioDetails(ModelItem item, bool showTimestamp, double? revealOffset) {
+  if (showTimestamp) {
+    return WidgetTimeStampPinnedStarred(
+        item: item, showTimestamp: showTimestamp, revealOffset: revealOffset);
+  } else {
+    return const SizedBox.shrink();
   }
 }
 
@@ -414,11 +462,14 @@ class ItemWidgetDocument extends StatefulWidget {
   final Function(ModelItem) onTap;
   final bool showTimestamp;
 
+  final double? revealOffset;
+
   const ItemWidgetDocument(
       {super.key,
       required this.item,
       required this.onTap,
-      required this.showTimestamp});
+      required this.showTimestamp,
+      this.revealOffset});
 
   @override
   State<ItemWidgetDocument> createState() => _ItemWidgetDocumentState();
@@ -452,71 +503,107 @@ class _ItemWidgetDocumentState extends State<ItemWidgetDocument> {
 
   @override
   Widget build(BuildContext context) {
-    bool displayDownloadButton =
-        widget.item.state == SyncState.downloadable.value;
     String title = widget.item.data!.containsKey("title")
         ? widget.item.data!["title"]
         : widget.item.data!["name"];
-    return GestureDetector(
-      onTap: () {
-        widget.onTap(widget.item);
-      },
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        //mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
+    bool hasThumbnail = widget.item.thumbnail != null;
+    String fileName = widget.item.data!["name"] ?? "";
+    String ext = fileName.contains('.') ? fileName.split('.').last.toUpperCase() : "FILE";
+    String size = readableFileSizeFromBytes(widget.item.data!["size"]);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
+              width: 0.75,
+            ),
+          ),
+          child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              displayDownloadButton
-                  ? Padding(
-                      padding: const EdgeInsets.all(4.0),
-                      child: DownloadButton(
-                        onPressed: downloadMedia,
-                        item: widget.item,
-                        iconSize: 30,
-                      ),
-                    )
-                  : Opacity(
-                      opacity: 0.6,
-                      child: const Icon(
-                        LucideIcons.file,
-                        size: 40,
-                      ),
-                    ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(4.0),
-                  child: Text(
-                    title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 13),
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+                      width: 0.75),
+                ),
+                child: hasThumbnail
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child:
+                            Image.memory(widget.item.thumbnail!, fit: BoxFit.cover))
+                    : Icon(LucideIcons.file,
+                        size: 18, color: Theme.of(context).colorScheme.primary),
+              ),
+              const SizedBox(width: 10),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 160),
+                    child: Text(title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontSize: 13, fontWeight: FontWeight.w600)),
                   ),
-                ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Container(
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .primary
+                                  .withValues(alpha: 0.2),
+                              width: 0.75),
+                        ),
+                        child: Text(ext,
+                            style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w800,
+                                color: Theme.of(context).colorScheme.primary,
+                                letterSpacing: 0.3)),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(size,
+                          style: TextStyle(
+                              fontSize: 10,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant
+                                  .withValues(alpha: 0.5))),
+                    ],
+                  ),
+                ],
               ),
             ],
           ),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // File size text at the left
-              Opacity(
-                opacity: 0.6,
-                child: Text(
-                  readableFileSizeFromBytes(widget.item.data!["size"]),
-                  style: const TextStyle(fontSize: 10),
-                ),
-              ),
-              WidgetTimeStampPinnedStarred(
-                item: widget.item,
-                showTimestamp: widget.showTimestamp,
-              ),
-            ],
-          ),
-        ],
-      ),
+        ),
+          const SizedBox(height: 4),
+          WidgetTimeStampPinnedStarred(
+              item: widget.item,
+              showTimestamp: widget.showTimestamp,
+              revealOffset: widget.revealOffset),
+      ],
     );
   }
 }
@@ -526,47 +613,83 @@ class ItemWidgetLocation extends StatelessWidget {
   final Function(ModelItem) onTap;
   final bool showTimestamp;
 
+  final double? revealOffset;
+
   const ItemWidgetLocation(
       {super.key,
       required this.item,
       required this.onTap,
-      required this.showTimestamp});
+      required this.showTimestamp,
+      this.revealOffset});
 
   @override
   Widget build(BuildContext context) {
-    double size = 200;
     return GestureDetector(
-      onTap: () {
-        onTap(item);
-      },
-      child: SizedBox(
-        width: size,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            const Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      onTap: () => onTap(item),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.red.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                  color: Colors.red.withValues(alpha: 0.15),
+                  width: 0.75),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  LucideIcons.mapPin,
-                  color: Colors.blue,
-                  size: 40,
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: Colors.red.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                        color: Colors.red.withValues(alpha: 0.2), width: 0.75),
+                  ),
+                  child:
+                      const Icon(LucideIcons.mapPin, size: 18, color: Colors.red),
                 ),
-                SizedBox(
-                  width: 5,
+                const SizedBox(width: 10),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text("Location",
+                        style: TextStyle(
+                            fontSize: 13, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 2),
+                    const Text("Tap to open in maps",
+                        style: TextStyle(fontSize: 10)),
+                  ],
                 ),
-                Text(
-                  "Location",
-                  style: TextStyle(fontSize: 15),
+                const SizedBox(width: 12),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                        color: Colors.red.withValues(alpha: 0.2), width: 0.75),
+                  ),
+                  child: const Text("View",
+                      style: TextStyle(
+                          fontSize: 10,
+                          color: Colors.red,
+                          fontWeight: FontWeight.w600)),
                 ),
               ],
             ),
-            WidgetTimeStampPinnedStarred(
+          ),
+          const SizedBox(height: 4),
+          WidgetTimeStampPinnedStarred(
               item: item,
               showTimestamp: showTimestamp,
-            ),
-          ],
-        ),
+              revealOffset: revealOffset),
+        ],
       ),
     );
   }
@@ -577,131 +700,82 @@ class ItemWidgetContact extends StatelessWidget {
   final Function(ModelItem) onTap;
   final bool showTimestamp;
 
+  final double? revealOffset;
+
   const ItemWidgetContact(
       {super.key,
       required this.item,
       required this.onTap,
-      required this.showTimestamp});
+      required this.showTimestamp,
+      this.revealOffset});
 
   @override
   Widget build(BuildContext context) {
-    double size = 200;
+    final Color avatarColor = Colors.green;
+    String initials = (item.data!["name"] as String? ?? "?").isNotEmpty
+        ? (item.data!["name"] as String).trim()[0].toUpperCase()
+        : "?";
+
     return GestureDetector(
-      onTap: () {
-        onTap(item);
-      },
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(18),
-        child: SizedBox(
-          width: size,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: item.thumbnail != null
+      onTap: () => onTap(item),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.green.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                  color: Colors.green.withValues(alpha: 0.15),
+                  width: 0.75),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                item.thumbnail != null
                     ? CircleAvatar(
-                        radius: 50,
-                        backgroundImage: MemoryImage(item.thumbnail!),
-                      )
-                    : const CircleAvatar(
-                        radius: 50,
-                        child: Icon(LucideIcons.user, size: 50),
-                      ),
-              ),
-              // Name Row
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    '${item.data!["name"]}'.trim(),
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 5),
-              // Phones Row
-              Row(
-                children: [
-                  const Icon(LucideIcons.phone, size: 16, color: Colors.blue),
-                  const SizedBox(width: 5),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        ...item.data!["phones"].map((phone) => Text(
-                              phone,
-                              style: const TextStyle(
+                        radius: 18,
+                        backgroundImage: MemoryImage(item.thumbnail!))
+                    : CircleAvatar(
+                        radius: 18,
+                        backgroundColor: avatarColor.withValues(alpha: 0.15),
+                        child: Text(initials,
+                            style: TextStyle(
                                 fontSize: 14,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ))
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 5),
-              // Emails Row (if available)
-              if (item.data!["emails"].isNotEmpty)
-                Row(
-                  children: [
-                    Icon(LucideIcons.mail, size: 16, color: Colors.red),
-                    const SizedBox(width: 5),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          ...item.data!["emails"].map((email) => (Text(
-                                email,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              )))
-                        ],
+                                fontWeight: FontWeight.w700,
+                                color: avatarColor)),
                       ),
-                    ),
+                const SizedBox(width: 10),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('${item.data!["name"]}'.trim(),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontSize: 13, fontWeight: FontWeight.w600)),
+                    if ((item.data!["phones"] as List).isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(item.data!["phones"][0],
+                          style: TextStyle(
+                              fontSize: 11,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant
+                                  .withValues(alpha: 0.55))),
+                    ],
                   ],
                 ),
-              const SizedBox(height: 5),
-              // Addresses Row (if available)
-              if (item.data!["addresses"].isNotEmpty)
-                Row(
-                  children: [
-                    Icon(LucideIcons.home, size: 16, color: Colors.green),
-                    const SizedBox(width: 5),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          ...item.data!["addresses"].map((address) => (Text(
-                                address,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ))),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  WidgetTimeStampPinnedStarred(
-                    item: item,
-                    showTimestamp: showTimestamp,
-                  ),
-                ],
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
+          const SizedBox(height: 4),
+          WidgetTimeStampPinnedStarred(
+              item: item, 
+              showTimestamp: showTimestamp,
+              revealOffset: revealOffset),
+        ],
       ),
     );
   }
@@ -844,53 +918,74 @@ class _NoteUrlPreviewState extends State<NoteUrlPreview> {
 
   @override
   Widget build(BuildContext context) {
-    String fileName = '${widget.itemId}-urlimage.png';
-    String filePath = path.join(widget.imageDirectory, fileName);
-    File imageFile = File(filePath);
-    bool imageAvailable = imageFile.existsSync();
-    bool portrait = widget.urlInfo["portrait"] == 1 ? true : false;
-    if (imageAvailable) {}
     return removed
         ? const SizedBox.shrink()
-        : Stack(
-            alignment: Alignment.topRight,
-            children: [
-              Column(
-                //crossAxisAlignment: CrossAxisAlignment.start, // For desktops
+        : Container(
+            margin: const EdgeInsets.only(bottom: 6),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .outlineVariant
+                      .withValues(alpha: 0.35),
+                  width: 0.75),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  if (!portrait)
-                    Image.file(
-                      imageFile,
-                      height: 100,
-                      fit: BoxFit.contain,
+                  // accent bar
+                  Container(
+                      width: 3, color: Theme.of(context).colorScheme.primary),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(10),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (widget.urlInfo["title"] != null)
+                            Text(widget.urlInfo["title"],
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                    fontSize: 12, fontWeight: FontWeight.w600)),
+                          if (widget.urlInfo["desc"] != null) ...[
+                            const SizedBox(height: 3),
+                            Text(widget.urlInfo["desc"],
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                    fontSize: 11,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant
+                                        .withValues(alpha: 0.6))),
+                          ],
+                          const SizedBox(height: 4),
+                          Text(
+                              Uri.tryParse(widget.urlInfo["url"] ?? "")?.host ??
+                                  widget.urlInfo["url"] ??
+                                  "",
+                              style: TextStyle(
+                                  fontSize: 10,
+                                  color:
+                                      Theme.of(context).colorScheme.primary)),
+                        ],
+                      ),
                     ),
-                  ListTile(
-                    leading: imageAvailable && portrait
-                        ? Image.file(
-                            imageFile,
-                            width: 80,
-                            fit: BoxFit.contain,
-                          )
-                        : null,
-                    title: widget.urlInfo["title"] == null
-                        ? null
-                        : Text(
-                            widget.urlInfo["title"],
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                    subtitle: widget.urlInfo["desc"] == null
-                        ? null
-                        : Text(
-                            widget.urlInfo["desc"],
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
                   ),
+                  IconButton(
+                      onPressed: remove,
+                      icon: Icon(LucideIcons.x,
+                          size: 16,
+                          color: Theme.of(context).colorScheme.outline),
+                      padding: const EdgeInsets.all(8)),
                 ],
               ),
-              IconButton(onPressed: remove, icon: Icon(Icons.close))
-            ],
+            ),
           );
   }
 }

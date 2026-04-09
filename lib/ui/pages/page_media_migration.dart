@@ -14,11 +14,15 @@ class PageMediaMigration extends StatefulWidget {
   final bool runningOnDesktop;
   final bool isDarkMode;
   final VoidCallback onThemeToggle;
+  final bool useDynamicColor;
+  final VoidCallback onDynamicColorToggle;
 
   const PageMediaMigration(
       {super.key,
       required this.isDarkMode,
       required this.onThemeToggle,
+      required this.useDynamicColor,
+      required this.onDynamicColorToggle,
       required this.runningOnDesktop});
 
   @override
@@ -37,6 +41,8 @@ class _PageMediaMigrationState extends State<PageMediaMigration> {
       sharedContents: const [],
       isDarkMode: widget.isDarkMode,
       onThemeToggle: widget.onThemeToggle,
+      useDynamicColor: widget.useDynamicColor,
+      onDynamicColorToggle: widget.onDynamicColorToggle,
       runningOnDesktop: false,
       setShowHidePage: null,
     );
@@ -44,7 +50,9 @@ class _PageMediaMigrationState extends State<PageMediaMigration> {
       page = PageCategoriesGroupsPane(
           sharedContents: const [],
           isDarkMode: widget.isDarkMode,
-          onThemeToggle: widget.onThemeToggle);
+          onThemeToggle: widget.onThemeToggle,
+          useDynamicColor: widget.useDynamicColor,
+          onDynamicColorToggle: widget.onDynamicColorToggle);
     }
     Navigator.of(context).pushReplacement(MaterialPageRoute(
       builder: (_) => page,

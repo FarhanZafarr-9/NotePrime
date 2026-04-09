@@ -55,7 +55,7 @@ class PageItems extends StatefulWidget {
   State<PageItems> createState() => _PageItemsState();
 }
 
-class _PageItemsState extends State<PageItems> {
+class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
   final logger = AppLogger(prefixes: ["page_items"]);
   String? showItemId;
   final List<ModelItem> _displayItemList = []; // Store items
@@ -110,11 +110,24 @@ class _PageItemsState extends State<PageItems> {
 
   bool _shouldBlinkItem = false;
 
+  late AnimationController _timestampRevealController;
+  double _timestampRevealOffset = 0;
+  final double _maxRevealWidth = 70.0;
+
   @override
   void initState() {
     super.initState();
 
     _audioRecorder = AudioRecorder();
+
+    _timestampRevealController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    )..addListener(() {
+        setState(() {
+          _timestampRevealOffset = _timestampRevealController.value * _maxRevealWidth;
+        });
+      });
 
     EventStream().notifier.addListener(_handleAppEvent);
   }
@@ -126,6 +139,7 @@ class _PageItemsState extends State<PageItems> {
     _textController.dispose();
     _textControllerFocus.dispose();
     _audioRecorder.dispose();
+    _timestampRevealController.dispose();
     super.dispose();
   }
 
@@ -1538,132 +1552,207 @@ class _PageItemsState extends State<PageItems> {
             Expanded(
               child: Stack(
                 children: [
-                  NotificationListener<ScrollNotification>(
-                    onNotification: (ScrollNotification scrollInfo) {
-                      showHideScrollToBottomButton(scrollInfo.metrics.pixels);
-                      return false;
+                  GestureDetector(
+                    onHorizontalDragUpdate: (details) {
+                      setState(() {
+                        _timestampRevealOffset =
+                            (_timestampRevealOffset - details.delta.dx)
+                                .clamp(0.0, _maxRevealWidth);
+                      });
                     },
-                    child: ScrollablePositionedList.builder(
-                      itemScrollController: _itemScrollController,
-                      itemPositionsListener: _itemPositionsListener,
-                      reverse: true,
-                      itemCount: _displayItemList.length,
-                      itemBuilder: (context, index) {
-                        if (index < 0 || index >= _displayItemList.length) {
-                          return const SizedBox.shrink();
-                        }
-                        final ModelItem item = _displayItemList[index];
-                        if (item.type == ItemType.date) {
-                          if (showDateTime) {
-                            return ItemWidgetDate(item: item);
-                          } else {
+                    onHorizontalDragEnd: (details) {
+                      _timestampRevealController.value =
+                          _timestampRevealOffset / _maxRevealWidth;
+                      _timestampRevealController.reverse();
+                    },
+                    child: NotificationListener<ScrollNotification>(
+                      onNotification: (ScrollNotification scrollInfo) {
+                        showHideScrollToBottomButton(scrollInfo.metrics.pixels);
+                        return false;
+                      },
+                      child: ScrollablePositionedList.builder(
+                        itemScrollController: _itemScrollController,
+                        itemPositionsListener: _itemPositionsListener,
+                        reverse: true,
+                        itemCount: _displayItemList.length,
+                        itemBuilder: (context, index) {
+                          if (index < 0 || index >= _displayItemList.length) {
                             return const SizedBox.shrink();
                           }
-                        } else {
-                          Map<String, dynamic>? urlInfo = item.data != null &&
-                                  item.data!.containsKey("url_info")
-                              ? item.data!["url_info"]
-                              : null;
-                          return Dismissible(
-                            key: ValueKey(item.id),
-                            direction: DismissDirection.startToEnd,
-                            confirmDismiss: (direction) async {
-                              replyOnSwipe(item);
-                              return false;
-                            },
-                            background: Container(
-                              alignment: Alignment.centerLeft,
-                              padding: const EdgeInsets.only(left: 20),
-                              child: const Icon(
-                                LucideIcons.reply,
+                          final ModelItem item = _displayItemList[index];
+
+                          // Grouping logic: Show time pill if gap > 5 mins
+                          bool showTimePill = false;
+                          if (index == _displayItemList.length - 1) {
+                            showTimePill = true;
+                          } else {
+                            final olderItem = _displayItemList[index + 1];
+                            if (olderItem.type == ItemType.date) {
+                              showTimePill = true;
+                            } else {
+                              final diff = DateTime.fromMillisecondsSinceEpoch(
+                                      item.at!,
+                                      isUtc: true)
+                                  .difference(DateTime.fromMillisecondsSinceEpoch(
+                                      olderItem.at!,
+                                      isUtc: true));
+                              if (diff.abs().inMinutes >= 5) {
+                                showTimePill = true;
+                              }
+                            }
+                          }
+
+                          final bool isAttachment =
+                              item.type == ItemType.image ||
+                                  item.type == ItemType.video ||
+                                  item.type == ItemType.audio ||
+                                  item.type == ItemType.document ||
+                                  item.type == ItemType.location ||
+                                  item.type == ItemType.contact;
+
+                          Widget mainItem;
+                          if (item.type == ItemType.date) {
+                            mainItem = showDateTime
+                                ? ItemWidgetDate(item: item)
+                                : const SizedBox.shrink();
+                          } else {
+                            Map<String, dynamic>? urlInfo = item.data != null &&
+                                    item.data!.containsKey("url_info")
+                                ? item.data!["url_info"]
+                                : null;
+                            mainItem = Dismissible(
+                              key: ValueKey(item.id),
+                              direction: DismissDirection.startToEnd,
+                              confirmDismiss: (direction) async {
+                                replyOnSwipe(item);
+                                return false;
+                              },
+                              background: Container(
+                                alignment: Alignment.centerLeft,
+                                padding: const EdgeInsets.only(left: 20),
+                                child: const Icon(LucideIcons.reply),
                               ),
-                            ),
-                            child: GestureDetector(
-                              onLongPress: () {
-                                onItemLongPressed(item);
-                              },
-                              onTap: () {
-                                onItemTapped(item);
-                              },
-                              child: Container(
-                                width: double.infinity,
-                                color: _selectedItems.contains(item)
-                                    ? Theme.of(context)
-                                        .colorScheme
-                                        .inversePrimary
-                                    : _shouldBlinkItem &&
-                                            showItemId != null &&
-                                            showItemId == item.id
-                                        ? Theme.of(context)
-                                            .colorScheme
-                                            .inversePrimary
-                                        : Colors.transparent,
-                                child: Align(
-                                  alignment: Alignment.centerRight,
-                                  child: Container(
-                                      margin: const EdgeInsets.symmetric(
-                                          vertical: 5, horizontal: 10),
-                                      padding: const EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color: showNoteBorder
-                                            ? Theme.of(context)
-                                                .colorScheme
-                                                .surfaceContainerLow
-                                            : Colors.transparent,
-                                        borderRadius: BorderRadius.circular(20),
+                              child: GestureDetector(
+                                onLongPress: () => onItemLongPressed(item),
+                                onTap: () => onItemTapped(item),
+                                child: Container(
+                                  width: double.infinity,
+                                  color: _selectedItems.contains(item)
+                                      ? Theme.of(context)
+                                          .colorScheme
+                                          .inversePrimary
+                                      : _shouldBlinkItem &&
+                                              showItemId != null &&
+                                              showItemId == item.id
+                                          ? Theme.of(context)
+                                              .colorScheme
+                                              .inversePrimary
+                                          : Colors.transparent,
+                                  child: Align(
+                                    alignment: Alignment.centerRight,
+                                    child: Container(
+                                      margin: EdgeInsets.only(
+                                        top: isAttachment ? 0 : 4,
+                                        bottom: isAttachment ? 0 : 4,
+                                        right: 12,
                                       ),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          if (item.replyOn != null)
-                                            GestureDetector(
-                                              onTap: () {
-                                                fetchItems(item.replyOn!.id);
-                                              },
-                                              child: NotePreviewSummary(
-                                                item: item.replyOn!,
-                                                showImagePreview: true,
-                                                showTimestamp: false,
-                                                expanded: false,
-                                              ),
-                                            ),
-                                          if (urlInfo != null)
-                                            GestureDetector(
-                                              onTap: () async {
-                                                if (_hasNotesSelected) {
-                                                  onItemTapped(item);
-                                                } else {
-                                                  final String linkText =
-                                                      urlInfo["url"];
-                                                  final linkUri =
-                                                      Uri.parse(linkText);
-                                                  if (await canLaunchUrl(
-                                                      linkUri)) {
-                                                    await launchUrl(linkUri);
-                                                  } else {
-                                                    logger.warning(
-                                                        "Could not launch $linkText");
-                                                  }
-                                                }
-                                              },
-                                              child: imageDirPath.isEmpty
-                                                  ? const SizedBox.shrink()
-                                                  : NoteUrlPreview(
-                                                      urlInfo: urlInfo,
-                                                      imageDirectory:
-                                                          imageDirPath,
-                                                      itemId: item.id!),
-                                            ),
-                                          _buildNoteItem(item, showDateTime),
-                                        ],
-                                      )),
+                                      child: Material(
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: const BorderRadius.only(
+                                            topLeft: Radius.circular(16),
+                                            topRight: Radius.circular(16),
+                                            bottomLeft: Radius.circular(16),
+                                            bottomRight: Radius.circular(4),
+                                          ),
+                                          side: BorderSide(
+                                            color: (showNoteBorder &&
+                                                    !isAttachment)
+                                                ? Theme.of(context)
+                                                    .colorScheme
+                                                    .outlineVariant
+                                                    .withValues(alpha: 0.4)
+                                                : Colors.transparent,
+                                            width: 0.5,
+                                          ),
+                                        ),
+                                        color: isAttachment
+                                            ? Colors.transparent
+                                            : Theme.of(context)
+                                                .colorScheme
+                                                .onSurfaceVariant
+                                                .withValues(alpha: 0.09),
+                                        child: Container(
+                                          margin: EdgeInsets.symmetric(
+                                              vertical: isAttachment ? 6 : 12,
+                                              horizontal: isAttachment ? 4 : 8),
+                                          padding: EdgeInsets.all(
+                                              isAttachment ? 4 : 8),
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              if (item.replyOn != null)
+                                                GestureDetector(
+                                                  onTap: () => fetchItems(
+                                                      item.replyOn!.id),
+                                                  child: NotePreviewSummary(
+                                                    item: item.replyOn!,
+                                                    showImagePreview: true,
+                                                    showTimestamp: false,
+                                                    expanded: false,
+                                                  ),
+                                                ),
+                                              if (urlInfo != null)
+                                                GestureDetector(
+                                                  onTap: () async {
+                                                    if (_hasNotesSelected) {
+                                                      onItemTapped(item);
+                                                    } else {
+                                                      final String linkText =
+                                                          urlInfo["url"];
+                                                      final linkUri =
+                                                          Uri.parse(linkText);
+                                                      if (await canLaunchUrl(
+                                                          linkUri)) {
+                                                        await launchUrl(
+                                                            linkUri);
+                                                      }
+                                                    }
+                                                  },
+                                                  child: NoteUrlPreview(
+                                                    urlInfo: urlInfo,
+                                                    imageDirectory:
+                                                        imageDirPath,
+                                                    itemId: item.id!,
+                                                  ),
+                                                ),
+                                              _buildNoteItem(item, showDateTime,
+                                                  _timestampRevealOffset),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
-                          );
-                        }
-                      },
+                            );
+                          }
+
+                          if (showTimePill) {
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                ItemWidgetTimePill(
+                                  timeText: getFormattedTime(item.at!),
+                                ),
+                                mainItem,
+                              ],
+                            );
+                          }
+                          return mainItem;
+                        },
+                      ),
                     ),
                   ),
                   if (canScrollToBottom)
@@ -1710,57 +1799,66 @@ class _PageItemsState extends State<PageItems> {
   }
 
   // Widget for displaying different item types
-  Widget _buildNoteItem(ModelItem item, bool showTimestamp) {
+  Widget _buildNoteItem(ModelItem item, bool showTimestamp, double revealOffset) {
     switch (item.type) {
       case ItemType.text:
         return ItemWidgetText(
           item: item,
           showTimestamp: showTimestamp,
+          revealOffset: revealOffset,
         );
       case ItemType.image:
         return ItemWidgetImage(
           item: item,
           onTap: viewImageVideo,
           showTimestamp: showTimestamp,
+          revealOffset: revealOffset,
         );
       case ItemType.video:
         return ItemWidgetVideo(
           item: item,
           onTap: viewImageVideo,
           showTimestamp: showTimestamp,
+          revealOffset: revealOffset,
         );
       case ItemType.audio:
         return ItemWidgetAudio(
           item: item,
           showTimestamp: showTimestamp,
+          revealOffset: revealOffset,
         );
       case ItemType.document:
         return ItemWidgetDocument(
           item: item,
           onTap: openDocument,
           showTimestamp: showTimestamp,
+          revealOffset: revealOffset,
         );
       case ItemType.location:
         return ItemWidgetLocation(
           item: item,
           onTap: openLocation,
           showTimestamp: showTimestamp,
+          revealOffset: revealOffset,
         );
       case ItemType.contact:
         return ItemWidgetContact(
           item: item,
           onTap: addToContacts,
           showTimestamp: showTimestamp,
+          revealOffset: revealOffset,
         );
       case ItemType.completedTask:
         return ItemWidgetTask(
           item: item,
           showTimestamp: showTimestamp,
+          revealOffset: revealOffset,
         );
       case ItemType.task:
         return ItemWidgetTask(
           item: item,
           showTimestamp: showTimestamp,
+          revealOffset: revealOffset,
         );
       default:
         return const SizedBox.shrink();

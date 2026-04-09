@@ -20,15 +20,19 @@ import '../../utils/common.dart';
 
 class SettingsPage extends StatefulWidget {
   final bool isDarkMode;
+  final bool useDynamicColor;
   final bool runningOnDesktop;
   final Function(PageType, bool, PageParams)? setShowHidePage;
   final VoidCallback onThemeToggle;
+  final VoidCallback onDynamicColorToggle;
   final bool canShowBackupRestore;
 
   const SettingsPage(
       {super.key,
       required this.isDarkMode,
+      required this.useDynamicColor,
       required this.onThemeToggle,
+      required this.onDynamicColorToggle,
       required this.canShowBackupRestore,
       required this.runningOnDesktop,
       required this.setShowHidePage});
@@ -194,202 +198,262 @@ class SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  Widget _buildLeadingIcon(IconData icon, Color color) {
+    final themeColor = Theme.of(context).colorScheme.onSurfaceVariant;
+    return Container(
+      width: 36,
+      height: 36,
+      decoration: BoxDecoration(
+        color: themeColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Icon(
+        icon,
+        size: 20,
+        color: themeColor,
+      ),
+    );
+  }
+
+  Widget _buildTrailingChevron() {
+    return Icon(
+      LucideIcons.chevronRight,
+      size: 16,
+      color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+    );
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 8.0, bottom: 8.0, top: 16.0),
+      child: Text(
+        title.toUpperCase(),
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 1.2,
+          color: Theme.of(context).colorScheme.primary,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(
-          title: const Text("Settings"),
-          leading: widget.runningOnDesktop
-              ? BackButton(
-                  onPressed: () async {
-                    EventStream()
-                        .publish(AppEvent(type: EventType.exitSettings));
-                    widget.setShowHidePage!(
-                        PageType.settings, false, PageParams());
-                  },
-                )
-              : null,
-        ),
-        body: ListView(
-          padding: const EdgeInsets.all(8.0),
-          children: <Widget>[
-            ListTile(
-              leading: const Icon(LucideIcons.sunMoon, color: Colors.grey),
-              title: const Text("Theme"),
-              horizontalTitleGap: 24.0,
-              onTap: widget.onThemeToggle,
-              trailing: IconButton(
-                tooltip: "Day/night theme",
-                icon: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 500),
-                  transitionBuilder:
-                      (Widget child, Animation<double> animation) {
-                    // Use both fade and rotation transitions
-                    return FadeTransition(
-                      opacity: animation,
-                      child: RotationTransition(
-                        turns: Tween<double>(begin: 0.75, end: 1.0)
-                            .animate(animation),
-                        child: child,
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
+      appBar: AppBar(
+        title: const Text("Settings"),
+        centerTitle: true,
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
+        leading: widget.runningOnDesktop
+            ? BackButton(
+                onPressed: () async {
+                  EventStream().publish(AppEvent(type: EventType.exitSettings));
+                  widget.setShowHidePage!(
+                      PageType.settings, false, PageParams());
+                },
+              )
+            : null,
+      ),
+      body: ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+        children: <Widget>[
+          _buildSectionHeader("Appearance"),
+          Card(
+            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.09),
+            elevation: 1,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(
+                color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.1),
+                width: 0.75,
+              ),
+            ),
+            child: Column(
+              children: [
+                ListTile(
+                  leading: _buildLeadingIcon(LucideIcons.sunMoon, Colors.orange),
+                  title: const Text("Theme"),
+                  subtitle: Text(widget.isDarkMode ? "Dark Mode" : "Light Mode"),
+                  onTap: widget.onThemeToggle,
+                  trailing: Switch(
+                    value: widget.isDarkMode,
+                    onChanged: (bool value) => widget.onThemeToggle(),
+                  ),
+                ),
+                Divider(height: 1, indent: 56, endIndent: 16, color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3)),
+                ListTile(
+                  leading: _buildLeadingIcon(LucideIcons.palette, Colors.blue),
+                  title: const Text("Dynamic Coloring"),
+                  subtitle: const Text("Wallpaper colors (Material You)"),
+                  trailing: Switch(
+                    value: widget.useDynamicColor,
+                    onChanged: (bool value) => widget.onDynamicColorToggle(),
+                  ),
+                ),
+                Divider(height: 1, indent: 56, endIndent: 16, color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3)),
+                ListTile(
+                  leading: _buildLeadingIcon(LucideIcons.type, Colors.green),
+                  title: const Text("Font Size"),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(LucideIcons.minus),
+                        iconSize: 18,
+                        onPressed: () => Provider.of<FontSizeController>(context, listen: false).decreaseFontSize(),
                       ),
+                      IconButton(
+                        icon: const Icon(LucideIcons.plus),
+                        iconSize: 18,
+                        onPressed: () => Provider.of<FontSizeController>(context, listen: false).increaseFontSize(),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildSectionHeader("General"),
+          Card(
+            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.09),
+            elevation: 1,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(
+                color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.1),
+                width: 0.75,
+              ),
+            ),
+            child: Column(
+              children: [
+                ListTile(
+                  leading: _buildLeadingIcon(LucideIcons.timer, Colors.amber),
+                  title: const Text('Time Format'),
+                  trailing: DropdownButton<String>(
+                    value: timeFormat,
+                    underline: const SizedBox(),
+                    icon: _buildTrailingChevron(),
+                    items: const [
+                      DropdownMenuItem(value: "H12", child: Text('H12')),
+                      DropdownMenuItem(value: "H24", child: Text('H24')),
+                    ],
+                    onChanged: (format) => updateTimeFormat(format),
+                  ),
+                ),
+                Divider(height: 1, indent: 56, endIndent: 16, color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3)),
+                ListTile(
+                  leading: _buildLeadingIcon(LucideIcons.lock, Colors.red),
+                  title: const Text("App Lock"),
+                  subtitle: const Text("Biometric or pattern lock"),
+                  trailing: Switch(
+                    value: isAuthEnabled,
+                    onChanged: (bool value) => _authenticate(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildSectionHeader("Storage"),
+          Card(
+            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.09),
+            elevation: 1,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(
+                color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.1),
+                width: 0.75,
+              ),
+            ),
+            child: Column(
+              children: [
+                if (widget.canShowBackupRestore)
+                  ListTile(
+                    leading: _buildLeadingIcon(LucideIcons.databaseBackup, Colors.purple),
+                    title: const Text('Backup Data'),
+                    subtitle: const Text("Export your notes as zip"),
+                    trailing: _buildTrailingChevron(),
+                    onTap: createDownloadBackup,
+                  ),
+                if (widget.canShowBackupRestore)
+                  Divider(height: 1, indent: 56, endIndent: 16, color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3)),
+                if (widget.canShowBackupRestore)
+                  ListTile(
+                    leading: _buildLeadingIcon(LucideIcons.rotateCcw, Colors.blue),
+                    title: const Text('Restore Data'),
+                    subtitle: const Text("Import from backup zip"),
+                    trailing: _buildTrailingChevron(),
+                    onTap: restoreZipBackup,
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildSectionHeader("About & Feedback"),
+          Card(
+            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.09),
+            elevation: 1,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(
+                color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.1),
+                width: 0.75,
+              ),
+            ),
+            child: Column(
+              children: [
+                ListTile(
+                  leading: _buildLeadingIcon(LucideIcons.star, Colors.orange),
+                  title: const Text('Leave a Review'),
+                  trailing: _buildTrailingChevron(),
+                  onTap: _redirectToFeedback,
+                ),
+                Divider(height: 1, indent: 56, endIndent: 16, color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3)),
+                ListTile(
+                  leading: _buildLeadingIcon(LucideIcons.share2, Colors.blue),
+                  title: const Text('Share App'),
+                  trailing: _buildTrailingChevron(),
+                  onTap: _share,
+                ),
+                Divider(height: 1, indent: 56, endIndent: 16, color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3)),
+                if (Platform.isAndroid || Platform.isIOS)
+                  ListTile(
+                    leading: _buildLeadingIcon(LucideIcons.monitor, Colors.grey),
+                    title: const Text('Desktop Version'),
+                    trailing: _buildTrailingChevron(),
+                    onTap: _redirectToDesktopApp,
+                  ),
+                Divider(height: 1, indent: 56, endIndent: 16, color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3)),
+                ListTile(
+                  leading: _buildLeadingIcon(LucideIcons.list, Colors.blueGrey),
+                  title: const Text("Developer Logging"),
+                  trailing: Switch(
+                    value: loggingEnabled,
+                    onChanged: _setLogging,
+                  ),
+                ),
+                Divider(height: 1, indent: 56, endIndent: 16, color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3)),
+                FutureBuilder<PackageInfo>(
+                  future: PackageInfo.fromPlatform(),
+                  builder: (context, snapshot) {
+                    final version = snapshot.data?.version ?? 'Loading...';
+                    return ListTile(
+                      leading: _buildLeadingIcon(LucideIcons.info, Colors.grey),
+                      title: const Text('App Version'),
+                      trailing: Text(version, style: const TextStyle(fontSize: 12)),
                     );
                   },
-                  child: Icon(
-                    widget.isDarkMode ? Icons.light_mode : Icons.dark_mode,
-                    key: ValueKey(widget.isDarkMode ? 'dark' : 'light'),
-                    // Unique key for AnimatedSwitcher
-                    color: widget.isDarkMode ? Colors.orange : Colors.black,
-                  ),
                 ),
-                onPressed: () => widget.onThemeToggle(),
-              ),
+              ],
             ),
-            ListTile(
-              leading: const Icon(LucideIcons.lock, color: Colors.grey),
-              title: const Text("Lock"),
-              horizontalTitleGap: 24.0,
-              trailing: Transform.scale(
-                scale: 0.7,
-                child: Switch(
-                  value: isAuthEnabled,
-                  onChanged: (bool value) {
-                    _authenticate();
-                  },
-                ),
-              ),
-            ),
-            ListTile(
-              // The icon at the beginning of the ListTile.
-              leading: const Icon(LucideIcons.timer, color: Colors.grey),
-              // The main text of the ListTile.
-              title: const Text('Time Format'),
-              // The widget at the end of the ListTile, in this case, a dropdown.
-              trailing: DropdownButton<String>(
-                value: timeFormat,
-                // The items that will be displayed in the dropdown.
-                items: const [
-                  DropdownMenuItem(
-                    value: "H12",
-                    child: Text('H12'),
-                  ),
-                  DropdownMenuItem(
-                    value: "H24",
-                    child: Text('H24'),
-                  ),
-                ],
-                // The function that is called when a new item is selected.
-                onChanged: (format) => updateTimeFormat(format),
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.text_fields, color: Colors.grey),
-              title: const Text("Font size"),
-              horizontalTitleGap: 24.0,
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    tooltip: "Reduce text size",
-                    icon: Icon(Icons.remove),
-                    onPressed: () {
-                      Provider.of<FontSizeController>(context, listen: false)
-                          .decreaseFontSize();
-                    },
-                  ),
-/*
-                  IconButton(
-                    icon: Icon(Icons.refresh),
-                    onPressed: () {
-                      Provider.of<FontSizeController>(context, listen: false)
-                          .resetFontSize();
-                    },
-                  ),
-*/
-                  IconButton(
-                    tooltip: "Increase text size",
-                    icon: Icon(Icons.add),
-                    onPressed: () {
-                      Provider.of<FontSizeController>(context, listen: false)
-                          .increaseFontSize();
-                    },
-                  ),
-                ],
-              ),
-            ),
-            if (widget.canShowBackupRestore)
-              ListTile(
-                leading:
-                    const Icon(LucideIcons.databaseBackup, color: Colors.grey),
-                title: const Text('Backup'),
-                horizontalTitleGap: 24.0,
-                onTap: () async {
-                  createDownloadBackup();
-                },
-              ),
-            if (widget.canShowBackupRestore)
-              ListTile(
-                leading: const Icon(LucideIcons.rotateCcw, color: Colors.grey),
-                title: const Text('Restore'),
-                horizontalTitleGap: 24.0,
-                onTap: () async {
-                  restoreZipBackup();
-                },
-              ),
-            ListTile(
-              leading: const Icon(LucideIcons.star, color: Colors.grey),
-              title: const Text('Leave a review'),
-              horizontalTitleGap: 24.0,
-              onTap: () => _redirectToFeedback(),
-            ),
-            ListTile(
-              leading: const Icon(LucideIcons.share2, color: Colors.grey),
-              title: const Text('Share'),
-              horizontalTitleGap: 24.0,
-              onTap: () {
-                _share();
-              },
-            ),
-            if (Platform.isAndroid || Platform.isIOS)
-              ListTile(
-                leading: const Icon(LucideIcons.monitor, color: Colors.grey),
-                title: const Text('Desktop App'),
-                horizontalTitleGap: 24.0,
-                onTap: () => _redirectToDesktopApp(),
-              ),
-            ListTile(
-              leading: const Icon(LucideIcons.list, color: Colors.grey),
-              title: const Text("Logging"),
-              horizontalTitleGap: 24.0,
-              trailing: Transform.scale(
-                scale: 0.7,
-                child: Switch(
-                  value: loggingEnabled,
-                  onChanged: _setLogging,
-                ),
-              ),
-            ),
-            FutureBuilder<PackageInfo>(
-              future: PackageInfo.fromPlatform(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.done) {
-                  final version = snapshot.data?.version ?? '';
-                  return ListTile(
-                    leading: const Icon(LucideIcons.info, color: Colors.grey),
-                    horizontalTitleGap: 24.0,
-                    title: Text('Version: $version'),
-                    onTap: null,
-                  );
-                } else {
-                  return const ListTile(
-                    leading: Icon(LucideIcons.info, color: Colors.grey),
-                    title: Text('Loading...'),
-                    horizontalTitleGap: 24.0,
-                  );
-                }
-              },
-            ),
-          ],
-        ));
+          ),
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
   }
 
   void _redirectToDesktopApp() {
