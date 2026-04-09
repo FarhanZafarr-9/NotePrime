@@ -250,7 +250,6 @@ class SearchPageState extends State<SearchPage> {
       _buildCategoryGroupHeader(search),
       ItemWidgetTask(
         item: item,
-        showTimestamp: false,
       ),
     ]);
   }

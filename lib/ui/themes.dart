@@ -23,6 +23,31 @@ class AppThemes {
           borderRadius: BorderRadius.circular(16),
         ),
       ),
+      popupMenuTheme: PopupMenuThemeData(
+        color: colorScheme.surfaceContainerHigh,
+        elevation: 3,
+        shadowColor: colorScheme.shadow.withValues(alpha: 0.3),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.2),
+            width: 0.75,
+          ),
+        ),
+        surfaceTintColor: Colors.transparent,
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: colorScheme.surfaceContainerHigh,
+        modalBackgroundColor: colorScheme.surfaceContainerHigh,
+        elevation: 4,
+        shadowColor: colorScheme.shadow.withValues(alpha: 0.3),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        showDragHandle: true,
+        dragHandleColor: colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+        dragHandleSize: const Size(36, 4),
+      ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: colorScheme.primary,

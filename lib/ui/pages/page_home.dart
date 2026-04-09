@@ -36,6 +36,7 @@ import 'page_search.dart';
 import 'page_settings.dart';
 import 'page_user_task.dart';
 import '../../utils/utils_sync.dart';
+import '../widgets_shimmer.dart';
 
 class PageCategoriesGroups extends StatefulWidget {
   final List<String> sharedContents;
@@ -77,6 +78,7 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
   List<ModelCategoryGroup> _categoriesGroupsDisplayList = [];
   bool _isFetchingFromServer = false;
   bool _hasInitiated = false;
+  bool _isLoading = true;
   bool _isReordering = false;
   bool _canSync = false;
   bool loadedSharedContents = false;
@@ -288,10 +290,14 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
       final categoriesGroups = await ModelCategoryGroup.all();
       setState(() {
         _categoriesGroupsDisplayList = categoriesGroups;
+        _isLoading = false;
       });
       logger.info("Loaded categoriesGroups");
     } catch (e, s) {
       logger.error("loadCategoriesGroups", error: e, stackTrace: s);
+      setState(() {
+        _isLoading = false;
+      });
     }
     if (_categoriesGroupsDisplayList.isEmpty && widget.runningOnDesktop) {
       widget.setShowHidePage!(PageType.items, false, PageParams());
@@ -909,7 +915,6 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              Container(height: 12),
               ListTile(
                 leading: const Icon(Icons.reorder, color: Colors.grey),
                 horizontalTitleGap: 24,
@@ -939,7 +944,6 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
                   archiveCategoryGroup(categoryGroup);
                 },
               ),
-              Container(height: 8),
             ],
           ),
         );
@@ -1012,8 +1016,9 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
                   });
                 },
               )
-            : _hasInitiated
-                ? _isFetchingFromServer
+            : _isLoading
+                ? const ShimmerList()
+                : _isFetchingFromServer
                     ? const Center(child: CircularProgressIndicator())
                     : _categoriesGroupsDisplayList.isNotEmpty
                         ? RefreshIndicator(
@@ -1081,8 +1086,7 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
                                 ],
                               ),
                             ),
-                          )
-                : const Center(child: CircularProgressIndicator()),
+                          ),
         floatingActionButton: !requiresAuthentication || isAuthenticated
             ? FloatingActionButton(
                 heroTag: "add_group_or_mark_reordering_complete",

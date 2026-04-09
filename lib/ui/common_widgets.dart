@@ -237,7 +237,6 @@ class WidgetCategoryGroup extends StatelessWidget {
           ? categoryGroup.type == "group"
               ? NotePreviewSummary(
                   item: categoryGroup.group!.lastItem,
-                  showTimestamp: false,
                   showImagePreview: false,
                   expanded: true,
                 )
@@ -648,13 +647,12 @@ class _WidgetAudioState extends State<WidgetAudio> {
   }
 }
 
-Widget widgetAudioDetails(ModelItem item, bool showTimestamp) {
+Widget widgetAudioDetails(ModelItem item) {
   return Row(
     mainAxisAlignment: MainAxisAlignment.end,
     children: [
       WidgetTimeStampPinnedStarred(
         item: item,
-        showTimestamp: showTimestamp,
       ),
     ],
   );

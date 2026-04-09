@@ -110,9 +110,7 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
 
   bool _shouldBlinkItem = false;
 
-  late AnimationController _timestampRevealController;
-  double _timestampRevealOffset = 0;
-  final double _maxRevealWidth = 70.0;
+
 
   @override
   void initState() {
@@ -120,14 +118,7 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
 
     _audioRecorder = AudioRecorder();
 
-    _timestampRevealController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 200),
-    )..addListener(() {
-        setState(() {
-          _timestampRevealOffset = _timestampRevealController.value * _maxRevealWidth;
-        });
-      });
+
 
     EventStream().notifier.addListener(_handleAppEvent);
   }
@@ -139,7 +130,7 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
     _textController.dispose();
     _textControllerFocus.dispose();
     _audioRecorder.dispose();
-    _timestampRevealController.dispose();
+
     super.dispose();
   }
 
@@ -1552,20 +1543,7 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
             Expanded(
               child: Stack(
                 children: [
-                  GestureDetector(
-                    onHorizontalDragUpdate: (details) {
-                      setState(() {
-                        _timestampRevealOffset =
-                            (_timestampRevealOffset - details.delta.dx)
-                                .clamp(0.0, _maxRevealWidth);
-                      });
-                    },
-                    onHorizontalDragEnd: (details) {
-                      _timestampRevealController.value =
-                          _timestampRevealOffset / _maxRevealWidth;
-                      _timestampRevealController.reverse();
-                    },
-                    child: NotificationListener<ScrollNotification>(
+                  NotificationListener<ScrollNotification>(
                       onNotification: (ScrollNotification scrollInfo) {
                         showHideScrollToBottomButton(scrollInfo.metrics.pixels);
                         return false;
@@ -1630,7 +1608,19 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                               background: Container(
                                 alignment: Alignment.centerLeft,
                                 padding: const EdgeInsets.only(left: 20),
-                                child: const Icon(LucideIcons.reply),
+                                child: Row(
+                                  children: [
+                                    const Icon(LucideIcons.reply, size: 20),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      getFormattedTime(item.at!),
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Theme.of(context).colorScheme.outline,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                               child: GestureDetector(
                                 onLongPress: () => onItemLongPressed(item),
@@ -1652,8 +1642,8 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                                     alignment: Alignment.centerRight,
                                     child: Container(
                                       margin: EdgeInsets.only(
-                                        top: isAttachment ? 0 : 4,
-                                        bottom: isAttachment ? 0 : 4,
+                                        top: isAttachment ? 0 : 2,
+                                        bottom: isAttachment ? 0 : 2,
                                         right: 12,
                                       ),
                                       child: Material(
@@ -1683,10 +1673,10 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                                                 .withValues(alpha: 0.09),
                                         child: Container(
                                           margin: EdgeInsets.symmetric(
-                                              vertical: isAttachment ? 6 : 12,
+                                              vertical: isAttachment ? 4 : 8,
                                               horizontal: isAttachment ? 4 : 8),
                                           padding: EdgeInsets.all(
-                                              isAttachment ? 4 : 8),
+                                              isAttachment ? 4 : 6),
                                           child: Column(
                                             crossAxisAlignment:
                                                 CrossAxisAlignment.start,
@@ -1698,7 +1688,7 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                                                   child: NotePreviewSummary(
                                                     item: item.replyOn!,
                                                     showImagePreview: true,
-                                                    showTimestamp: false,
+
                                                     expanded: false,
                                                   ),
                                                 ),
@@ -1726,8 +1716,7 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                                                     itemId: item.id!,
                                                   ),
                                                 ),
-                                              _buildNoteItem(item, showDateTime,
-                                                  _timestampRevealOffset),
+                                              _buildNoteItem(item),
                                             ],
                                           ),
                                         ),
@@ -1739,7 +1728,7 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                             );
                           }
 
-                          if (showTimePill) {
+                          if (showTimePill && item.type != ItemType.date) {
                             return Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
@@ -1754,7 +1743,7 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                         },
                       ),
                     ),
-                  ),
+
                   if (canScrollToBottom)
                     Positioned(
                       bottom: 10, // Adjust for FAB height and margin
@@ -1799,66 +1788,48 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
   }
 
   // Widget for displaying different item types
-  Widget _buildNoteItem(ModelItem item, bool showTimestamp, double revealOffset) {
+  Widget _buildNoteItem(ModelItem item) {
     switch (item.type) {
       case ItemType.text:
         return ItemWidgetText(
           item: item,
-          showTimestamp: showTimestamp,
-          revealOffset: revealOffset,
         );
       case ItemType.image:
         return ItemWidgetImage(
           item: item,
           onTap: viewImageVideo,
-          showTimestamp: showTimestamp,
-          revealOffset: revealOffset,
         );
       case ItemType.video:
         return ItemWidgetVideo(
           item: item,
           onTap: viewImageVideo,
-          showTimestamp: showTimestamp,
-          revealOffset: revealOffset,
         );
       case ItemType.audio:
         return ItemWidgetAudio(
           item: item,
-          showTimestamp: showTimestamp,
-          revealOffset: revealOffset,
         );
       case ItemType.document:
         return ItemWidgetDocument(
           item: item,
           onTap: openDocument,
-          showTimestamp: showTimestamp,
-          revealOffset: revealOffset,
         );
       case ItemType.location:
         return ItemWidgetLocation(
           item: item,
           onTap: openLocation,
-          showTimestamp: showTimestamp,
-          revealOffset: revealOffset,
         );
       case ItemType.contact:
         return ItemWidgetContact(
           item: item,
           onTap: addToContacts,
-          showTimestamp: showTimestamp,
-          revealOffset: revealOffset,
         );
       case ItemType.completedTask:
         return ItemWidgetTask(
           item: item,
-          showTimestamp: showTimestamp,
-          revealOffset: revealOffset,
         );
       case ItemType.task:
         return ItemWidgetTask(
           item: item,
-          showTimestamp: showTimestamp,
-          revealOffset: revealOffset,
         );
       default:
         return const SizedBox.shrink();
@@ -2094,7 +2065,6 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                                 Expanded(
                                   child: NotePreviewSummary(
                                     item: replyOnItem!,
-                                    showTimestamp: false,
                                     showImagePreview: true,
                                     expanded: true,
                                   ),

@@ -345,7 +345,7 @@ class SettingsPageState extends State<SettingsPage> {
                 ),
                 Divider(height: 1, indent: 56, endIndent: 16, color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3)),
                 ListTile(
-                  leading: _buildLeadingIcon(LucideIcons.lock, Colors.red),
+                  leading: _buildLeadingIcon(LucideIcons.shieldCheck, Colors.red),
                   title: const Text("App Lock"),
                   subtitle: const Text("Biometric or pattern lock"),
                   trailing: Switch(

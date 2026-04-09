@@ -6,6 +6,7 @@ import 'dart:io';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import 'package:ntsapp/services/service_events.dart';
 import 'package:ntsapp/utils/auth_guard.dart';
 import 'package:ntsapp/utils/common.dart';
@@ -448,7 +449,7 @@ class PrivacyShield extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
-      body: Container(
+      body: SizedBox(
         width: double.infinity,
         height: double.infinity,
         child: Center(
@@ -463,7 +464,7 @@ class PrivacyShield extends StatelessWidget {
                   borderRadius: BorderRadius.circular(24),
                 ),
                 child: Icon(
-                  Icons.lock_rounded,
+                  LucideIcons.shieldCheck,
                   size: 48,
                   color: Theme.of(context).colorScheme.primary,
                 ),

@@ -9,6 +9,7 @@ import 'package:ntsapp/models/model_item_group.dart';
 import 'package:ntsapp/services/service_logger.dart';
 
 import '../common_widgets.dart';
+import '../widgets_shimmer.dart';
 import '../../utils/enums.dart';
 import '../../models/model_category.dart';
 import '../../models/model_item.dart';
@@ -45,6 +46,7 @@ class _PageCategoryGroupsState extends State<PageCategoryGroups> {
   ModelGroup? selectedGroup;
   bool loadedSharedContents = false;
   bool _isReordering = false;
+  bool _isLoading = true;
   Timer? _debounceTimer;
 
   late StreamSubscription categoryStream;
@@ -157,6 +159,7 @@ class _PageCategoryGroupsState extends State<PageCategoryGroups> {
     List<ModelGroup> groups = await ModelGroup.inCategory(category.id!);
     setState(() {
       categoryGroupsDisplayList = groups;
+      _isLoading = false;
     });
   }
 
@@ -288,7 +291,6 @@ class _PageCategoryGroupsState extends State<PageCategoryGroups> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              Container(height: 12),
               ListTile(
                 leading: const Icon(Icons.reorder, color: Colors.grey),
                 horizontalTitleGap: 24,
@@ -318,7 +320,6 @@ class _PageCategoryGroupsState extends State<PageCategoryGroups> {
                   archiveGroup(group);
                 },
               ),
-              Container(height: 8),
             ],
           ),
         );
@@ -409,7 +410,9 @@ class _PageCategoryGroupsState extends State<PageCategoryGroups> {
                     });
                   },
                 )
-              : ListView.builder(
+              : _isLoading
+                  ? const ShimmerList()
+                  : ListView.builder(
                   itemCount: categoryGroupsDisplayList.length,
                   itemBuilder: (context, index) {
                     final ModelGroup group = categoryGroupsDisplayList[index];

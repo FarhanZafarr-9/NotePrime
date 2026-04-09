@@ -175,52 +175,52 @@ class _PageArchivedItemsState extends State<PageArchivedItems> {
       case ItemType.task:
         return ItemWidgetTask(
           item: item,
-          showTimestamp: false,
+
         );
       case ItemType.completedTask:
         return ItemWidgetTask(
           item: item,
-          showTimestamp: false,
+
         );
       case ItemType.text:
         return ItemWidgetText(
           item: item,
-          showTimestamp: false,
+
         );
       case ItemType.image:
         return ItemWidgetImage(
           item: item,
           onTap: onItemTapped,
-          showTimestamp: false,
+
         );
       case ItemType.video:
         return ItemWidgetVideo(
           item: item,
           onTap: onItemTapped,
-          showTimestamp: false,
+
         );
       case ItemType.audio:
         return ItemWidgetAudio(
           item: item,
-          showTimestamp: false,
+
         );
       case ItemType.document:
         return ItemWidgetDocument(
           item: item,
           onTap: onItemTapped,
-          showTimestamp: false,
+
         );
       case ItemType.location:
         return ItemWidgetLocation(
           item: item,
           onTap: onItemTapped,
-          showTimestamp: false,
+
         );
       case ItemType.contact:
         return ItemWidgetContact(
           item: item,
           onTap: onItemTapped,
-          showTimestamp: false,
+
         );
       default:
         return const SizedBox.shrink();
