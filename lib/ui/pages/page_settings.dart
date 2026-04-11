@@ -423,29 +423,35 @@ class SettingsPageState extends State<SettingsPage> {
             ]),
           ],
 
-          // ── About & Feedback ──────────────────────────────────────────────
-          _buildSectionHeader("About & Feedback"),
+          // ── About ──────────────────────────────────────────────────────────
+          _buildSectionHeader("About"),
           _buildSettingsGroup([
             _SettingsTile(
-              leading: _buildLeadingIcon(LucideIcons.star, Colors.orange),
-              title: const Text('Leave a Review'),
+              leading: _buildLeadingIcon(LucideIcons.gitFork, Colors.purple),
+              title: const Text('Fork Repository'),
+              subtitle: const Text('Modern evolution with Material You'),
               trailing: _buildTrailingChevron(),
-              onTap: _redirectToFeedback,
+              onTap: _openForkRepo,
             ),
             _SettingsTile(
-              leading: _buildLeadingIcon(LucideIcons.share2, Colors.blue),
-              title: const Text('Share App'),
+              leading: _buildLeadingIcon(LucideIcons.github, Colors.grey),
+              title: const Text('Original Repository'),
+              subtitle: const Text('By jeerovan'),
               trailing: _buildTrailingChevron(),
-              onTap: _share,
+              onTap: _openOriginalRepo,
             ),
-            if (Platform.isAndroid || Platform.isIOS)
-              _SettingsTile(
-                leading:
-                    _buildLeadingIcon(LucideIcons.monitor, Colors.blueGrey),
-                title: const Text('Desktop Version'),
-                trailing: _buildTrailingChevron(),
-                onTap: _redirectToDesktopApp,
-              ),
+            _SettingsTile(
+              leading: _buildLeadingIcon(LucideIcons.bookOpen, Colors.blue),
+              title: const Text("What's New in This Fork"),
+              trailing: _buildTrailingChevron(),
+              onTap: _showChangelog,
+            ),
+            _SettingsTile(
+              leading: _buildLeadingIcon(LucideIcons.star, Colors.orange),
+              title: const Text('Original App (Play Store)'),
+              trailing: _buildTrailingChevron(),
+              onTap: _redirectToOriginalPlayStore,
+            ),
             _SettingsTile(
               leading: _buildLeadingIcon(LucideIcons.list, Colors.blueGrey),
               title: const Text("Developer Logging"),
@@ -481,23 +487,148 @@ class SettingsPageState extends State<SettingsPage> {
 
   // ── Actions ────────────────────────────────────────────────────────────────
 
-  void _redirectToDesktopApp() {
-    const url = "https://github.com/jeerovan/ntsapp/releases";
+  void _openForkRepo() {
+    const url = "https://github.com/FarhanZafarr-9/ntsapp";
     openURL(url);
   }
 
-  void _redirectToFeedback() {
+  void _openOriginalRepo() {
+    const url = "https://github.com/jeerovan/ntsapp";
+    openURL(url);
+  }
+
+  void _redirectToOriginalPlayStore() {
     const url =
         'https://play.google.com/store/apps/details?id=com.makenotetoself';
     openURL(url);
   }
 
-  Future<void> _share() async {
-    String? appName = await secureStorage.read(key: AppString.appName.string);
-    appName = appName ?? "";
-    const String appLink =
-        'https://play.google.com/store/apps/details?id=com.makenotetoself';
-    Share.share("Make a $appName: $appLink");
+  void _showChangelog() {
+    final cs = Theme.of(context).colorScheme;
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: cs.surfaceContainerHigh,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: cs.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(LucideIcons.sparkles, size: 20, color: cs.primary),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              "What's New",
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: cs.onSurface,
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'This fork brings modern improvements to the original app:',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: cs.onSurfaceVariant,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 16),
+              _changelogItem(
+                cs,
+                '✨ Material You Support',
+                'Dynamic color theming based on your wallpaper',
+              ),
+              _changelogItem(
+                cs,
+                '🎨 Modern UI Design',
+                'Refined interface with monochromatic icons and consistent theming',
+              ),
+              _changelogItem(
+                cs,
+                '🧩 Smarter Components',
+                'Enhanced reply system, better message layouts, and improved interactions',
+              ),
+              _changelogItem(
+                cs,
+                '⚡ Performance & Polish',
+                'Optimized rendering and smoother animations throughout',
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            style: TextButton.styleFrom(
+              foregroundColor: cs.primary,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Got it'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _changelogItem(ColorScheme cs, String title, String description) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 4,
+            height: 4,
+            margin: const EdgeInsets.only(top: 8, right: 10),
+            decoration: BoxDecoration(
+              color: cs.primary,
+              shape: BoxShape.circle,
+            ),
+          ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: cs.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  description,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: cs.onSurfaceVariant.withValues(alpha: 0.8),
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

@@ -516,11 +516,13 @@ Widget widgetAudioDetails(ModelItem item) {
 class ItemWidgetDocument extends StatefulWidget {
   final ModelItem item;
   final Function(ModelItem) onTap;
+  final bool showBorder;
 
   const ItemWidgetDocument({
     super.key,
     required this.item,
     required this.onTap,
+    this.showBorder = true,
   });
 
   @override
@@ -574,10 +576,12 @@ class _ItemWidgetDocumentState extends State<ItemWidgetDocument> {
           decoration: BoxDecoration(
             color: cs.primary.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: cs.primary.withValues(alpha: 0.15),
-              width: 0.75,
-            ),
+            border: widget.showBorder
+                ? Border.all(
+                    color: cs.primary.withValues(alpha: 0.15),
+                    width: 0.75,
+                  )
+                : null,
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -653,11 +657,13 @@ class _ItemWidgetDocumentState extends State<ItemWidgetDocument> {
 class ItemWidgetLocation extends StatelessWidget {
   final ModelItem item;
   final Function(ModelItem) onTap;
+  final bool showBorder;
 
   const ItemWidgetLocation({
     super.key,
     required this.item,
     required this.onTap,
+    this.showBorder = true,
   });
 
   @override
@@ -673,8 +679,10 @@ class ItemWidgetLocation extends StatelessWidget {
             decoration: BoxDecoration(
               color: cs.error.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                  color: cs.error.withValues(alpha: 0.15), width: 0.75),
+              border: showBorder
+                  ? Border.all(
+                      color: cs.error.withValues(alpha: 0.15), width: 0.75)
+                  : null,
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -735,11 +743,13 @@ class ItemWidgetLocation extends StatelessWidget {
 class ItemWidgetContact extends StatelessWidget {
   final ModelItem item;
   final Function(ModelItem) onTap;
+  final bool showBorder;
 
   const ItemWidgetContact({
     super.key,
     required this.item,
     required this.onTap,
+    this.showBorder = true,
   });
 
   @override
@@ -760,8 +770,10 @@ class ItemWidgetContact extends StatelessWidget {
             decoration: BoxDecoration(
               color: cs.tertiary.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                  color: cs.tertiary.withValues(alpha: 0.15), width: 0.75),
+              border: showBorder
+                  ? Border.all(
+                      color: cs.tertiary.withValues(alpha: 0.15), width: 0.75)
+                  : null,
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -813,112 +825,98 @@ class ItemWidgetContact extends StatelessWidget {
 class ReplyQuoteBubble extends StatelessWidget {
   final ModelItem replyOn;
   final VoidCallback onTap;
+  final bool showBorder;
 
   const ReplyQuoteBubble({
     super.key,
     required this.replyOn,
     required this.onTap,
+    this.showBorder = true,
   });
 
-  String _getPreviewText() {
+  // Types where a thumbnail tells the whole story — no text label needed.
+  bool get _thumbnailOnly =>
+      replyOn.thumbnail != null &&
+      (replyOn.type == ItemType.image ||
+          replyOn.type == ItemType.video ||
+          replyOn.type == ItemType.contact);
+
+  // Label for types without a self-explanatory thumbnail.
+  String get _label {
     switch (replyOn.type) {
       case ItemType.text:
-        return replyOn.text;
-      case ItemType.image:
-        return '🖼 Image';
-      case ItemType.video:
-        return '🎬 Video';
-      case ItemType.audio:
-        return '🎵 Audio';
-      case ItemType.document:
-        return '📄 Document';
-      case ItemType.contact:
-        return '👤 Contact';
-      case ItemType.location:
-        return '📍 Location';
       case ItemType.task:
       case ItemType.completedTask:
         return replyOn.text;
+      case ItemType.audio:
+        return '🎵 ${replyOn.data?["name"] ?? "Audio"}';
+      case ItemType.document:
+        return '📄 ${replyOn.data?["title"] ?? replyOn.data?["name"] ?? "Document"}';
+      case ItemType.location:
+        return '📍 Location';
       default:
-        return 'Message';
+        return '';
     }
+  }
+
+  // Radius scales with text length for text types; fixed pill for everything else.
+  double get _radius {
+    final isText = replyOn.type == ItemType.text ||
+        replyOn.type == ItemType.task ||
+        replyOn.type == ItemType.completedTask;
+    if (!isText) return 12.0;
+    final len = replyOn.text.length;
+    if (len <= 20) return 14.0;
+    if (len >= 120) return 6.0;
+    return 14.0 - (len - 20) / (120 - 20) * 8.0;
   }
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final hasThumbnail = replyOn.thumbnail != null &&
-        (replyOn.type == ItemType.image ||
-            replyOn.type == ItemType.video ||
-            replyOn.type == ItemType.contact);
+    final double r = _radius;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ── Quote bubble ──────────────────────────────────────────────
         GestureDetector(
           onTap: onTap,
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 260),
-            decoration: BoxDecoration(
-              color: cs.onSurface.withValues(alpha: 0.04),
-              borderRadius: const BorderRadius.only(
-                topRight: Radius.circular(14),
-                bottomRight: Radius.circular(14),
-              ),
-              border: Border.all(
-                color: cs.onSurface.withValues(alpha: 0.1),
-                width: 0.75,
-              ),
-            ),
-            child: IntrinsicHeight(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // left accent bar — no radius, left side of bubble is square
-                  Container(
-                    width: 3,
-                    color: cs.primary.withValues(alpha: 0.6),
+          child: _thumbnailOnly
+              // ── Thumbnail-only (image / video / contact) ────────────
+              ? ClipRRect(
+                  borderRadius: BorderRadius.circular(r),
+                  child: Image.memory(
+                    replyOn.thumbnail!,
+                    width: 72,
+                    height: 72,
+                    fit: BoxFit.cover,
                   ),
-                  const SizedBox(width: 8),
-                  // text
-                  Flexible(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 8, horizontal: 4),
-                      child: Text(
-                        _getPreviewText(),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: cs.onSurface.withValues(alpha: 0.7),
-                        ),
-                      ),
+                )
+              // ── Text / label bubble ──────────────────────────────────
+              : Container(
+                  constraints: const BoxConstraints(maxWidth: 260),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: cs.onSurface.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(r),
+                    border: showBorder
+                        ? Border.all(
+                            color: cs.onSurface.withValues(alpha: 0.1),
+                            width: 0.75,
+                          )
+                        : null,
+                  ),
+                  child: Text(
+                    _label,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: cs.onSurface.withValues(alpha: 0.7),
                     ),
                   ),
-                  // thumbnail if available
-                  if (hasThumbnail) ...[
-                    const SizedBox(width: 6),
-                    Padding(
-                      padding: const EdgeInsets.all(6),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.memory(
-                          replyOn.thumbnail!,
-                          width: 40,
-                          height: 40,
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    ),
-                  ] else
-                    const SizedBox(width: 8),
-                ],
-              ),
-            ),
-          ),
+                ),
         ),
         // ── Connector: drops down then bends right toward the bubble ──
         CustomPaint(
@@ -1182,7 +1180,7 @@ class _NoteUrlPreviewState extends State<NoteUrlPreview> {
       margin: const EdgeInsets.only(bottom: 6),
       decoration: BoxDecoration(
         color: cs.onSurface.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
             color: cs.onSurface.withValues(alpha: 0.08), width: 0.75),
       ),
@@ -1243,7 +1241,7 @@ class _NoteUrlPreviewState extends State<NoteUrlPreview> {
                     width: 72,
                     margin: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius: BorderRadius.circular(10),
                       image: DecorationImage(
                         image: FileImage(imgFile),
                         fit: BoxFit.cover,
@@ -1328,8 +1326,6 @@ class _NoteUrlPreviewState extends State<NoteUrlPreview> {
 }
 
 // ── Reply connector painter ───────────────────────────────────────────────────
-/// Draws a short vertical drop that curves rightward, visually connecting
-/// the quote bubble above to the reply bubble below.
 class _ReplyConnectorPainter extends CustomPainter {
   final Color color;
   const _ReplyConnectorPainter({required this.color});
@@ -1341,16 +1337,10 @@ class _ReplyConnectorPainter extends CustomPainter {
       ..strokeWidth = 1.5
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
-
     final path = ui.Path()
       ..moveTo(12, 0)
       ..lineTo(12, size.height * 0.55)
-      ..quadraticBezierTo(
-        12,
-        size.height,
-        28,
-        size.height,
-      );
+      ..quadraticBezierTo(12, size.height, 28, size.height);
     canvas.drawPath(path, paint);
   }
 

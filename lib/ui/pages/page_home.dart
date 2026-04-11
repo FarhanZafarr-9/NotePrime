@@ -508,7 +508,7 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
       }
       if (now - installedAt > timeSpent) {
         await ModelSetting.set(AppString.reviewDialogShown.string, "yes");
-        _showReviewDialog();
+        _showForkInfoDialog();
       }
     }
   }
@@ -584,7 +584,7 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
     );
   }
 
-  void _showReviewDialog() {
+  void _showForkInfoDialog() {
     if (mounted) {
       final cs = Theme.of(context).colorScheme;
       showDialog(
@@ -597,13 +597,27 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
               borderRadius: BorderRadius.circular(20),
             ),
             title: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Did you know?',
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: cs.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(LucideIcons.gitFork, size: 20, color: cs.primary),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'About This App',
                     style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w500,
-                        color: cs.onSurface)),
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: cs.onSurface,
+                    ),
+                  ),
+                ),
                 IconButton(
                   tooltip: "Close",
                   icon:
@@ -612,30 +626,131 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
                 ),
               ],
             ),
-            content: Text(
-              '$appName is a completely private notes app. It doesn\'t collect your personal data or show you ads.\n\nWe hope you enjoy using it. Tell us what you think.',
-              style: TextStyle(fontSize: 14, color: cs.onSurfaceVariant),
+            content: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Fork notice
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: cs.primary.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: cs.primary.withValues(alpha: 0.2),
+                        width: 0.75,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(LucideIcons.info, size: 16, color: cs.primary),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'This is a modern fork with Material You support',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: cs.onSurface.withValues(alpha: 0.85),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Original app credit
+                  Text(
+                    'Based on the original app by jeerovan',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: cs.onSurfaceVariant.withValues(alpha: 0.8),
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // Improvements
+                  Text(
+                    'What\'s New:',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: cs.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _forkFeature(cs, '✨', 'Material You theming'),
+                  _forkFeature(cs, '🎨', 'Refined modern UI'),
+                  _forkFeature(cs, '🧩', 'Enhanced components'),
+                  _forkFeature(cs, '⚡', 'Better performance'),
+                  const SizedBox(height: 12),
+                  // Privacy note
+                  Text(
+                    '$appName is completely private. No data collection, no ads.',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: cs.onSurfaceVariant.withValues(alpha: 0.7),
+                      height: 1.4,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+              ),
             ),
             actions: [
               TextButton(
                 style: TextButton.styleFrom(
-                  foregroundColor: cs.primary,
+                  foregroundColor: cs.onSurfaceVariant,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
                 onPressed: () {
                   Navigator.pop(context);
-                  const url =
-                      'https://play.google.com/store/apps/details?id=com.makenotetoself';
+                  const url = 'https://github.com/jeerovan/ntsapp';
                   openURL(url);
                 },
-                child: const Text('Leave a review'),
+                child: const Text('Original'),
+              ),
+              TextButton(
+                style: TextButton.styleFrom(
+                  foregroundColor: cs.primary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                onPressed: () {
+                  Navigator.pop(context);
+                  const url = 'https://github.com/FarhanZafarr-9/ntsapp';
+                  openURL(url);
+                },
+                child: const Text('View Fork'),
               ),
             ],
           );
         },
       );
     }
+  }
+
+  Widget _forkFeature(ColorScheme cs, String emoji, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        children: [
+          Text(emoji, style: const TextStyle(fontSize: 14)),
+          const SizedBox(width: 8),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 13,
+              color: cs.onSurface.withValues(alpha: 0.8),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> navigateToOnboardCheck() async {
@@ -732,7 +847,7 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
       if (!requiresAuthentication || isAuthenticated)
         IconButton(
           tooltip: "Search notes",
-          icon: const Icon(LucideIcons.search),
+          icon: _buildIconBadge(LucideIcons.search),
           onPressed: () {
             if (widget.runningOnDesktop) {
               widget.setShowHidePage!(PageType.search, true, PageParams());
@@ -747,216 +862,150 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
             }
           },
         ),
-      PopupMenuButton<int>(
-        padding: EdgeInsets.zero,
-        constraints: const BoxConstraints(minWidth: 200, maxWidth: 240),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(
-            color: cs.onSurface.withValues(alpha: 0.1),
-            width: 0.75,
+      IconButton(
+        tooltip: "About this fork",
+        icon: _buildIconBadge(LucideIcons.gitFork),
+        onPressed: _showForkInfoDialog,
+      ),
+      Padding(
+        padding: const EdgeInsets.only(right: 8),
+        child: PopupMenuButton<int>(
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 200, maxWidth: 240),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(
+              color: cs.onSurface.withValues(alpha: 0.1),
+              width: 0.75,
+            ),
           ),
-        ),
-        color: cs.surfaceContainerLowest,
-        elevation: 4,
-        icon: Stack(
-          children: [
-            const Icon(LucideIcons.moreVertical),
-            if (!hasValidPlan)
-              Positioned(
-                right: 0,
-                top: 0,
-                child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: cs.error,
-                    shape: BoxShape.circle,
+          color: cs.surfaceContainerLowest,
+          elevation: 4,
+          icon: Stack(
+            children: [
+              _buildIconBadge(LucideIcons.moreVertical),
+              if (!hasValidPlan)
+                Positioned(
+                  right: 0,
+                  top: 0,
+                  child: Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: cs.error,
+                      shape: BoxShape.circle,
+                    ),
                   ),
                 ),
-              ),
-          ],
-        ),
-        onSelected: (value) {
-          switch (value) {
-            case 0:
-              if (widget.runningOnDesktop) {
-                widget.setShowHidePage!(
-                    PageType.settings,
-                    true,
-                    PageParams(
-                        isAuthenticated:
-                            !requiresAuthentication || isAuthenticated));
-              } else {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => SettingsPage(
-                      runningOnDesktop: widget.runningOnDesktop,
-                      setShowHidePage: widget.setShowHidePage,
-                      isDarkMode: widget.isDarkMode,
-                      onThemeToggle: widget.onThemeToggle,
-                      useDynamicColor: widget.useDynamicColor,
-                      onDynamicColorToggle: widget.onDynamicColorToggle,
-                      canShowBackupRestore:
-                          !requiresAuthentication || isAuthenticated,
+            ],
+          ),
+          onSelected: (value) {
+            switch (value) {
+              case 0:
+                if (widget.runningOnDesktop) {
+                  widget.setShowHidePage!(
+                      PageType.settings,
+                      true,
+                      PageParams(
+                          isAuthenticated:
+                              !requiresAuthentication || isAuthenticated));
+                } else {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => SettingsPage(
+                        runningOnDesktop: widget.runningOnDesktop,
+                        setShowHidePage: widget.setShowHidePage,
+                        isDarkMode: widget.isDarkMode,
+                        onThemeToggle: widget.onThemeToggle,
+                        useDynamicColor: widget.useDynamicColor,
+                        onDynamicColorToggle: widget.onDynamicColorToggle,
+                        canShowBackupRestore:
+                            !requiresAuthentication || isAuthenticated,
+                      ),
+                      settings: const RouteSettings(name: "Settings"),
                     ),
-                    settings: const RouteSettings(name: "Settings"),
-                  ),
-                ).then((_) {
-                  onExitSettings();
-                });
-              }
-              break;
-            case 1:
-              if (widget.runningOnDesktop) {
-                widget.setShowHidePage!(PageType.starred, true, PageParams());
-              } else {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => PageStarredItems(
-                      runningOnDesktop: widget.runningOnDesktop,
-                      setShowHidePage: widget.setShowHidePage,
+                  ).then((_) {
+                    onExitSettings();
+                  });
+                }
+                break;
+              case 1:
+                if (widget.runningOnDesktop) {
+                  widget.setShowHidePage!(PageType.starred, true, PageParams());
+                } else {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => PageStarredItems(
+                        runningOnDesktop: widget.runningOnDesktop,
+                        setShowHidePage: widget.setShowHidePage,
+                      ),
+                      settings: const RouteSettings(name: "StarredNotes"),
                     ),
-                    settings: const RouteSettings(name: "StarredNotes"),
-                  ),
-                );
-              }
-              break;
-            case 2:
-              if (widget.runningOnDesktop) {
-                widget.setShowHidePage!(PageType.archive, true, PageParams());
-              } else {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => PageArchived(
-                      runningOnDesktop: widget.runningOnDesktop,
-                      setShowHidePage: widget.setShowHidePage,
+                  );
+                }
+                break;
+              case 2:
+                if (widget.runningOnDesktop) {
+                  widget.setShowHidePage!(PageType.archive, true, PageParams());
+                } else {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => PageArchived(
+                        runningOnDesktop: widget.runningOnDesktop,
+                        setShowHidePage: widget.setShowHidePage,
+                      ),
+                      settings: const RouteSettings(name: "Trash"),
                     ),
-                    settings: const RouteSettings(name: "Trash"),
-                  ),
-                );
-              }
-              break;
-            case 3:
-              if (_canSync) {
-                SyncUtils.waitAndSyncChanges(manualSync: true);
-              } else {
-                navigateToOnboardCheck();
-              }
-              break;
-            case 4:
-              navigateToPlanStatus();
-              break;
-            case 11:
-              Navigator.of(context).push(MaterialPageRoute(
-                builder: (context) => PageDummy(),
-                settings: const RouteSettings(name: "DummyPage"),
-              ));
-              break;
-            case 12:
-              Navigator.of(context).push(MaterialPageRoute(
-                builder: (context) => PageSqlite(),
-                settings: const RouteSettings(name: "SqlitePage"),
-              ));
-              break;
-            case 14:
-              Navigator.of(context).push(MaterialPageRoute(
-                builder: (context) => PageLogs(),
-                settings: const RouteSettings(name: "PageLogs"),
-              ));
-              break;
-          }
-        },
-        itemBuilder: (context) => [
-          PopupMenuItem<int>(
-            value: 3,
-            padding: EdgeInsets.zero,
-            height: 0,
-            child: _menuItem(
+                  );
+                }
+                break;
+              case 3:
+                if (_canSync) {
+                  SyncUtils.waitAndSyncChanges(manualSync: true);
+                } else {
+                  navigateToOnboardCheck();
+                }
+                break;
+              case 4:
+                navigateToPlanStatus();
+                break;
+              case 11:
+                Navigator.of(context).push(MaterialPageRoute(
+                  builder: (context) => PageDummy(),
+                  settings: const RouteSettings(name: "DummyPage"),
+                ));
+                break;
+              case 12:
+                Navigator.of(context).push(MaterialPageRoute(
+                  builder: (context) => PageSqlite(),
+                  settings: const RouteSettings(name: "SqlitePage"),
+                ));
+                break;
+              case 14:
+                Navigator.of(context).push(MaterialPageRoute(
+                  builder: (context) => PageLogs(),
+                  settings: const RouteSettings(name: "PageLogs"),
+                ));
+                break;
+            }
+          },
+          itemBuilder: (context) => [
+            PopupMenuItem<int>(
+              value: 3,
+              padding: EdgeInsets.zero,
+              height: 0,
+              child: _menuItem(
                 context: context,
                 value: 3,
                 icon: LucideIcons.refreshCcw,
                 label: "Sync",
                 extraTopRadius: true,
-                ),
-          ),
-          PopupMenuItem(
-            enabled: false,
-            height: 0,
-            padding: EdgeInsets.zero,
-            child: Divider(
-              height: 6,
-              thickness: 0.75,
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.1),
-            ),
-          ),
-          if (!requiresAuthentication || isAuthenticated)
-            PopupMenuItem<int>(
-              value: 2,
-              padding: EdgeInsets.zero,
-              height: 0,
-              child: _menuItem(
-                  context: context,
-                  value: 2,
-                  icon: LucideIcons.archiveRestore,
-                  label: "Trash"),
-            ),
-          if (!requiresAuthentication || isAuthenticated)
-            PopupMenuItem<int>(
-              value: 1,
-              padding: EdgeInsets.zero,
-              height: 0,
-              child: _menuItem(
-                  context: context,
-                  value: 1,
-                  icon: LucideIcons.star,
-                  label: "Starred notes"),
-            ),
-          PopupMenuItem(
-            enabled: false,
-            height: 0,
-            padding: EdgeInsets.zero,
-            child: Divider(
-              height: 6,
-              thickness: 0.75,
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.1),
-            ),
-          ),
-          PopupMenuItem<int>(
-            value: 0,
-            padding: EdgeInsets.zero,
-            height: 0,
-            child: _menuItem(
-                context: context,
-                value: 0,
-                icon: LucideIcons.settings,
-                label: "Settings"),
-          ),
-          if (SyncUtils.getSignedInUserId() != null)
-            PopupMenuItem<int>(
-              value: 4,
-              padding: EdgeInsets.zero,
-              height: 0,
-              child: _menuItem(
-                context: context,
-                value: 4,
-                icon: hasValidPlan
-                    ? LucideIcons.shield
-                    : LucideIcons.alertTriangle,
-                label: "Account",
-                isDanger: !hasValidPlan,
               ),
             ),
-          if (isDebugEnabled) PopupMenuItem(
+            PopupMenuItem(
               enabled: false,
               height: 0,
               padding: EdgeInsets.zero,
@@ -969,44 +1018,119 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
                     .withValues(alpha: 0.1),
               ),
             ),
-          if (isDebugEnabled)
+            if (!requiresAuthentication || isAuthenticated)
+              PopupMenuItem<int>(
+                value: 2,
+                padding: EdgeInsets.zero,
+                height: 0,
+                child: _menuItem(
+                    context: context,
+                    value: 2,
+                    icon: LucideIcons.archiveRestore,
+                    label: "Trash"),
+              ),
+            if (!requiresAuthentication || isAuthenticated)
+              PopupMenuItem<int>(
+                value: 1,
+                padding: EdgeInsets.zero,
+                height: 0,
+                child: _menuItem(
+                    context: context,
+                    value: 1,
+                    icon: LucideIcons.star,
+                    label: "Starred notes"),
+              ),
+            PopupMenuItem(
+              enabled: false,
+              height: 0,
+              padding: EdgeInsets.zero,
+              child: Divider(
+                height: 6,
+                thickness: 0.75,
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.1),
+              ),
+            ),
             PopupMenuItem<int>(
-              value: 11,
+              value: 0,
               padding: EdgeInsets.zero,
               height: 0,
               child: _menuItem(
                   context: context,
-                  value: 11,
-                  icon: LucideIcons.file,
-                  label: "Page"),
+                  value: 0,
+                  icon: LucideIcons.settings,
+                  label: "Settings"),
             ),
-          if (isDebugEnabled)
-            PopupMenuItem<int>(
-              value: 12,
-              padding: EdgeInsets.zero,
-              height: 0,
-              child: _menuItem(
+            if (SyncUtils.getSignedInUserId() != null)
+              PopupMenuItem<int>(
+                value: 4,
+                padding: EdgeInsets.zero,
+                height: 0,
+                child: _menuItem(
+                  context: context,
+                  value: 4,
+                  icon: hasValidPlan
+                      ? LucideIcons.shield
+                      : LucideIcons.alertTriangle,
+                  label: "Account",
+                  isDanger: !hasValidPlan,
+                ),
+              ),
+            if (isDebugEnabled)
+              PopupMenuItem(
+                enabled: false,
+                height: 0,
+                padding: EdgeInsets.zero,
+                child: Divider(
+                  height: 6,
+                  thickness: 0.75,
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.1),
+                ),
+              ),
+            if (isDebugEnabled)
+              PopupMenuItem<int>(
+                value: 11,
+                padding: EdgeInsets.zero,
+                height: 0,
+                child: _menuItem(
+                    context: context,
+                    value: 11,
+                    icon: LucideIcons.file,
+                    label: "Page"),
+              ),
+            if (isDebugEnabled)
+              PopupMenuItem<int>(
+                value: 12,
+                padding: EdgeInsets.zero,
+                height: 0,
+                child: _menuItem(
                   context: context,
                   value: 12,
                   icon: LucideIcons.database,
                   label: "Sqlite",
                   extraBottomRadius: !loggingEnabled,
-                  ),
-            ),
-          if (loggingEnabled)
-            PopupMenuItem<int>(
-              value: 14,
-              padding: EdgeInsets.zero,
-              height: 0,
-              child: _menuItem(
+                ),
+              ),
+            if (loggingEnabled)
+              PopupMenuItem<int>(
+                value: 14,
+                padding: EdgeInsets.zero,
+                height: 0,
+                child: _menuItem(
                   context: context,
                   value: 14,
                   icon: LucideIcons.list,
                   label: "Logs",
                   extraBottomRadius: true,
-                  ),
-            ),
-        ],
+                ),
+              ),
+          ],
+        ),
       ),
     ];
   }

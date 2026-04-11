@@ -229,9 +229,14 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
         }
         if (itemInItems != null) {
           int indexOfItem = _displayItemList.indexOf(itemInItems);
+          FocusManager.instance.primaryFocus?.unfocus();
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            _itemScrollController.jumpTo(index: indexOfItem);
-            triggerItemBlink();
+            Future.delayed(const Duration(milliseconds: 80), () {
+              if (mounted) {
+                _itemScrollController.jumpTo(index: indexOfItem);
+                triggerItemBlink();
+              }
+            });
           });
         }
       } else {
@@ -1280,6 +1285,7 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                             item: chainItem,
                             isLast: isLast,
                             onTap: () {
+                              FocusManager.instance.primaryFocus?.unfocus();
                               Navigator.of(context).pop();
                               fetchItems(chainItem.id);
                             },
@@ -1391,6 +1397,15 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                             item.type == ItemType.location ||
                             item.type == ItemType.contact;
 
+                        // Dynamic radius: short text → pill (22), long → flat (10).
+                        final double bubbleRadius = () {
+                          if (isAttachment) return 14.0;
+                          final int len = item.text.length;
+                          if (len <= 20) return 22.0;
+                          if (len >= 120) return 10.0;
+                          return 22.0 - (len - 20) / (120 - 20) * 12.0;
+                        }();
+
                         Widget mainItem;
                         if (item.type == ItemType.date) {
                           mainItem = showDateTime
@@ -1450,6 +1465,7 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                                           alignment: Alignment.centerLeft,
                                           child: ReplyQuoteBubble(
                                             replyOn: item.replyOn!,
+                                            showBorder: showNoteBorder,
                                             onTap: () =>
                                                 _showReplyThreadOverlay(
                                                     context, item),
@@ -1468,16 +1484,16 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                                         ),
                                         child: Material(
                                           shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(16),
-                                            side: BorderSide(
-                                              color: (showNoteBorder &&
-                                                      !isAttachment)
-                                                  ? cs.onSurface
-                                                      .withValues(alpha: 0.1)
-                                                  : Colors.transparent,
-                                              width: 0.5,
-                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                                bubbleRadius),
+                                            side: (!isAttachment &&
+                                                    showNoteBorder)
+                                                ? BorderSide(
+                                                    color: cs.onSurface
+                                                        .withValues(alpha: 0.1),
+                                                    width: 0.5,
+                                                  )
+                                                : BorderSide.none,
                                           ),
                                           color: isAttachment
                                               ? Colors.transparent
@@ -1488,8 +1504,10 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                                                 vertical: isAttachment ? 2 : 8,
                                                 horizontal:
                                                     isAttachment ? 0 : 8),
-                                            padding: EdgeInsets.all(
-                                                isAttachment ? 0 : 6),
+                                            padding: EdgeInsets.symmetric(
+                                              vertical: isAttachment ? 0 : 2,
+                                              horizontal: isAttachment ? 0 : 6,
+                                            ),
                                             child: Column(
                                               crossAxisAlignment:
                                                   CrossAxisAlignment.start,
@@ -1561,8 +1579,8 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                           fetchItems(null);
                         },
                         shape: const CircleBorder(),
-                        backgroundColor: cs.onSurface.withValues(alpha: 0.06),
-                        foregroundColor: cs.onSurface,
+                        backgroundColor: cs.onSurface,
+                        foregroundColor: cs.surface,
                         child: const Icon(LucideIcons.chevronsDown),
                       ),
                     ),
@@ -1602,11 +1620,14 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
       case ItemType.audio:
         return ItemWidgetAudio(item: item);
       case ItemType.document:
-        return ItemWidgetDocument(item: item, onTap: openDocument);
+        return ItemWidgetDocument(
+            item: item, onTap: openDocument, showBorder: showNoteBorder);
       case ItemType.location:
-        return ItemWidgetLocation(item: item, onTap: openLocation);
+        return ItemWidgetLocation(
+            item: item, onTap: openLocation, showBorder: showNoteBorder);
       case ItemType.contact:
-        return ItemWidgetContact(item: item, onTap: addToContacts);
+        return ItemWidgetContact(
+            item: item, onTap: addToContacts, showBorder: showNoteBorder);
       case ItemType.completedTask:
       case ItemType.task:
         return ItemWidgetTask(item: item);
@@ -1991,26 +2012,14 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // 2-column grid of attachment options
                 GridView.count(
-                  crossAxisCount: 4,
+                  crossAxisCount: 5,
                   shrinkWrap: true,
                   mainAxisSpacing: 8,
                   crossAxisSpacing: 8,
                   childAspectRatio: 0.9,
                   physics: const NeverScrollableScrollPhysics(),
                   children: [
-                    if (Platform.isAndroid || Platform.isIOS)
-                      _attachmentGridItem(
-                          context, LucideIcons.contact, "Contact", () {
-                        Navigator.pop(context);
-                        _addMedia('contact');
-                      }),
-                    _attachmentGridItem(context, LucideIcons.mapPin, "Location",
-                        () {
-                      Navigator.pop(context);
-                      _addMedia('location');
-                    }),
                     if (ImagePicker().supportsImageSource(ImageSource.camera))
                       _attachmentGridItem(context, LucideIcons.camera, "Camera",
                           () {
@@ -2026,6 +2035,17 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                       Navigator.pop(context);
                       setTaskMode();
                     }, active: _isCreatingTask),
+                    _attachmentGridItem(context, LucideIcons.mapPin, "Location",
+                        () {
+                      Navigator.pop(context);
+                      _addMedia('location');
+                    }),
+                    if (Platform.isAndroid || Platform.isIOS)
+                      _attachmentGridItem(
+                          context, LucideIcons.contact, "Contact", () {
+                        Navigator.pop(context);
+                        _addMedia('contact');
+                      }),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -2116,41 +2136,82 @@ class _ThreadBubble extends StatelessWidget {
     required this.onTap,
   });
 
-  String _getText() {
+  bool get _thumbnailOnly =>
+      item.thumbnail != null &&
+      (item.type == ItemType.image ||
+          item.type == ItemType.video ||
+          item.type == ItemType.contact);
+
+  String get _label {
     switch (item.type) {
       case ItemType.text:
-        return item.text;
-      case ItemType.image:
-        return '🖼 Image';
-      case ItemType.video:
-        return '🎬 Video';
-      case ItemType.audio:
-        return '🎵 Audio';
-      case ItemType.document:
-        return '📄 Document';
-      case ItemType.contact:
-        return '👤 Contact';
-      case ItemType.location:
-        return '📍 Location';
       case ItemType.task:
       case ItemType.completedTask:
         return item.text;
+      case ItemType.audio:
+        return '🎵 ${item.data?["name"] ?? "Audio"}';
+      case ItemType.document:
+        return '📄 ${item.data?["title"] ?? item.data?["name"] ?? "Document"}';
+      case ItemType.location:
+        return '📍 Location';
       default:
-        return 'Message';
+        return '';
     }
+  }
+
+  double get _radius {
+    final isText = item.type == ItemType.text ||
+        item.type == ItemType.task ||
+        item.type == ItemType.completedTask;
+    if (!isText) return 14.0;
+    final len = item.text.length;
+    if (len <= 20) return 20.0;
+    if (len >= 120) return 10.0;
+    return 20.0 - (len - 20) / (120 - 20) * 10.0;
   }
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final hasThumbnail = item.thumbnail != null &&
-        (item.type == ItemType.image ||
-            item.type == ItemType.video ||
-            item.type == ItemType.contact);
-
-    // isLast = the most recent reply (align right as "your message")
-    // !isLast = the original message being replied TO (align left as "quoted")
     final alignLeft = !isLast;
+    final double r = _radius;
+
+    Widget bubble;
+    if (_thumbnailOnly) {
+      bubble = ClipRRect(
+        borderRadius: BorderRadius.circular(r),
+        child: Image.memory(
+          item.thumbnail!,
+          width: 120,
+          height: 120,
+          fit: BoxFit.cover,
+        ),
+      );
+    } else {
+      bubble = Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: alignLeft
+              ? cs.onSurface.withValues(alpha: 0.05)
+              : cs.onSurface.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(r),
+          border: Border.all(
+            color: cs.onSurface.withValues(alpha: alignLeft ? 0.1 : 0.12),
+            width: 0.75,
+          ),
+        ),
+        child: Text(
+          _label,
+          maxLines: 3,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: 13,
+            color: cs.onSurface.withValues(alpha: 0.85),
+            decoration: TextDecoration.none,
+          ),
+        ),
+      );
+    }
 
     return Column(
       crossAxisAlignment:
@@ -2166,87 +2227,9 @@ class _ThreadBubble extends StatelessWidget {
               left: alignLeft ? 0 : 40,
               right: alignLeft ? 40 : 0,
             ),
-            child: IntrinsicHeight(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: alignLeft
-                      ? cs.onSurface.withValues(alpha: 0.04)
-                      : cs.onSurface.withValues(alpha: 0.07),
-                  borderRadius: alignLeft
-                      ? const BorderRadius.only(
-                          topRight: Radius.circular(16),
-                          bottomRight: Radius.circular(16),
-                        )
-                      : BorderRadius.circular(16),
-                  border: Border.all(
-                    color:
-                        cs.onSurface.withValues(alpha: alignLeft ? 0.1 : 0.12),
-                    width: 0.75,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Left accent bar for quoted message (left-aligned)
-                    if (alignLeft)
-                      Container(
-                        width: 3,
-                        decoration: BoxDecoration(
-                          color: cs.primary.withValues(alpha: 0.6),
-                          borderRadius: const BorderRadius.only(
-                            bottomLeft: Radius.circular(0),
-                            topLeft: Radius.circular(0),
-                          ),
-                        ),
-                      ),
-                    // Content
-                    Flexible(
-                      child: Padding(
-                        padding: EdgeInsets.only(
-                          left: alignLeft ? 10 : 14,
-                          right: 14,
-                          top: 10,
-                          bottom: 10,
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Flexible(
-                              child: Text(
-                                _getText(),
-                                maxLines: 3,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: cs.onSurface.withValues(alpha: 0.85),
-                                  decoration: TextDecoration.none,
-                                ),
-                              ),
-                            ),
-                            if (hasThumbnail) ...[
-                              const SizedBox(width: 10),
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.memory(
-                                  item.thumbnail!,
-                                  width: 44,
-                                  height: 44,
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            child: bubble,
           ),
         ),
-        // connector line between bubbles
         if (!isLast)
           SizedBox(
             height: 20,
