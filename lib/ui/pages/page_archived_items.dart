@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import 'package:ntsapp/ui/common_widgets.dart';
 import 'package:ntsapp/utils/enums.dart';
 import 'package:ntsapp/services/service_events.dart';
@@ -7,15 +8,17 @@ import '../../models/model_item.dart';
 import '../widgets_item.dart';
 
 class PageArchivedItems extends StatefulWidget {
-  final Function(bool) onSelectionChange;
+  final Function(bool, int) onSelectionChange;
   final Function(VoidCallback) setDeleteCallback;
   final Function(VoidCallback) setRestoreCallback;
+  final Function(VoidCallback) setSelectAllCallback;
 
   const PageArchivedItems({
     super.key,
     required this.onSelectionChange,
     required this.setDeleteCallback,
     required this.setRestoreCallback,
+    required this.setSelectAllCallback,
   });
 
   @override
@@ -25,31 +28,18 @@ class PageArchivedItems extends StatefulWidget {
 class _PageArchivedItemsState extends State<PageArchivedItems> {
   final List<ModelItem> _items = [];
   final List<ModelItem> _selection = [];
+  // ignore: unused_field
   bool _isSelecting = false;
 
   @override
   void initState() {
     super.initState();
-    widget.setDeleteCallback(() {
-      setState(() {
-        deleteSelectedItems();
-        widget.onSelectionChange(false);
-      });
-    });
-    widget.setRestoreCallback(() {
-      setState(() {
-        restoreSelectedItems();
-        widget.onSelectionChange(false);
-      });
-    });
+    widget.setDeleteCallback(deleteSelectedItems);
+    widget.setRestoreCallback(restoreSelectedItems);
+    widget.setSelectAllCallback(selectAllItems);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       fetchArchivedItems();
     });
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
   }
 
   Future<void> fetchArchivedItems() async {
@@ -65,47 +55,50 @@ class _PageArchivedItemsState extends State<PageArchivedItems> {
         _selection.remove(item);
         if (_selection.isEmpty) {
           _isSelecting = false;
-          widget.onSelectionChange(false);
+          widget.onSelectionChange(false, 0);
+        } else {
+          widget.onSelectionChange(true, _selection.length);
         }
       } else {
         _selection.add(item);
-        if (!_isSelecting) {
-          _isSelecting = true;
-          widget.onSelectionChange(true);
-        }
+        _isSelecting = true;
+        widget.onSelectionChange(true, _selection.length);
       }
     });
   }
 
   void selectAllItems() {
-    _selection.clear();
-    _selection.addAll(_items);
     setState(() {
+      _selection.clear();
+      _selection.addAll(_items);
       _isSelecting = true;
+      widget.onSelectionChange(true, _selection.length);
     });
   }
 
   Future<void> restoreSelectedItems() async {
-    for (ModelItem item in _selection) {
+    final toRestore = List<ModelItem>.from(_selection);
+    clearSelection();
+    for (ModelItem item in toRestore) {
       item.archivedAt = 0;
       await item.update(["archived_at"]);
       EventStream()
           .publish(AppEvent(type: EventType.changedItemId, value: item.id));
     }
     if (mounted) {
-      clearSelection();
       displaySnackBar(context, message: "Restored.", seconds: 1);
     }
     await fetchArchivedItems();
   }
 
   Future<void> deleteSelectedItems() async {
-    for (ModelItem item in _selection) {
+    final toDelete = List<ModelItem>.from(_selection);
+    clearSelection();
+    for (ModelItem item in toDelete) {
       _items.remove(item);
       await item.delete(withServerSync: true);
     }
     if (mounted) {
-      clearSelection();
       displaySnackBar(context, message: "Deleted permanently.", seconds: 1);
     }
     await fetchArchivedItems();
@@ -116,114 +109,154 @@ class _PageArchivedItemsState extends State<PageArchivedItems> {
       _selection.clear();
       _isSelecting = false;
     });
+    widget.onSelectionChange(false, 0);
   }
 
   @override
   Widget build(BuildContext context) {
-    final edgeToEdgePadding = MediaQuery.of(context).padding;
-    return Scaffold(
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              itemCount: _items.length,
-              itemBuilder: (context, index) {
-                final item = _items[index];
-                return GestureDetector(
-                  onTap: () {
-                    onItemTapped(item);
-                  },
-                  child: Container(
-                    width: double.infinity,
-                    color: _selection.contains(item)
-                        ? Theme.of(context).colorScheme.inversePrimary
-                        : Colors.transparent,
-                    margin: const EdgeInsets.symmetric(vertical: 1),
-                    child: Container(
-                        margin: const EdgeInsets.symmetric(
-                            vertical: 5, horizontal: 10),
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.surface,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: _buildItem(item)),
+    final cs = Theme.of(context).colorScheme;
+
+    if (_items.isEmpty) {
+      return _ArchivedEmptyState(
+        icon: LucideIcons.fileText,
+        message: "No archived notes",
+        subtitle: "Notes you archive will appear here",
+      );
+    }
+
+    return ListView.separated(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      itemCount: _items.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 3),
+      itemBuilder: (context, index) {
+        final item = _items[index];
+        final isSelected = _selection.contains(item);
+        final bool isAttachment = item.type == ItemType.image ||
+            item.type == ItemType.video ||
+            item.type == ItemType.audio ||
+            item.type == ItemType.document ||
+            item.type == ItemType.location ||
+            item.type == ItemType.contact;
+
+        return GestureDetector(
+          onTap: () => onItemTapped(item),
+          onLongPress: () => onItemTapped(item),
+          child: Container(
+            width: double.infinity,
+            color: isSelected
+                ? cs.onSurface.withValues(alpha: 0.1)
+                : Colors.transparent,
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Container(
+                margin: EdgeInsets.only(
+                  top: 2,
+                  bottom: 2,
+                  right: 12,
+                  left: isAttachment ? 0 : 12,
+                ),
+                child: Material(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: BorderSide(
+                      color: isAttachment
+                          ? Colors.transparent
+                          : cs.onSurface.withValues(alpha: 0.1),
+                      width: 0.5,
+                    ),
                   ),
-                );
-              },
+                  color: isAttachment
+                      ? Colors.transparent
+                      : cs.onSurface.withValues(alpha: 0.07),
+                  child: Container(
+                    margin: EdgeInsets.symmetric(
+                      vertical: isAttachment ? 2 : 8,
+                      horizontal: isAttachment ? 0 : 8,
+                    ),
+                    padding: EdgeInsets.all(isAttachment ? 0 : 6),
+                    child: _buildItem(item),
+                  ),
+                ),
+              ),
             ),
           ),
-          if (_isSelecting)
-            Padding(
-              padding:
-                  EdgeInsets.fromLTRB(8.0, 8, 8, 8 + edgeToEdgePadding.bottom),
-              child: ElevatedButton(
-                  onPressed: selectAllItems,
-                  child: Text(
-                    "Select all",
-                    style: TextStyle(color: Colors.black),
-                  )),
-            ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  // Widget for displaying different item types
   Widget _buildItem(ModelItem item) {
     switch (item.type) {
       case ItemType.task:
-        return ItemWidgetTask(
-          item: item,
-
-        );
       case ItemType.completedTask:
-        return ItemWidgetTask(
-          item: item,
-
-        );
+        return ItemWidgetTask(item: item);
       case ItemType.text:
-        return ItemWidgetText(
-          item: item,
-
-        );
+        return ItemWidgetText(item: item);
       case ItemType.image:
-        return ItemWidgetImage(
-          item: item,
-          onTap: onItemTapped,
-
-        );
+        return ItemWidgetImage(item: item, onTap: (_) {});
       case ItemType.video:
-        return ItemWidgetVideo(
-          item: item,
-          onTap: onItemTapped,
-
-        );
+        return ItemWidgetVideo(item: item, onTap: (_) {});
       case ItemType.audio:
-        return ItemWidgetAudio(
-          item: item,
-
-        );
+        return ItemWidgetAudio(item: item);
       case ItemType.document:
-        return ItemWidgetDocument(
-          item: item,
-          onTap: onItemTapped,
-
-        );
+        return ItemWidgetDocument(item: item, onTap: (_) {});
       case ItemType.location:
-        return ItemWidgetLocation(
-          item: item,
-          onTap: onItemTapped,
-
-        );
+        return ItemWidgetLocation(item: item, onTap: (_) {});
       case ItemType.contact:
-        return ItemWidgetContact(
-          item: item,
-          onTap: onItemTapped,
-
-        );
+        return ItemWidgetContact(item: item, onTap: (_) {});
       default:
         return const SizedBox.shrink();
     }
+  }
+}
+
+class _ArchivedEmptyState extends StatelessWidget {
+  final IconData icon;
+  final String message;
+  final String subtitle;
+
+  const _ArchivedEmptyState({
+    required this.icon,
+    required this.message,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: cs.onSurface.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Icon(icon, size: 28, color: cs.onSurfaceVariant),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              message,
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w500,
+                color: cs.onSurface,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14, color: cs.onSurfaceVariant),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

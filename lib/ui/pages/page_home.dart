@@ -1,8 +1,9 @@
+// ignore_for_file: unused_element, unused_field
+
 import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:ntsapp/ui/common_widgets.dart';
@@ -249,7 +250,6 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
     }
   }
 
-  // executes once while initstate
   Future<void> checkAuthAndLoad() async {
     if (isAuthenticating) return;
     isAuthenticating = true;
@@ -275,7 +275,7 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
   }
 
   void _loadCategoriesGroups() {
-    _debounceTimer?.cancel(); // Cancel any ongoing debounce
+    _debounceTimer?.cancel();
     _debounceTimer = Timer(Duration(seconds: 1), () {
       loadCategoriesGroups();
     });
@@ -311,34 +311,20 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
       isAuthenticated = await _auth.authenticate(
         localizedReason: 'Please authenticate',
         options: const AuthenticationOptions(
-          biometricOnly: false, // Use only biometric
-          stickyAuth: true, // Keeps the authentication open
+          biometricOnly: false,
+          stickyAuth: true,
         ),
       );
 
-      if (!isAuthenticated) {
-        _exitApp();
-      } else {
-        isAuthenticated = true;
+      if (isAuthenticated) {
         AuthGuard.isLocked.value = false;
         loadCategoriesGroups();
       }
     } catch (e, s) {
       logger.error("_authenticateOnStart", error: e, stackTrace: s);
-      _exitApp();
     } finally {
       AuthGuard.isAuthenticating = false;
       AuthGuard.lastActiveAt = DateTime.now();
-    }
-  }
-
-  void _exitApp() {
-    if (Platform.isAndroid || Platform.isWindows || Platform.isLinux) {
-      // Closes the app
-      SystemNavigator.pop();
-    } else if (Platform.isIOS || Platform.isMacOS) {
-      // For iOS and macOS, exit the process
-      exit(0);
     }
   }
 
@@ -521,57 +507,129 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
         timeSpent = 1 * 60 * 1000;
       }
       if (now - installedAt > timeSpent) {
-        // 10 minutes
         await ModelSetting.set(AppString.reviewDialogShown.string, "yes");
         _showReviewDialog();
       }
     }
   }
 
+  // ── Shared icon badge (monochromatic, matches settings page) ──────────────
+  Widget _buildIconBadge(IconData icon) {
+    final color = Theme.of(context).colorScheme.onSurfaceVariant;
+    return Container(
+      width: 34,
+      height: 34,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Icon(icon, size: 18, color: color),
+    );
+  }
+
+  // ── Popup menu item (monochromatic icon, consistent across both pages) ────
+  Widget _menuItem({
+    required BuildContext context,
+    required int value,
+    required IconData icon,
+    required String label,
+    bool isDanger = false,
+    bool extraTopRadius = false,
+    bool extraBottomRadius = false,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    final iconColor = isDanger ? cs.error : cs.onSurfaceVariant;
+    final textColor = isDanger ? cs.error : cs.onSurface;
+    final radius = BorderRadius.only(
+      topLeft: Radius.circular(extraTopRadius ? 12 : 8),
+      topRight: Radius.circular(extraTopRadius ? 12 : 8),
+      bottomLeft: Radius.circular(extraBottomRadius ? 12 : 8),
+      bottomRight: Radius.circular(extraBottomRadius ? 12 : 8),
+    );
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      child: ClipRRect(
+        borderRadius: radius,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => Navigator.pop(context, value),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+              child: Row(
+                children: [
+                  Container(
+                    width: 30,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      color: iconColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(extraTopRadius ? 9 : 7),
+                        topRight: Radius.circular(7),
+                        bottomLeft: Radius.circular(extraBottomRadius ? 9 : 7),
+                        bottomRight: Radius.circular(7),
+                      ),
+                    ),
+                    child: Icon(icon, size: 16, color: iconColor),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(label, style: TextStyle(fontSize: 14, color: textColor)),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   void _showReviewDialog() {
     if (mounted) {
+      final cs = Theme.of(context).colorScheme;
       showDialog(
         context: context,
         barrierDismissible: false,
         builder: (context) {
           return AlertDialog(
+            backgroundColor: cs.surfaceContainerHigh,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
             title: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Did you know?',
-                  style: TextStyle(
-                    fontSize: 22,
-                  ),
-                ),
+                Text('Did you know?',
+                    style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w500,
+                        color: cs.onSurface)),
                 IconButton(
                   tooltip: "Close",
-                  icon: Icon(Icons.close, color: Colors.grey),
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
+                  icon:
+                      Icon(LucideIcons.x, size: 18, color: cs.onSurfaceVariant),
+                  onPressed: () => Navigator.pop(context),
                 ),
               ],
             ),
             content: Text(
               '$appName is a completely private notes app. It doesn\'t collect your personal data or show you ads.\n\nWe hope you enjoy using it. Tell us what you think.',
-              style: TextStyle(
-                fontSize: 14,
-              ),
+              style: TextStyle(fontSize: 14, color: cs.onSurfaceVariant),
             ),
             actions: [
               TextButton(
+                style: TextButton.styleFrom(
+                  foregroundColor: cs.primary,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                ),
                 onPressed: () {
-                  // Handle "Leave a review" action
                   Navigator.pop(context);
                   const url =
                       'https://play.google.com/store/apps/details?id=com.makenotetoself';
-                  // Use package name
                   openURL(url);
                 },
-                child: Text(
-                  'Leave a review',
-                ),
+                child: const Text('Leave a review'),
               ),
             ],
           );
@@ -613,7 +671,6 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
   }
 
   Future<void> onExitSettings() async {
-    // remove backup file if exists
     String todayDate = getTodayDate();
     Directory baseDir = await getApplicationDocumentsDirectory();
     String? backupDir = await secureStorage.read(key: "backup_dir");
@@ -645,6 +702,7 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
   }
 
   List<Widget> _buildDefaultActions() {
+    final cs = Theme.of(context).colorScheme;
     bool supabaseInitialized =
         ModelSetting.get(AppString.supabaseInitialized.string, "no") == "yes";
     bool showSync =
@@ -655,27 +713,26 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
           !_canSync &&
           showSync)
         Padding(
-          padding: const EdgeInsets.only(right: 10.0),
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+          padding: const EdgeInsets.only(right: 8.0),
+          child: TextButton(
+            style: TextButton.styleFrom(
+              backgroundColor: cs.onSurface.withValues(alpha: 0.06),
+              foregroundColor: cs.onSurface,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(10),
               ),
-              padding: EdgeInsets.symmetric(vertical: 4, horizontal: 10),
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 14),
+              textStyle: const TextStyle(fontSize: 13),
             ),
             onPressed: navigateToOnboardCheck,
             onLongPress: hideSyncButton,
-            child: Text(
-              "Sync",
-              style: TextStyle(
-                  color: Theme.of(context).colorScheme.primary, fontSize: 12),
-            ),
+            child: const Text("Sync"),
           ),
         ),
       if (!requiresAuthentication || isAuthenticated)
         IconButton(
           tooltip: "Search notes",
+          icon: const Icon(LucideIcons.search),
           onPressed: () {
             if (widget.runningOnDesktop) {
               widget.setShowHidePage!(PageType.search, true, PageParams());
@@ -689,11 +746,19 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
               ));
             }
           },
-          icon: const Icon(
-            LucideIcons.search,
-          ),
         ),
       PopupMenuButton<int>(
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(minWidth: 200, maxWidth: 240),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(
+            color: cs.onSurface.withValues(alpha: 0.1),
+            width: 0.75,
+          ),
+        ),
+        color: cs.surfaceContainerLowest,
+        elevation: 4,
         icon: Stack(
           children: [
             const Icon(LucideIcons.moreVertical),
@@ -702,10 +767,10 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
                 right: 0,
                 top: 0,
                 child: Container(
-                  width: 10,
-                  height: 10,
-                  decoration: const BoxDecoration(
-                    color: Colors.red,
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: cs.error,
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -808,172 +873,264 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
         itemBuilder: (context) => [
           PopupMenuItem<int>(
             value: 3,
-            child: Row(
-              children: [
-                Icon(LucideIcons.refreshCcw, color: Colors.grey),
-                Container(width: 8),
-                const SizedBox(width: 5),
-                const Text('Sync'),
-              ],
+            padding: EdgeInsets.zero,
+            height: 0,
+            child: _menuItem(
+                context: context,
+                value: 3,
+                icon: LucideIcons.refreshCcw,
+                label: "Sync",
+                extraTopRadius: true,
+                ),
+          ),
+          PopupMenuItem(
+            enabled: false,
+            height: 0,
+            padding: EdgeInsets.zero,
+            child: Divider(
+              height: 6,
+              thickness: 0.75,
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.1),
             ),
           ),
           if (!requiresAuthentication || isAuthenticated)
             PopupMenuItem<int>(
               value: 2,
-              child: Row(
-                children: [
-                  Icon(LucideIcons.archiveRestore, color: Colors.grey),
-                  Container(width: 8),
-                  const SizedBox(width: 5),
-                  const Text('Trash'),
-                ],
-              ),
+              padding: EdgeInsets.zero,
+              height: 0,
+              child: _menuItem(
+                  context: context,
+                  value: 2,
+                  icon: LucideIcons.archiveRestore,
+                  label: "Trash"),
             ),
           if (!requiresAuthentication || isAuthenticated)
             PopupMenuItem<int>(
               value: 1,
-              child: Row(
-                children: [
-                  Icon(LucideIcons.star, color: Colors.grey),
-                  Container(width: 8),
-                  const SizedBox(width: 5),
-                  const Text('Starred notes'),
-                ],
-              ),
+              padding: EdgeInsets.zero,
+              height: 0,
+              child: _menuItem(
+                  context: context,
+                  value: 1,
+                  icon: LucideIcons.star,
+                  label: "Starred notes"),
             ),
+          PopupMenuItem(
+            enabled: false,
+            height: 0,
+            padding: EdgeInsets.zero,
+            child: Divider(
+              height: 6,
+              thickness: 0.75,
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.1),
+            ),
+          ),
           PopupMenuItem<int>(
             value: 0,
-            child: Row(
-              children: [
-                Icon(LucideIcons.settings, color: Colors.grey),
-                Container(width: 8),
-                const SizedBox(width: 5),
-                const Text('Settings'),
-              ],
-            ),
+            padding: EdgeInsets.zero,
+            height: 0,
+            child: _menuItem(
+                context: context,
+                value: 0,
+                icon: LucideIcons.settings,
+                label: "Settings"),
           ),
           if (SyncUtils.getSignedInUserId() != null)
             PopupMenuItem<int>(
               value: 4,
-              child: Row(
-                children: [
-                  hasValidPlan
-                      ? Icon(LucideIcons.shield, color: Colors.grey)
-                      : Icon(LucideIcons.alertTriangle, color: Colors.red),
-                  Container(width: 8),
-                  const SizedBox(width: 5),
-                  const Text('Account'),
-                ],
+              padding: EdgeInsets.zero,
+              height: 0,
+              child: _menuItem(
+                context: context,
+                value: 4,
+                icon: hasValidPlan
+                    ? LucideIcons.shield
+                    : LucideIcons.alertTriangle,
+                label: "Account",
+                isDanger: !hasValidPlan,
+              ),
+            ),
+          if (isDebugEnabled) PopupMenuItem(
+              enabled: false,
+              height: 0,
+              padding: EdgeInsets.zero,
+              child: Divider(
+                height: 6,
+                thickness: 0.75,
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.1),
               ),
             ),
           if (isDebugEnabled)
             PopupMenuItem<int>(
               value: 11,
-              child: Row(
-                children: [
-                  Icon(LucideIcons.file, color: Colors.grey),
-                  Container(width: 8),
-                  const SizedBox(width: 5),
-                  const Text('Page'),
-                ],
-              ),
+              padding: EdgeInsets.zero,
+              height: 0,
+              child: _menuItem(
+                  context: context,
+                  value: 11,
+                  icon: LucideIcons.file,
+                  label: "Page"),
             ),
           if (isDebugEnabled)
             PopupMenuItem<int>(
               value: 12,
-              child: Row(
-                children: [
-                  Icon(LucideIcons.database, color: Colors.grey),
-                  Container(width: 8),
-                  const SizedBox(width: 5),
-                  const Text('Sqlite'),
-                ],
-              ),
+              padding: EdgeInsets.zero,
+              height: 0,
+              child: _menuItem(
+                  context: context,
+                  value: 12,
+                  icon: LucideIcons.database,
+                  label: "Sqlite",
+                  extraBottomRadius: !loggingEnabled,
+                  ),
             ),
           if (loggingEnabled)
             PopupMenuItem<int>(
               value: 14,
-              child: Row(
-                children: [
-                  Icon(LucideIcons.list, color: Colors.grey),
-                  Container(width: 8),
-                  const SizedBox(width: 5),
-                  const Text('Logs'),
-                ],
-              ),
+              padding: EdgeInsets.zero,
+              height: 0,
+              child: _menuItem(
+                  context: context,
+                  value: 14,
+                  icon: LucideIcons.list,
+                  label: "Logs",
+                  extraBottomRadius: true,
+                  ),
             ),
         ],
       ),
     ];
   }
 
+  // ── Bottom sheet for long-press options ───────────────────────────────────
   void _showOptions(BuildContext context, ModelCategoryGroup categoryGroup) {
+    final cs = Theme.of(context).colorScheme;
     showModalBottomSheet(
       context: context,
+      backgroundColor: cs.surfaceContainerHigh,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (BuildContext context) {
         return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              ListTile(
-                leading: const Icon(Icons.reorder, color: Colors.grey),
-                horizontalTitleGap: 24,
-                title: const Text('Reorder'),
-                onTap: () {
-                  Navigator.pop(context);
-                  setState(() {
-                    _isReordering = true;
-                  });
-                },
-              ),
-              ListTile(
-                leading: const Icon(LucideIcons.edit3, color: Colors.grey),
-                horizontalTitleGap: 24,
-                title: const Text('Edit'),
-                onTap: () {
-                  Navigator.pop(context);
-                  editCategoryGroup(categoryGroup);
-                },
-              ),
-              ListTile(
-                leading: const Icon(LucideIcons.trash, color: Colors.grey),
-                horizontalTitleGap: 24,
-                title: const Text('Delete'),
-                onTap: () {
-                  Navigator.pop(context);
-                  archiveCategoryGroup(categoryGroup);
-                },
-              ),
-            ],
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _bottomSheetTile(
+                  context: context,
+                  icon: Icons.reorder,
+                  label: 'Reorder',
+                  onTap: () {
+                    Navigator.pop(context);
+                    setState(() => _isReordering = true);
+                  },
+                ),
+                const SizedBox(height: 3),
+                _bottomSheetTile(
+                  context: context,
+                  icon: LucideIcons.edit3,
+                  label: 'Edit',
+                  onTap: () {
+                    Navigator.pop(context);
+                    editCategoryGroup(categoryGroup);
+                  },
+                ),
+                const SizedBox(height: 3),
+                _bottomSheetTile(
+                  context: context,
+                  icon: LucideIcons.trash,
+                  label: 'Delete',
+                  isDanger: true,
+                  onTap: () {
+                    Navigator.pop(context);
+                    archiveCategoryGroup(categoryGroup);
+                  },
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
           ),
         );
       },
     );
   }
 
+  /// Single tile used inside bottom sheets — same monochromatic icon style.
+  Widget _bottomSheetTile({
+    required BuildContext context,
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    bool isDanger = false,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    final color = isDanger ? cs.error : cs.onSurfaceVariant;
+    return Material(
+      color: cs.onSurface.withValues(alpha: 0.06),
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, size: 18, color: color),
+              ),
+              const SizedBox(width: 14),
+              Text(label,
+                  style: TextStyle(
+                      fontSize: 15, color: isDanger ? cs.error : cs.onSurface)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
     if (selectedGroup != widget.selectedGroup) {
       selectedGroup = widget.selectedGroup;
     }
+
     return PopScope(
       canPop: !_isReordering,
       onPopInvokedWithResult: (didPop, result) {
         if (!didPop) {
-          setState(() {
-            _isReordering = false;
-          });
+          setState(() => _isReordering = false);
         }
       },
       child: Scaffold(
         appBar: AppBar(
           title: Text(
-              _isReordering
-                  ? "Reordering"
-                  : loadedSharedContents || widget.sharedContents.isEmpty
-                      ? appName!
-                      : "Select...",
-              style: TextStyle(fontSize: 18)),
+            _isReordering
+                ? "Reordering"
+                : loadedSharedContents || widget.sharedContents.isEmpty
+                    ? appName!
+                    : "Select...",
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+          ),
           actions: _buildDefaultActions(),
         ),
         body: _isReordering
@@ -983,11 +1140,6 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
                   final item = _categoriesGroupsDisplayList[index];
                   return GestureDetector(
                     key: ValueKey(item.id),
-                    child: WidgetCategoryGroup(
-                      categoryGroup: item,
-                      showSummary: true,
-                      showCategorySign: false,
-                    ),
                     onTap: () {
                       String dragTitle = "Drag handle to re-order";
                       if (Platform.isAndroid || Platform.isIOS) {
@@ -995,23 +1147,19 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
                       }
                       displaySnackBar(context, message: dragTitle, seconds: 1);
                     },
+                    child: WidgetCategoryGroup(
+                      categoryGroup: item,
+                      showSummary: true,
+                      showCategorySign: false,
+                    ),
                   );
                 },
                 onReorder: (int oldIndex, int newIndex) {
                   setState(() {
-                    // Adjust newIndex if dragging an item down
-                    if (oldIndex < newIndex) {
-                      newIndex -= 1;
-                    }
-
-                    // Remove the item from the old position
+                    if (oldIndex < newIndex) newIndex -= 1;
                     final item =
                         _categoriesGroupsDisplayList.removeAt(oldIndex);
-
-                    // Insert the item at the new position
                     _categoriesGroupsDisplayList.insert(newIndex, item);
-
-                    // Print positions after reordering
                     _saveGroupPositions();
                   });
                 },
@@ -1022,65 +1170,76 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
                     ? const Center(child: CircularProgressIndicator())
                     : _categoriesGroupsDisplayList.isNotEmpty
                         ? RefreshIndicator(
-                            onRefresh: () async {
-                              loadCategoriesGroups();
-                            },
-                            child: ListView.builder(
-                                itemCount: _categoriesGroupsDisplayList.length,
-                                itemBuilder: (context, index) {
-                                  final ModelCategoryGroup item =
-                                      _categoriesGroupsDisplayList[index];
-                                  return InkWell(
-                                    hoverColor: Theme.of(context)
-                                        .colorScheme
-                                        .surfaceContainerLow,
-                                    focusColor: Theme.of(context)
-                                        .colorScheme
-                                        .surfaceContainer,
-                                    onTap: () {
-                                      navigateToNotesOrGroups(item);
-                                    },
-                                    onLongPress: () {
-                                      _showOptions(context, item);
-                                    },
-                                    child: Container(
-                                      color: item.type == "group" &&
-                                              selectedGroup != null &&
-                                              selectedGroup!.id ==
-                                                  item.group!.id
-                                          ? Theme.of(context)
-                                              .colorScheme
-                                              .surfaceContainer
-                                          : Colors.transparent,
-                                      child: WidgetCategoryGroup(
-                                        categoryGroup: item,
-                                        showSummary: true,
-                                        showCategorySign: true,
-                                      ),
+                            onRefresh: () async => loadCategoriesGroups(),
+                            child: ListView.separated(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 8),
+                              itemCount: _categoriesGroupsDisplayList.length,
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(height: 3),
+                              itemBuilder: (context, index) {
+                                final ModelCategoryGroup item =
+                                    _categoriesGroupsDisplayList[index];
+                                final bool isSelected = item.type == "group" &&
+                                    selectedGroup != null &&
+                                    selectedGroup!.id == item.group!.id;
+
+                                return Material(
+                                  color: isSelected
+                                      ? cs.onSurface.withValues(alpha: 0.1)
+                                      : cs.onSurface.withValues(alpha: 0.06),
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(12),
+                                    onTap: () => navigateToNotesOrGroups(item),
+                                    onLongPress: () =>
+                                        _showOptions(context, item),
+                                    child: WidgetCategoryGroup(
+                                      categoryGroup: item,
+                                      showSummary: true,
+                                      showCategorySign: true,
                                     ),
-                                  );
-                                }),
+                                  ),
+                                );
+                              },
+                            ),
                           )
                         : Center(
                             child: Padding(
-                              padding: const EdgeInsets.all(8.0),
+                              padding: const EdgeInsets.all(32.0),
                               child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Padding(
-                                    padding: const EdgeInsets.all(12.0),
-                                    child: Text(
-                                      "Hi there!\n\n"
-                                      "It's kind of looking empty in here.\n\n"
-                                      "Tap the + button and create some notes to self. :)",
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyLarge
-                                          ?.copyWith(
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .primary),
+                                  Container(
+                                    width: 64,
+                                    height: 64,
+                                    decoration: BoxDecoration(
+                                      color:
+                                          cs.onSurface.withValues(alpha: 0.06),
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    child: Icon(
+                                      LucideIcons.edit3,
+                                      size: 28,
+                                      color: cs.onSurfaceVariant,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 20),
+                                  Text(
+                                    "Nothing here yet",
+                                    style: TextStyle(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w500,
+                                      color: cs.onSurface,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    "Tap + to create your first note group.",
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: cs.onSurfaceVariant,
                                     ),
                                   ),
                                 ],
@@ -1092,9 +1251,7 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
                 heroTag: "add_group_or_mark_reordering_complete",
                 onPressed: () {
                   if (_isReordering) {
-                    setState(() {
-                      _isReordering = false;
-                    });
+                    setState(() => _isReordering = false);
                   } else {
                     createNoteGroup();
                   }

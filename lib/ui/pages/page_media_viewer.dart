@@ -92,7 +92,7 @@ class _PageMediaViewerState extends State<PageMediaViewer> {
       }
     }
     currentIndex = index;
-    //loadItems();
+    if (mounted) setState(() {});
   }
 
   ModelItem? getItem(int index) {
@@ -111,9 +111,15 @@ class _PageMediaViewerState extends State<PageMediaViewer> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Scaffold(
+      backgroundColor: cs.surfaceContainerLow,
       appBar: AppBar(
-        title: const Text("Media"),
+        backgroundColor: cs.surfaceContainerLow,
+        title: Text(
+          currentItem == null ? "Media" : "${currentIndex + 1} / $mediaCount",
+          style: const TextStyle(fontSize: 15),
+        ),
         leading: widget.runningOnDesktop
             ? BackButton(
                 onPressed: () {
@@ -126,11 +132,9 @@ class _PageMediaViewerState extends State<PageMediaViewer> {
       body: PageView.builder(
         itemCount: mediaCount,
         controller: _pageController,
-        scrollDirection: Axis.vertical,
-        onPageChanged: (value) => {indexChanged(value)},
-        itemBuilder: (context, index) {
-          return _buildPage(index);
-        },
+        scrollDirection: Axis.horizontal,
+        onPageChanged: (value) => indexChanged(value),
+        itemBuilder: (context, index) => _buildPage(index),
       ),
     );
   }
@@ -138,11 +142,11 @@ class _PageMediaViewerState extends State<PageMediaViewer> {
   // Builds each page with content based on the index
   Widget _buildPage(int index) {
     ModelItem? item = getItem(index);
-    return item == null
-        ? const SizedBox.shrink()
-        : Center(
-            child: renderMedia(item),
-          );
+    if (item == null) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Center(child: renderMedia(item)),
+    );
   }
 
   Widget renderMedia(ModelItem item) {
@@ -156,30 +160,42 @@ class _PageMediaViewerState extends State<PageMediaViewer> {
     switch (item.type) {
       case ItemType.image: // image
         widget = fileAvailable
-            ? InteractiveViewer(
-                maxScale: 3.5,
-                child: Image.file(
-                  File(item.data!["path"]),
-                  fit: BoxFit.cover,
+            ? ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: InteractiveViewer(
+                  maxScale: 3.5,
+                  child: Image.file(
+                    File(item.data!["path"]),
+                    fit: BoxFit.contain,
+                  ),
                 ),
               )
             : item.thumbnail != null
-                ? Image.memory(
-                    item.thumbnail!,
-                    fit: BoxFit.cover,
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: Image.memory(
+                      item.thumbnail!,
+                      fit: BoxFit.contain,
+                    ),
                   )
-                : Image.asset(
-                    "assets/image.webp",
-                    fit: BoxFit.cover,
+                : ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: Image.asset(
+                      "assets/image.webp",
+                      fit: BoxFit.contain,
+                    ),
                   );
       case ItemType.video: // video
         widget = fileAvailable
             ? canUseVideoPlayer
                 ? WidgetVideoPlayer(videoPath: item.data!["path"])
                 : WidgetMediaKitPlayer(videoPath: item.data!["path"])
-            : Image.asset(
-                "assets/image.webp",
-                fit: BoxFit.cover,
+            : ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: Image.asset(
+                  "assets/image.webp",
+                  fit: BoxFit.contain,
+                ),
               );
       default:
         widget = const SizedBox.shrink();
@@ -200,6 +216,7 @@ class WidgetVideoPlayer extends StatefulWidget {
 class _WidgetVideoPlayerState extends State<WidgetVideoPlayer> {
   late final VideoPlayerController _controller;
   ChewieController? _chewieController;
+  bool _showControls = false;
 
   @override
   void initState() {
@@ -214,6 +231,7 @@ class _WidgetVideoPlayerState extends State<WidgetVideoPlayer> {
       videoPlayerController: _controller,
       autoPlay: true,
       looping: true,
+      showControls: false,
     );
     setState(() {});
   }
@@ -227,19 +245,26 @@ class _WidgetVideoPlayerState extends State<WidgetVideoPlayer> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      child: AspectRatio(
-        aspectRatio: _controller.value.aspectRatio,
-        child: Stack(
-          alignment: Alignment.bottomCenter,
-          children: <Widget>[
-            _chewieController == null
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: AspectRatio(
+          aspectRatio: _controller.value.aspectRatio,
+          child: GestureDetector(
+            onTap: () {
+              if (_chewieController == null) return;
+              setState(() {
+                _showControls = !_showControls;
+                _chewieController = _chewieController!.copyWith(
+                  showControls: _showControls,
+                );
+              });
+            },
+            child: _chewieController == null
                 ? const SizedBox.shrink()
                 : Chewie(controller: _chewieController!),
-            //_ControlsOverlay(controller: _controller),
-            //VideoProgressIndicator(_controller, allowScrubbing: true),
-          ],
+          ),
         ),
       ),
     );
@@ -276,8 +301,12 @@ class _WidgetMediaKitPlayerState extends State<WidgetMediaKitPlayer> {
 
   @override
   Widget build(BuildContext context) {
-    return Video(
-      controller: controller,
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: Video(controller: controller),
+      ),
     );
   }
 }

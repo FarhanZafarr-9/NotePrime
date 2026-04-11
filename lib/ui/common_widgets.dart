@@ -98,9 +98,10 @@ class FloatingActionButtonWithBadge extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.all(2),
               decoration: BoxDecoration(
-                color: Colors.red,
+                color: Theme.of(context).colorScheme.error,
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.white),
+                border:
+                    Border.all(color: Theme.of(context).colorScheme.onError),
               ),
               constraints: const BoxConstraints(
                 minWidth: 20,
@@ -108,8 +109,8 @@ class FloatingActionButtonWithBadge extends StatelessWidget {
               ),
               child: Text(
                 '$filterCount',
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onError,
                   fontSize: 10,
                 ),
                 textAlign: TextAlign.center,
@@ -179,19 +180,23 @@ class WidgetCategoryGroupAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return type == "group"
-        ? Padding(
-            padding: const EdgeInsets.all(10.0),
-            child: Icon(Icons.circle,
-                size: 14, color: colorFromHex(color).withValues(alpha: 0.8)),
-          )
-        : Padding(
-            padding: const EdgeInsets.all(5.0),
-            child: Icon(
-              Icons.workspaces,
-              color: colorFromHex(color).withValues(alpha: 0.8),
-            ),
-          );
+    final parsedColor = colorFromHex(color);
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: parsedColor.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Center(
+        child: Icon(
+          type == "group" ? Icons.circle : Icons.workspaces,
+          size: type == "group" ? 14 : 20,
+          color: parsedColor,
+        ),
+      ),
+    );
   }
 }
 
@@ -245,7 +250,9 @@ class WidgetCategoryGroup extends StatelessWidget {
                       ? "${categoryGroup.category!.groupCount} note group"
                       : "${categoryGroup.category!.groupCount} note groups",
                   overflow: TextOverflow.ellipsis, // Ellipsis for long text
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant),
                 )
           : const SizedBox.shrink(),
       trailing: categoryGroup.type == "category"
@@ -612,12 +619,9 @@ class _WidgetAudioState extends State<WidgetAudio> {
               ),
         Expanded(
           child: Slider(
-            activeColor: Theme.of(context).brightness == Brightness.dark
-                ? Theme.of(context).colorScheme.primary
-                : Colors.blue,
-            inactiveColor: Theme.of(context).brightness == Brightness.dark
-                ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)
-                : Colors.grey[300],
+            activeColor: Theme.of(context).colorScheme.primary,
+            inactiveColor:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
             min: 0,
             max: sliderMax,
             value: sliderValue,
@@ -640,7 +644,9 @@ class _WidgetAudioState extends State<WidgetAudio> {
               ? mediaFileDurationFromSeconds(
                   max(0, _totalDuration.inSeconds - _currentPosition.inSeconds))
               : mediaFileDurationFromSeconds(_totalDuration.inSeconds),
-          style: const TextStyle(fontSize: 12, color: Colors.grey),
+          style: TextStyle(
+              fontSize: 12,
+              color: Theme.of(context).colorScheme.onSurfaceVariant),
         ),
       ],
     );
@@ -713,7 +719,8 @@ class _WidgetTextWithLinksState extends State<WidgetTextWithLinks> {
         spans.add(TextSpan(
           text: linkText,
           style: TextStyle(
-              color: Colors.blue, fontSize: controller.getScaledSize(fontSize)),
+              color: Theme.of(context).colorScheme.primary,
+              fontSize: controller.getScaledSize(fontSize)),
           recognizer: TapGestureRecognizer()
             ..onTap = () async {
               if (await canLaunchUrl(linkUri)) {
@@ -826,7 +833,7 @@ class TimerWidgetState extends State<TimerWidget> {
     return Text(
       _formattedTime,
       style: TextStyle(
-        color: Colors.red,
+        color: Theme.of(context).colorScheme.error,
         fontSize: 16.0,
       ),
     );

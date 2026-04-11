@@ -225,6 +225,95 @@ class PageGroupAddEditState extends State<PageGroupAddEdit> {
     }
   }
 
+  // ── UI helpers ────────────────────────────────────────────────────────────
+
+  Widget _sectionLabel(String text) {
+    return Text(
+      text.toUpperCase(),
+      style: TextStyle(
+        fontSize: 11,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 1.1,
+        color: Theme.of(context).colorScheme.primary,
+      ),
+    );
+  }
+
+  Widget _tappableTile({
+    required BuildContext context,
+    required VoidCallback onTap,
+    required Widget leading,
+    required String label,
+    Widget? trailing,
+    Color? labelColor,
+    Color? tileColor,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    return Material(
+      color: tileColor ?? cs.onSurface.withValues(alpha: 0.06),
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+          child: Row(
+            children: [
+              leading,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                      fontSize: 14, color: labelColor ?? cs.onSurface),
+                ),
+              ),
+              if (trailing != null) trailing,
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _settingsToggleTile({
+    required BuildContext context,
+    required IconData icon,
+    required String label,
+    required bool value,
+    required Function(bool) onChanged,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    return Material(
+      color: cs.onSurface.withValues(alpha: 0.06),
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+        child: Row(
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: cs.onSurfaceVariant.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, size: 18, color: cs.onSurfaceVariant),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(label,
+                  style: TextStyle(fontSize: 14, color: cs.onSurface)),
+            ),
+            Switch(value: value, onChanged: onChanged),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Build ─────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
     if (widget.category != null &&
@@ -251,72 +340,68 @@ class PageGroupAddEditState extends State<PageGroupAddEdit> {
             : null,
       ),
       body: Padding(
-        padding: const EdgeInsets.all(20.0),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              "Title",
-              style: TextStyle(color: Colors.grey),
-            ),
+            _sectionLabel("Title"),
+            const SizedBox(height: 8),
             TextField(
               controller: titleController,
               textCapitalization: TextCapitalization.sentences,
               autofocus: widget.group == null ? false : true,
-              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+              style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface, fontSize: 16),
               textInputAction: TextInputAction.done,
               onSubmitted: saveGroup,
               decoration: InputDecoration(
                 hintText: 'Group title',
-                // Placeholder
-                hintStyle:
-                    TextStyle(color: Colors.grey, fontWeight: FontWeight.w400),
-                border: UnderlineInputBorder(
+                hintStyle: TextStyle(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurfaceVariant
+                        .withValues(alpha: 0.5),
+                    fontWeight: FontWeight.w400),
+                filled: true,
+                fillColor: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.06),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(
-                      width: 1.0,
                       color: Theme.of(context)
                           .colorScheme
-                          .outlineVariant), // Default line color
+                          .onSurface
+                          .withValues(alpha: 0.15),
+                      width: 0.75),
                 ),
-                enabledBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(
-                      width: 1.0,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .outlineVariant), // Default line color
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
                 ),
-                focusedBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(
-                      width: 1.0,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .outlineVariant), // Focused line color
-                ),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               ),
               onChanged: (value) {
                 title = value.trim();
                 itemChanged = true;
               },
             ),
-            const SizedBox(
-              height: 32,
-            ),
-            Text(
-              "Color",
-              style: TextStyle(color: Colors.grey),
-            ),
-            const SizedBox(
-              height: 12,
-            ),
-            GestureDetector(
+            const SizedBox(height: 24),
+            _sectionLabel("Color"),
+            const SizedBox(height: 8),
+            _tappableTile(
+              context: context,
               onTap: () async {
                 Color? pickedColor = await showDialog<Color>(
                   context: context,
-                  builder: (context) => ColorPickerDialog(
-                    color: colorCode,
-                  ),
+                  builder: (context) => ColorPickerDialog(color: colorCode),
                 );
-
                 if (pickedColor != null) {
                   setState(() {
                     itemChanged = true;
@@ -324,153 +409,76 @@ class PageGroupAddEditState extends State<PageGroupAddEdit> {
                   });
                 }
               },
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.circle,
-                    size: 18,
-                    color: colorFromHex(colorCode ?? "#00BCD4"),
-                  ),
-                  const SizedBox(
-                    width: 12,
-                  ),
-                  Text("Change color"),
-                ],
+              leading: Container(
+                width: 22,
+                height: 22,
+                decoration: BoxDecoration(
+                  color: colorFromHex(colorCode ?? "#00BCD4"),
+                  shape: BoxShape.circle,
+                ),
               ),
+              label: "Change color",
             ),
-            const SizedBox(
-              height: 32,
+            const SizedBox(height: 24),
+            _sectionLabel("Category"),
+            const SizedBox(height: 8),
+            _tappableTile(
+              context: context,
+              onTap: addToCategory,
+              leading: Icon(
+                LucideIcons.folder,
+                size: 18,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+              label: (category == null || category!.title == "DND")
+                  ? "Select category"
+                  : category!.title,
+              trailing: (category != null && category!.title != "DND")
+                  ? GestureDetector(
+                      onTap: removeCategory,
+                      child: Icon(
+                        LucideIcons.x,
+                        size: 16,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurfaceVariant
+                            .withValues(alpha: 0.6),
+                      ),
+                    )
+                  : null,
             ),
-            Text(
-              "Category",
-              style: TextStyle(color: Colors.grey),
+            const SizedBox(height: 24),
+            _sectionLabel("Display"),
+            const SizedBox(height: 8),
+            _settingsToggleTile(
+              context: context,
+              icon: LucideIcons.clock9,
+              label: 'Date / Time',
+              value: showDateTime,
+              onChanged: setShowDateTime,
             ),
-            const SizedBox(
-              height: 12,
+            const SizedBox(height: 3),
+            _settingsToggleTile(
+              context: context,
+              icon: LucideIcons.rectangleHorizontal,
+              label: 'Note border',
+              value: showNoteBorder,
+              onChanged: setShowNoteBorder,
             ),
-            Row(
-              children: [
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () {
-                      addToCategory();
-                    },
-                    child: category == null
-                        ? Text(
-                            "Select category",
-                            style: TextStyle(
-                                color: Theme.of(context).colorScheme.onSurface),
-                          )
-                        : category!.title == "DND"
-                            ? Text(
-                                "Select category",
-                                style: TextStyle(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurface),
-                              )
-                            : Text(
-                                category!.title,
-                                style: TextStyle(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurface),
-                              ),
-                  ),
-                ),
-                const SizedBox(
-                  width: 10,
-                ),
-                if (category != null && category!.title != "DND")
-                  IconButton(
-                    onPressed: () {
-                      removeCategory();
-                    },
-                    icon: Icon(LucideIcons.x),
-                  ),
-              ],
-            ),
-            const SizedBox(
-              height: 32,
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      LucideIcons.clock9,
-                    ),
-                    const SizedBox(
-                      width: 8,
-                    ),
-                    const Text('Date/Time'),
-                  ],
-                ),
-                Transform.scale(
-                  scale: 0.7,
-                  child: Switch(
-                    value: showDateTime,
-                    onChanged: (bool value) {
-                      setState(() {
-                        setShowDateTime(value);
-                      });
-                    },
-                  ),
-                ),
-              ],
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      LucideIcons.rectangleHorizontal,
-                    ),
-                    const SizedBox(
-                      width: 8,
-                    ),
-                    const Text('Note border'),
-                  ],
-                ),
-                Transform.scale(
-                  scale: 0.7,
-                  child: Switch(
-                    value: showNoteBorder,
-                    onChanged: (bool value) {
-                      setState(() {
-                        setShowNoteBorder(value);
-                      });
-                    },
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(
-              height: 10,
-            ),
+            const SizedBox(height: 24),
             if (widget.group != null)
-              GestureDetector(
-                onTap: () {
-                  archiveGroup(widget.group!);
-                },
-                child: Row(
-                  children: [
-                    Icon(
-                      LucideIcons.trash,
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                    const SizedBox(
-                      width: 8,
-                    ),
-                    Text(
-                      'Delete',
-                      style:
-                          TextStyle(color: Theme.of(context).colorScheme.error),
-                    ),
-                  ],
+              _tappableTile(
+                context: context,
+                onTap: () => archiveGroup(widget.group!),
+                leading: Icon(
+                  LucideIcons.trash,
+                  size: 18,
+                  color: Theme.of(context).colorScheme.error,
                 ),
+                label: 'Delete group',
+                labelColor: Theme.of(context).colorScheme.error,
+                tileColor:
+                    Theme.of(context).colorScheme.error.withValues(alpha: 0.06),
               ),
             Expanded(
               child: const SizedBox.shrink(),
@@ -480,10 +488,12 @@ class PageGroupAddEditState extends State<PageGroupAddEdit> {
       ),
       floatingActionButton: FloatingActionButton(
         heroTag: "save_new_group",
-        onPressed: () async {
-          saveGroup(titleController.text);
-        },
+        onPressed: () async => saveGroup(titleController.text),
         shape: const CircleBorder(),
+        backgroundColor:
+            Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
+        elevation: 0,
         child: Icon(widget.group == null ? Icons.arrow_forward : Icons.check),
       ),
     );

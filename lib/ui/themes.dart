@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 
 class AppThemes {
   static ThemeData getTheme(Brightness brightness, ColorScheme? dynamicColorScheme) {
-    final colorScheme = dynamicColorScheme ?? ColorScheme.fromSeed(
-      seedColor: Colors.white,
-      brightness: brightness,
-    );
+    final colorScheme = dynamicColorScheme ??
+        ColorScheme.fromSeed(
+          seedColor: const Color(0xFF6750A4),
+          brightness: brightness,
+        );
 
     return ThemeData(
       fontFamily: 'Inter',

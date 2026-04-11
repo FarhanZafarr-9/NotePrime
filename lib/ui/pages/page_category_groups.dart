@@ -286,44 +286,94 @@ class _PageCategoryGroupsState extends State<PageCategoryGroups> {
   void _showOptions(BuildContext context, ModelGroup group) {
     showModalBottomSheet(
       context: context,
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (BuildContext context) {
         return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              ListTile(
-                leading: const Icon(Icons.reorder, color: Colors.grey),
-                horizontalTitleGap: 24,
-                title: const Text('Reorder'),
-                onTap: () {
-                  Navigator.pop(context);
-                  setState(() {
-                    _isReordering = true;
-                  });
-                },
-              ),
-              ListTile(
-                leading: const Icon(LucideIcons.edit3, color: Colors.grey),
-                horizontalTitleGap: 24,
-                title: const Text('Edit'),
-                onTap: () {
-                  Navigator.pop(context);
-                  navigateToGroupAddEdit(group, category);
-                },
-              ),
-              ListTile(
-                leading: const Icon(LucideIcons.trash, color: Colors.grey),
-                horizontalTitleGap: 24,
-                title: const Text('Delete'),
-                onTap: () {
-                  Navigator.pop(context);
-                  archiveGroup(group);
-                },
-              ),
-            ],
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                _bottomSheetTile(
+                  context: context,
+                  icon: Icons.reorder,
+                  label: 'Reorder',
+                  onTap: () {
+                    Navigator.pop(context);
+                    setState(() {
+                      _isReordering = true;
+                    });
+                  },
+                ),
+                const SizedBox(height: 8),
+                _bottomSheetTile(
+                  context: context,
+                  icon: LucideIcons.edit3,
+                  label: 'Edit',
+                  onTap: () {
+                    Navigator.pop(context);
+                    navigateToGroupAddEdit(group, category);
+                  },
+                ),
+                const SizedBox(height: 8),
+                _bottomSheetTile(
+                  context: context,
+                  icon: LucideIcons.trash,
+                  label: 'Delete',
+                  isDanger: true,
+                  onTap: () {
+                    Navigator.pop(context);
+                    archiveGroup(group);
+                  },
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
           ),
         );
       },
+    );
+  }
+
+  Widget _bottomSheetTile({
+    required BuildContext context,
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    bool isDanger = false,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    final color = isDanger ? cs.error : cs.onSurfaceVariant;
+    return Material(
+      color: cs.onSurface.withValues(alpha: 0.06),
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, size: 18, color: color),
+              ),
+              const SizedBox(width: 14),
+              Text(label,
+                  style: TextStyle(
+                      fontSize: 15, color: isDanger ? cs.error : cs.onSurface)),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -412,43 +462,50 @@ class _PageCategoryGroupsState extends State<PageCategoryGroups> {
                 )
               : _isLoading
                   ? const ShimmerList()
-                  : ListView.builder(
-                  itemCount: categoryGroupsDisplayList.length,
-                  itemBuilder: (context, index) {
-                    final ModelGroup group = categoryGroupsDisplayList[index];
-                    final ModelCategoryGroup categoryGroup = ModelCategoryGroup(
-                        id: group.id!,
-                        type: "group",
-                        group: group,
-                        position: group.position!,
-                        thumbnail: group.thumbnail,
-                        color: group.color,
-                        title: group.title);
-                    return InkWell(
-                      hoverColor:
-                          Theme.of(context).colorScheme.surfaceContainerLow,
-                      focusColor:
-                          Theme.of(context).colorScheme.surfaceContainer,
-                      onTap: () {
-                        navigateToNotes(group, false);
-                      },
-                      onLongPress: () {
-                        _showOptions(context, group);
-                      },
-                      child: Container(
-                        color: selectedGroup != null &&
-                                selectedGroup!.id == group.id
-                            ? Theme.of(context).colorScheme.surfaceContainer
-                            : Colors.transparent,
-                        child: WidgetCategoryGroup(
-                          categoryGroup: categoryGroup,
-                          showSummary: true,
-                          showCategorySign: false,
-                        ),
-                      ),
-                    );
-                  },
-                ),
+                  : categoryGroupsDisplayList.isNotEmpty
+                      ? RefreshIndicator(
+                          onRefresh: () async => loadGroups(),
+                          child: ListView.separated(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            itemCount: categoryGroupsDisplayList.length,
+                            separatorBuilder: (_, __) => const SizedBox(height: 3),
+                            itemBuilder: (context, index) {
+                              final cs = Theme.of(context).colorScheme;
+                              final ModelGroup group = categoryGroupsDisplayList[index];
+                              final ModelCategoryGroup categoryGroup = ModelCategoryGroup(
+                                  id: group.id!,
+                                  type: "group",
+                                  group: group,
+                                  position: group.position!,
+                                  thumbnail: group.thumbnail,
+                                  color: group.color,
+                                  title: group.title);
+                              final bool isSelected = selectedGroup != null && selectedGroup!.id == group.id;
+
+                              return Material(
+                                color: isSelected
+                                    ? cs.onSurface.withValues(alpha: 0.1)
+                                    : cs.onSurface.withValues(alpha: 0.06),
+                                borderRadius: BorderRadius.circular(12),
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(12),
+                                  onTap: () {
+                                    navigateToNotes(group, false);
+                                  },
+                                  onLongPress: () {
+                                    _showOptions(context, group);
+                                  },
+                                  child: WidgetCategoryGroup(
+                                    categoryGroup: categoryGroup,
+                                    showSummary: true,
+                                    showCategorySign: false,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        )
+                      : const SizedBox.shrink(),
         ),
         floatingActionButton: FloatingActionButton(
           heroTag: "add_category_group_or_mark_reordering_complete",

@@ -19,92 +19,163 @@ class PageArchived extends StatefulWidget {
   State<PageArchived> createState() => _PageArchivedState();
 }
 
-class _PageArchivedState extends State<PageArchived> {
-  // ValueNotifier to track if any items are selected
+class _PageArchivedState extends State<PageArchived>
+    with SingleTickerProviderStateMixin {
   final ValueNotifier<bool> _isAnyItemSelected = ValueNotifier(false);
+  final ValueNotifier<int> _selectionCount = ValueNotifier(0);
 
-  // Callbacks to trigger delete/restore on child pages
-  late VoidCallback onDelete;
-  late VoidCallback onRestore;
+  VoidCallback? _onDelete;
+  VoidCallback? _onRestore;
+  VoidCallback? _onSelectAll;
+
+  late final TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(() {
+      if (_tabController.indexIsChanging) {
+        _isAnyItemSelected.value = false;
+        _selectionCount.value = 0;
+        _onDelete = null;
+        _onRestore = null;
+        _onSelectAll = null;
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    _isAnyItemSelected.dispose();
+    _selectionCount.dispose();
+    super.dispose();
+  }
 
   void _deleteSelectedItems() {
-    onDelete(); // Trigger the onDelete method in the active child page
-    _isAnyItemSelected.value = false; // Reset selection state
+    _onDelete?.call();
+    _isAnyItemSelected.value = false;
+    _selectionCount.value = 0;
   }
 
   void _restoreSelectedItems() {
-    onRestore(); // Trigger the onRestore method in the active child page
-    _isAnyItemSelected.value = false; // Reset selection state
+    _onRestore?.call();
+    _isAnyItemSelected.value = false;
+    _selectionCount.value = 0;
+  }
+
+  void _selectAllItems() {
+    _onSelectAll?.call();
+  }
+
+  Future<void> _showDeleteConfirmation(BuildContext context) async {
+    final count = _selectionCount.value;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Delete permanently?"),
+        content: Text(
+          "This will permanently delete $count item${count == 1 ? '' : 's'}. This cannot be undone.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text("Cancel"),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: const Text("Delete"),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) _deleteSelectedItems();
   }
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 3, // Number of tabs
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text("Trash"),
-          leading: widget.runningOnDesktop
-              ? BackButton(
-                  onPressed: () {
-                    widget.setShowHidePage!(
-                        PageType.archive, false, PageParams());
-                  },
-                )
-              : null,
-          actions: [
-            ValueListenableBuilder<bool>(
-              valueListenable: _isAnyItemSelected,
-              builder: (context, isSelected, child) {
-                if (isSelected) {
-                  return Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(LucideIcons.archiveRestore),
-                        onPressed: _restoreSelectedItems,
-                      ),
-                      IconButton(
-                        icon: const Icon(LucideIcons.trash2),
-                        onPressed: _deleteSelectedItems,
-                      ),
-                    ],
-                  );
-                }
-                return const SizedBox
-                    .shrink(); // Show nothing if no items are selected
-              },
-            ),
-          ],
-          bottom: TabBar(
-            tabs: const [
-              Tab(text: "Notes"),
-              Tab(text: "Groups"),
-              Tab(text: 'Categories'),
-            ],
+    final cs = Theme.of(context).colorScheme;
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Trash"),
+        leading: widget.runningOnDesktop
+            ? BackButton(
+                onPressed: () {
+                  widget.setShowHidePage!(
+                      PageType.archive, false, PageParams());
+                },
+              )
+            : null,
+        actions: [
+          ValueListenableBuilder<bool>(
+            valueListenable: _isAnyItemSelected,
+            builder: (context, isSelected, child) {
+              if (!isSelected) return const SizedBox.shrink();
+              return Row(
+                children: [
+                  TextButton(
+                    onPressed: _selectAllItems,
+                    child: Text("All", style: TextStyle(color: cs.primary)),
+                  ),
+                  IconButton(
+                    icon: const Icon(LucideIcons.archiveRestore),
+                    tooltip: "Restore",
+                    onPressed: _restoreSelectedItems,
+                  ),
+                  IconButton(
+                    icon: const Icon(LucideIcons.trash2),
+                    tooltip: "Delete permanently",
+                    onPressed: () => _showDeleteConfirmation(context),
+                  ),
+                ],
+              );
+            },
           ),
-        ),
-        body: TabBarView(
-          children: [
-            PageArchivedItems(
-              onSelectionChange: (isSelected) =>
-                  _isAnyItemSelected.value = isSelected,
-              setDeleteCallback: (callback) => onDelete = callback,
-              setRestoreCallback: (callback) => onRestore = callback,
-            ),
-            PageArchivedGroups(
-              onSelectionChange: (isSelected) =>
-                  _isAnyItemSelected.value = isSelected,
-              setDeleteCallback: (callback) => onDelete = callback,
-              setRestoreCallback: (callback) => onRestore = callback,
-            ), // Content for Groups tab
-            PageArchivedCategories(
-              onSelectionChange: (isSelected) =>
-                  _isAnyItemSelected.value = isSelected,
-              setDeleteCallback: (callback) => onDelete = callback,
-              setRestoreCallback: (callback) => onRestore = callback,
-            ),
+        ],
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: "Notes"),
+            Tab(text: "Groups"),
+            Tab(text: "Categories"),
           ],
         ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          PageArchivedItems(
+            onSelectionChange: (isSelected, count) {
+              _isAnyItemSelected.value = isSelected;
+              _selectionCount.value = count;
+            },
+            setDeleteCallback: (cb) => _onDelete = cb,
+            setRestoreCallback: (cb) => _onRestore = cb,
+            setSelectAllCallback: (cb) => _onSelectAll = cb,
+          ),
+          PageArchivedGroups(
+            onSelectionChange: (isSelected, count) {
+              _isAnyItemSelected.value = isSelected;
+              _selectionCount.value = count;
+            },
+            setDeleteCallback: (cb) => _onDelete = cb,
+            setRestoreCallback: (cb) => _onRestore = cb,
+            setSelectAllCallback: (cb) => _onSelectAll = cb,
+          ),
+          PageArchivedCategories(
+            onSelectionChange: (isSelected, count) {
+              _isAnyItemSelected.value = isSelected;
+              _selectionCount.value = count;
+            },
+            setDeleteCallback: (cb) => _onDelete = cb,
+            setRestoreCallback: (cb) => _onRestore = cb,
+            setSelectAllCallback: (cb) => _onSelectAll = cb,
+          ),
+        ],
       ),
     );
   }

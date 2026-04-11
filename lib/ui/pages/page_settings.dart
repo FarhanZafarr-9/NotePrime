@@ -77,8 +77,8 @@ class SettingsPageState extends State<SettingsPage> {
       bool isAuthenticated = await _auth.authenticate(
         localizedReason: 'Please authenticate',
         options: const AuthenticationOptions(
-          biometricOnly: false, // Use only biometric
-          stickyAuth: true, // Keeps the authentication open
+          biometricOnly: false,
+          stickyAuth: true,
         ),
       );
 
@@ -142,7 +142,6 @@ class SettingsPageState extends State<SettingsPage> {
       if (mounted) showAlertMessage(context, "Could not create", status);
     } else {
       try {
-        // Use Share package to trigger download or share intent
         await Share.shareXFiles(
           [XFile(backupFilePath)],
           text: 'Here is the backup file for your app.',
@@ -198,6 +197,10 @@ class SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  // ── Helpers ────────────────────────────────────────────────────────────────
+
+  /// Monochromatic icon badge — uses the theme's onSurfaceVariant for both
+  /// the icon tint and the container background (same as original design).
   Widget _buildLeadingIcon(IconData icon, Color color) {
     final themeColor = Theme.of(context).colorScheme.onSurfaceVariant;
     return Container(
@@ -207,11 +210,7 @@ class SettingsPageState extends State<SettingsPage> {
         color: themeColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(10),
       ),
-      child: Icon(
-        icon,
-        size: 20,
-        color: themeColor,
-      ),
+      child: Icon(icon, size: 20, color: themeColor),
     );
   }
 
@@ -219,33 +218,99 @@ class SettingsPageState extends State<SettingsPage> {
     return Icon(
       LucideIcons.chevronRight,
       size: 16,
-      color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+      color:
+          Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
     );
   }
 
   Widget _buildSectionHeader(String title) {
     return Padding(
-      padding: const EdgeInsets.only(left: 8.0, bottom: 8.0, top: 16.0),
+      padding: const EdgeInsets.only(left: 4.0, bottom: 8.0, top: 20.0),
       child: Text(
         title.toUpperCase(),
         style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 1.2,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 1.1,
           color: Theme.of(context).colorScheme.primary,
         ),
       ),
     );
   }
 
+  /// Wraps a list of tiles so that:
+  ///   - first tile  → large top corners    (12), small bottom corners (5)
+  ///   - last tile   → small top corners    (5),  large bottom corners (12)
+  ///   - only tile   → large corners all around (12)
+  ///   - middle tiles → small corners all around (5)
+  ///
+  /// Tiles are separated by a 3 px gap; no borders are drawn on any tile.
+  Widget _buildSettingsGroup(List<_SettingsTile> tiles) {
+    return Column(
+      children: List.generate(tiles.length, (i) {
+        final isFirst = i == 0;
+        final isLast = i == tiles.length - 1;
+        final isOnly = tiles.length == 1;
+
+        const double large = 12;
+        const double small = 5;
+
+        final radius = BorderRadius.only(
+          topLeft: Radius.circular(isFirst || isOnly ? large : small),
+          topRight: Radius.circular(isFirst || isOnly ? large : small),
+          bottomLeft: Radius.circular(isLast || isOnly ? large : small),
+          bottomRight: Radius.circular(isLast || isOnly ? large : small),
+        );
+
+        final tile = tiles[i];
+
+        return Column(
+          children: [
+            Material(
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.06),
+              borderRadius: radius,
+              child: InkWell(
+                borderRadius: radius,
+                onTap: tile.onTap,
+                child: ClipRRect(
+                  borderRadius: radius,
+                  child: ListTile(
+                    leading: tile.leading,
+                    title: tile.title,
+                    subtitle: tile.subtitle,
+                    trailing: tile.trailing,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 2,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            if (!isLast) const SizedBox(height: 3),
+          ],
+        );
+      }),
+    );
+  }
+
+  // ── Build ──────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
+      backgroundColor: cs.surfaceContainerLowest,
       appBar: AppBar(
         title: const Text("Settings"),
         centerTitle: true,
-        backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
+        backgroundColor: cs.surfaceContainerLowest,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
         leading: widget.runningOnDesktop
             ? BackButton(
                 onPressed: () async {
@@ -257,204 +322,164 @@ class SettingsPageState extends State<SettingsPage> {
             : null,
       ),
       body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
         children: <Widget>[
+          // ── Appearance ────────────────────────────────────────────────────
           _buildSectionHeader("Appearance"),
-          Card(
-            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.09),
-            elevation: 1,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: BorderSide(
-                color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.1),
-                width: 0.75,
+          _buildSettingsGroup([
+            _SettingsTile(
+              leading: _buildLeadingIcon(LucideIcons.sunMoon, Colors.orange),
+              title: const Text("Theme"),
+              subtitle: Text(widget.isDarkMode ? "Dark Mode" : "Light Mode"),
+              trailing: Switch(
+                value: widget.isDarkMode,
+                onChanged: (_) => widget.onThemeToggle(),
+              ),
+              onTap: widget.onThemeToggle,
+            ),
+            _SettingsTile(
+              leading: _buildLeadingIcon(LucideIcons.palette, Colors.blue),
+              title: const Text("Dynamic Coloring"),
+              subtitle: const Text("Wallpaper colors (Material You)"),
+              trailing: Switch(
+                value: widget.useDynamicColor,
+                onChanged: (_) => widget.onDynamicColorToggle(),
+              ),
+              onTap: widget.onDynamicColorToggle,
+            ),
+            _SettingsTile(
+              leading: _buildLeadingIcon(LucideIcons.type, Colors.green),
+              title: const Text("Font Size"),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(LucideIcons.minus),
+                    iconSize: 18,
+                    onPressed: () =>
+                        Provider.of<FontSizeController>(context, listen: false)
+                            .decreaseFontSize(),
+                  ),
+                  IconButton(
+                    icon: const Icon(LucideIcons.plus),
+                    iconSize: 18,
+                    onPressed: () =>
+                        Provider.of<FontSizeController>(context, listen: false)
+                            .increaseFontSize(),
+                  ),
+                ],
               ),
             ),
-            child: Column(
-              children: [
-                ListTile(
-                  leading: _buildLeadingIcon(LucideIcons.sunMoon, Colors.orange),
-                  title: const Text("Theme"),
-                  subtitle: Text(widget.isDarkMode ? "Dark Mode" : "Light Mode"),
-                  onTap: widget.onThemeToggle,
-                  trailing: Switch(
-                    value: widget.isDarkMode,
-                    onChanged: (bool value) => widget.onThemeToggle(),
-                  ),
-                ),
-                Divider(height: 1, indent: 56, endIndent: 16, color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3)),
-                ListTile(
-                  leading: _buildLeadingIcon(LucideIcons.palette, Colors.blue),
-                  title: const Text("Dynamic Coloring"),
-                  subtitle: const Text("Wallpaper colors (Material You)"),
-                  trailing: Switch(
-                    value: widget.useDynamicColor,
-                    onChanged: (bool value) => widget.onDynamicColorToggle(),
-                  ),
-                ),
-                Divider(height: 1, indent: 56, endIndent: 16, color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3)),
-                ListTile(
-                  leading: _buildLeadingIcon(LucideIcons.type, Colors.green),
-                  title: const Text("Font Size"),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(LucideIcons.minus),
-                        iconSize: 18,
-                        onPressed: () => Provider.of<FontSizeController>(context, listen: false).decreaseFontSize(),
-                      ),
-                      IconButton(
-                        icon: const Icon(LucideIcons.plus),
-                        iconSize: 18,
-                        onPressed: () => Provider.of<FontSizeController>(context, listen: false).increaseFontSize(),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
+          ]),
+
+          // ── General ───────────────────────────────────────────────────────
           _buildSectionHeader("General"),
-          Card(
-            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.09),
-            elevation: 1,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: BorderSide(
-                color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.1),
-                width: 0.75,
+          _buildSettingsGroup([
+            _SettingsTile(
+              leading: _buildLeadingIcon(LucideIcons.timer, Colors.amber),
+              title: const Text('Time Format'),
+              trailing: DropdownButton<String>(
+                value: timeFormat,
+                underline: const SizedBox(),
+                icon: _buildTrailingChevron(),
+                items: const [
+                  DropdownMenuItem(value: "H12", child: Text('H12')),
+                  DropdownMenuItem(value: "H24", child: Text('H24')),
+                ],
+                onChanged: (format) => updateTimeFormat(format),
               ),
             ),
-            child: Column(
-              children: [
-                ListTile(
-                  leading: _buildLeadingIcon(LucideIcons.timer, Colors.amber),
-                  title: const Text('Time Format'),
-                  trailing: DropdownButton<String>(
-                    value: timeFormat,
-                    underline: const SizedBox(),
-                    icon: _buildTrailingChevron(),
-                    items: const [
-                      DropdownMenuItem(value: "H12", child: Text('H12')),
-                      DropdownMenuItem(value: "H24", child: Text('H24')),
-                    ],
-                    onChanged: (format) => updateTimeFormat(format),
-                  ),
-                ),
-                Divider(height: 1, indent: 56, endIndent: 16, color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3)),
-                ListTile(
-                  leading: _buildLeadingIcon(LucideIcons.shieldCheck, Colors.red),
-                  title: const Text("App Lock"),
-                  subtitle: const Text("Biometric or pattern lock"),
-                  trailing: Switch(
-                    value: isAuthEnabled,
-                    onChanged: (bool value) => _authenticate(),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          _buildSectionHeader("Storage"),
-          Card(
-            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.09),
-            elevation: 1,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: BorderSide(
-                color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.1),
-                width: 0.75,
+            _SettingsTile(
+              leading: _buildLeadingIcon(LucideIcons.shieldCheck, Colors.red),
+              title: const Text("App Lock"),
+              subtitle: const Text("Biometric or pattern lock"),
+              trailing: Switch(
+                value: isAuthEnabled,
+                onChanged: (_) => _authenticate(),
               ),
+              onTap: _authenticate,
             ),
-            child: Column(
-              children: [
-                if (widget.canShowBackupRestore)
-                  ListTile(
-                    leading: _buildLeadingIcon(LucideIcons.databaseBackup, Colors.purple),
-                    title: const Text('Backup Data'),
-                    subtitle: const Text("Export your notes as zip"),
-                    trailing: _buildTrailingChevron(),
-                    onTap: createDownloadBackup,
-                  ),
-                if (widget.canShowBackupRestore)
-                  Divider(height: 1, indent: 56, endIndent: 16, color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3)),
-                if (widget.canShowBackupRestore)
-                  ListTile(
-                    leading: _buildLeadingIcon(LucideIcons.rotateCcw, Colors.blue),
-                    title: const Text('Restore Data'),
-                    subtitle: const Text("Import from backup zip"),
-                    trailing: _buildTrailingChevron(),
-                    onTap: restoreZipBackup,
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
+          ]),
+
+          // ── Storage ───────────────────────────────────────────────────────
+          if (widget.canShowBackupRestore) ...[
+            _buildSectionHeader("Storage"),
+            _buildSettingsGroup([
+              _SettingsTile(
+                leading: _buildLeadingIcon(
+                    LucideIcons.databaseBackup, Colors.purple),
+                title: const Text('Backup Data'),
+                subtitle: const Text("Export your notes as zip"),
+                trailing: _buildTrailingChevron(),
+                onTap: createDownloadBackup,
+              ),
+              _SettingsTile(
+                leading: _buildLeadingIcon(LucideIcons.rotateCcw, Colors.blue),
+                title: const Text('Restore Data'),
+                subtitle: const Text("Import from backup zip"),
+                trailing: _buildTrailingChevron(),
+                onTap: restoreZipBackup,
+              ),
+            ]),
+          ],
+
+          // ── About & Feedback ──────────────────────────────────────────────
           _buildSectionHeader("About & Feedback"),
-          Card(
-            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.09),
-            elevation: 1,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: BorderSide(
-                color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.1),
-                width: 0.75,
+          _buildSettingsGroup([
+            _SettingsTile(
+              leading: _buildLeadingIcon(LucideIcons.star, Colors.orange),
+              title: const Text('Leave a Review'),
+              trailing: _buildTrailingChevron(),
+              onTap: _redirectToFeedback,
+            ),
+            _SettingsTile(
+              leading: _buildLeadingIcon(LucideIcons.share2, Colors.blue),
+              title: const Text('Share App'),
+              trailing: _buildTrailingChevron(),
+              onTap: _share,
+            ),
+            if (Platform.isAndroid || Platform.isIOS)
+              _SettingsTile(
+                leading:
+                    _buildLeadingIcon(LucideIcons.monitor, Colors.blueGrey),
+                title: const Text('Desktop Version'),
+                trailing: _buildTrailingChevron(),
+                onTap: _redirectToDesktopApp,
+              ),
+            _SettingsTile(
+              leading: _buildLeadingIcon(LucideIcons.list, Colors.blueGrey),
+              title: const Text("Developer Logging"),
+              trailing: Switch(
+                value: loggingEnabled,
+                onChanged: _setLogging,
               ),
             ),
-            child: Column(
-              children: [
-                ListTile(
-                  leading: _buildLeadingIcon(LucideIcons.star, Colors.orange),
-                  title: const Text('Leave a Review'),
-                  trailing: _buildTrailingChevron(),
-                  onTap: _redirectToFeedback,
-                ),
-                Divider(height: 1, indent: 56, endIndent: 16, color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3)),
-                ListTile(
-                  leading: _buildLeadingIcon(LucideIcons.share2, Colors.blue),
-                  title: const Text('Share App'),
-                  trailing: _buildTrailingChevron(),
-                  onTap: _share,
-                ),
-                Divider(height: 1, indent: 56, endIndent: 16, color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3)),
-                if (Platform.isAndroid || Platform.isIOS)
-                  ListTile(
-                    leading: _buildLeadingIcon(LucideIcons.monitor, Colors.grey),
-                    title: const Text('Desktop Version'),
-                    trailing: _buildTrailingChevron(),
-                    onTap: _redirectToDesktopApp,
-                  ),
-                Divider(height: 1, indent: 56, endIndent: 16, color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3)),
-                ListTile(
-                  leading: _buildLeadingIcon(LucideIcons.list, Colors.blueGrey),
-                  title: const Text("Developer Logging"),
-                  trailing: Switch(
-                    value: loggingEnabled,
-                    onChanged: _setLogging,
-                  ),
-                ),
-                Divider(height: 1, indent: 56, endIndent: 16, color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3)),
-                FutureBuilder<PackageInfo>(
-                  future: PackageInfo.fromPlatform(),
-                  builder: (context, snapshot) {
-                    final version = snapshot.data?.version ?? 'Loading...';
-                    return ListTile(
-                      leading: _buildLeadingIcon(LucideIcons.info, Colors.grey),
-                      title: const Text('App Version'),
-                      trailing: Text(version, style: const TextStyle(fontSize: 12)),
-                    );
-                  },
-                ),
-              ],
+            _SettingsTile(
+              leading: _buildLeadingIcon(LucideIcons.info, Colors.grey),
+              title: const Text('App Version'),
+              trailing: FutureBuilder<PackageInfo>(
+                future: PackageInfo.fromPlatform(),
+                builder: (context, snapshot) {
+                  final version = snapshot.data?.version ?? '...';
+                  return Text(
+                    version,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: cs.onSurfaceVariant,
+                    ),
+                  );
+                },
+              ),
             ),
-          ),
-          const SizedBox(height: 24),
+          ]),
+
+          const SizedBox(height: 32),
         ],
       ),
     );
   }
+
+  // ── Actions ────────────────────────────────────────────────────────────────
 
   void _redirectToDesktopApp() {
     const url = "https://github.com/jeerovan/ntsapp/releases";
@@ -464,7 +489,6 @@ class SettingsPageState extends State<SettingsPage> {
   void _redirectToFeedback() {
     const url =
         'https://play.google.com/store/apps/details?id=com.makenotetoself';
-    // Use your package name
     openURL(url);
   }
 
@@ -475,4 +499,24 @@ class SettingsPageState extends State<SettingsPage> {
         'https://play.google.com/store/apps/details?id=com.makenotetoself';
     Share.share("Make a $appName: $appLink");
   }
+}
+
+// ── Data class ────────────────────────────────────────────────────────────────
+
+/// Lightweight data holder so _buildSettingsGroup can inspect each tile's
+/// properties without needing to unwrap a fully-built widget.
+class _SettingsTile {
+  final Widget? leading;
+  final Widget title;
+  final Widget? subtitle;
+  final Widget? trailing;
+  final VoidCallback? onTap;
+
+  const _SettingsTile({
+    this.leading,
+    required this.title,
+    this.subtitle,
+    this.trailing,
+    this.onTap,
+  });
 }

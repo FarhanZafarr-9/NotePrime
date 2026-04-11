@@ -58,7 +58,7 @@ class PageItems extends StatefulWidget {
 class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
   final logger = AppLogger(prefixes: ["page_items"]);
   String? showItemId;
-  final List<ModelItem> _displayItemList = []; // Store items
+  final List<ModelItem> _displayItemList = [];
   final List<ModelItem> _selectedItems = [];
   bool _hasNotesSelected = false;
   bool selectionHasStarredItems = true;
@@ -107,19 +107,12 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
     "locations": false
   };
   bool _filtersEnabled = false;
-
   bool _shouldBlinkItem = false;
-
-
 
   @override
   void initState() {
     super.initState();
-
     _audioRecorder = AudioRecorder();
-
-
-
     EventStream().notifier.addListener(_handleAppEvent);
   }
 
@@ -130,24 +123,18 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
     _textController.dispose();
     _textControllerFocus.dispose();
     _audioRecorder.dispose();
-
     super.dispose();
   }
 
   void _handleAppEvent() {
     final AppEvent? event = EventStream().notifier.value;
     if (event == null) return;
-
     switch (event.type) {
       case EventType.changedGroupId:
-        if (mounted) {
-          changedGroup(event.value);
-        }
+        if (mounted) changedGroup(event.value);
         break;
       case EventType.changedItemId:
-        if (mounted) {
-          changedItem(event.value);
-        }
+        if (mounted) changedItem(event.value);
         break;
       default:
         break;
@@ -167,11 +154,7 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
             if (mounted) Navigator.of(context).pop();
           }
         } else {
-          if (mounted) {
-            setState(() {
-              noteGroup = group;
-            });
-          }
+          if (mounted) setState(() => noteGroup = group);
           await loadGroupSettings(group);
         }
       } else {
@@ -202,12 +185,8 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
           if (item.archivedAt! > 0) {
             _removeItemsFromDisplayList([oldItem]);
           } else {
-            setState(() {
-              _displayItemList[itemIndex] = item;
-            });
-            if (oldItem.text != item.text) {
-              checkFetchUrlMetadata(item);
-            }
+            setState(() => _displayItemList[itemIndex] = item);
+            if (oldItem.text != item.text) checkFetchUrlMetadata(item);
           }
         } else {
           fetchItems(null);
@@ -221,13 +200,13 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
     if (data != null && mounted) {
       setState(() {
         if (data.containsKey("date_time")) {
-          showDateTime = data["date_time"] == 1 ? true : false;
+          showDateTime = data["date_time"] == 1;
         }
         if (data.containsKey("note_border")) {
-          showNoteBorder = data["note_border"] == 1 ? true : false;
+          showNoteBorder = data["note_border"] == 1;
         }
         if (data.containsKey("task_mode")) {
-          _isCreatingTask = data["task_mode"] == 1 ? true : false;
+          _isCreatingTask = data["task_mode"] == 1;
         }
       });
     }
@@ -236,11 +215,7 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
   Future<void> fetchItems(String? itemId) async {
     List<ModelItem> newItems =
         await ModelItem.getInGroup(noteGroup!.id!, _filters);
-    if (itemId != null) {
-      canScrollToBottom = true;
-    } else {
-      canScrollToBottom = false;
-    }
+    canScrollToBottom = itemId != null;
     _displayItemList.clear();
     await _addItemsToDisplayList(newItems, true);
     setState(() {
@@ -260,23 +235,19 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
           });
         }
       } else {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _itemScrollController.jumpTo(index: 0);
-        });
+        WidgetsBinding.instance.addPostFrameCallback(
+            (_) => _itemScrollController.jumpTo(index: 0));
       }
     });
     if (newItems.isEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _textControllerFocus.requestFocus();
-      });
+      WidgetsBinding.instance
+          .addPostFrameCallback((_) => _textControllerFocus.requestFocus());
     }
   }
 
   Future<void> loadImageDirectoryPath() async {
     String filePath = await getFilePath("image", "dummy.png");
-    setState(() {
-      imageDirPath = path.dirname(filePath);
-    });
+    setState(() => imageDirPath = path.dirname(filePath));
   }
 
   Future<void> _addItemsToDisplayList(
@@ -297,16 +268,14 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
           _displayItemList.removeLast();
           lastDisplayItemDate = null;
         }
-        if (lastDate != null) {
-          if (currentDate != lastDate) {
-            final ModelItem dateItem = await ModelItem.fromMap({
-              "group_id": noteGroup!.id,
-              "text": getReadableDate(lastDate),
-              "type": 170000,
-              "at": lastItemAt! - 1
-            });
-            _displayItemList.add(dateItem);
-          }
+        if (lastDate != null && currentDate != lastDate) {
+          final ModelItem dateItem = await ModelItem.fromMap({
+            "group_id": noteGroup!.id,
+            "text": getReadableDate(lastDate),
+            "type": 170000,
+            "at": lastItemAt! - 1
+          });
+          _displayItemList.add(dateItem);
         }
         _displayItemList.add(item);
         lastDate = currentDate;
@@ -327,17 +296,15 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
       }
       for (ModelItem item in items) {
         final currentDate = getLocalDateFromUtcMilliSeconds(item.at!);
-        if (lastDate != null) {
-          if (currentDate != lastDate) {
-            final ModelItem dateItem = await ModelItem.fromMap({
-              "group_id": noteGroup!.id,
-              "text": getReadableDate(currentDate),
-              "type": 170000,
-              "at": item.at! - 1
-            });
-            _displayItemList.insert(0, dateItem);
-          }
-        } else {
+        if (lastDate != null && currentDate != lastDate) {
+          final ModelItem dateItem = await ModelItem.fromMap({
+            "group_id": noteGroup!.id,
+            "text": getReadableDate(currentDate),
+            "type": 170000,
+            "at": item.at! - 1
+          });
+          _displayItemList.insert(0, dateItem);
+        } else if (lastDate == null) {
           final ModelItem dateItem = await ModelItem.fromMap({
             "group_id": noteGroup!.id,
             "text": getReadableDate(currentDate),
@@ -357,38 +324,20 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
       for (ModelItem item in items) {
         int itemIndex = _displayItemList.indexOf(item);
         if (itemIndex == -1) continue;
-        // check if the next item is date
         ModelItem nextItem = _displayItemList.elementAt(itemIndex + 1);
         if (nextItem.type == ItemType.date) {
-          // check the previous item
           if (itemIndex > 0) {
             ModelItem previousItem = _displayItemList.elementAt(itemIndex - 1);
             if (previousItem.type == ItemType.date) {
               _displayItemList.removeAt(itemIndex + 1);
             }
           } else {
-            // if removing the first item, remove the date
             _displayItemList.removeAt(itemIndex + 1);
           }
         }
         _displayItemList.remove(item);
       }
     });
-  }
-
-  ModelItem? getLastItemFromDisplayList() {
-    if (_displayItemList.isNotEmpty) {
-      final ModelItem item = _displayItemList.last;
-      if (item.type != ItemType.date) {
-        return item;
-      } else if (_displayItemList.length < 2) {
-        return null;
-      } else {
-        return _displayItemList[_displayItemList.length - 2];
-      }
-    } else {
-      return null;
-    }
   }
 
   Future<void> loadSharedContents() async {
@@ -411,331 +360,139 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
   }
 
   void triggerItemBlink() {
-    int milliseconds = 250;
-    if (mounted) {
-      setState(() {
-        _shouldBlinkItem = true;
-      });
-    }
-
-    Future.delayed(Duration(milliseconds: milliseconds), () {
-      if (mounted) {
-        setState(() {
-          _shouldBlinkItem = false;
-        });
-      }
-
-      Future.delayed(Duration(milliseconds: milliseconds), () {
-        if (mounted) {
-          setState(() {
-            _shouldBlinkItem = true;
-          });
-        }
-
-        Future.delayed(Duration(milliseconds: milliseconds), () {
-          if (mounted) {
-            setState(() {
-              _shouldBlinkItem = false; // Final state
-            });
-          }
+    const ms = 250;
+    if (mounted) setState(() => _shouldBlinkItem = true);
+    Future.delayed(const Duration(milliseconds: ms), () {
+      if (mounted) setState(() => _shouldBlinkItem = false);
+      Future.delayed(const Duration(milliseconds: ms), () {
+        if (mounted) setState(() => _shouldBlinkItem = true);
+        Future.delayed(const Duration(milliseconds: ms), () {
+          if (mounted) setState(() => _shouldBlinkItem = false);
         });
       });
     });
   }
 
-  //Filters
   void _applyFilters() {
     setState(() {
-      _filtersEnabled = _filters["pinned"] == true ||
-          _filters["starred"] == true ||
-          _filters["notes"] == true ||
-          _filters["tasks"] == true ||
-          _filters["links"] == true ||
-          _filters["images"] == true ||
-          _filters["audio"] == true ||
-          _filters["video"] == true ||
-          _filters["documents"] == true ||
-          _filters["contacts"] == true ||
-          _filters["locations"] == true;
+      _filtersEnabled = _filters.values.any((v) => v == true);
       fetchItems(null);
     });
   }
 
   void _clearFilters() {
     setState(() {
-      _filters["pinned"] = false;
-      _filters["starred"] = false;
-      _filters["notes"] = false;
-      _filters["tasks"] = false;
-      _filters["links"] = false;
-      _filters["images"] = false;
-      _filters["audio"] = false;
-      _filters["video"] = false;
-      _filters["documents"] = false;
-      _filters["contacts"] = false;
-      _filters["locations"] = false;
+      _filters.updateAll((key, value) => false);
       _applyFilters();
     });
   }
 
   void _toggleFilter(String filter) {
-    setState(() {
-      _filters[filter] = !_filters[filter]!;
-    });
+    setState(() => _filters[filter] = !_filters[filter]!);
     _applyFilters();
   }
 
+  // ── Filter dialog — icon grid with chip-style toggle ─────────────────────
   void _openFilterDialog() {
-    bool pinned = _filters["pinned"]!;
-    bool starred = _filters["starred"]!;
-    bool notes = _filters["notes"]!;
-    bool tasks = _filters["tasks"]!;
-    bool links = _filters["links"]!;
-    bool images = _filters["images"]!;
-    bool audio = _filters["audio"]!;
-    bool video = _filters["video"]!;
-    bool documents = _filters["documents"]!;
-    bool contacts = _filters["contacts"]!;
-    bool locations = _filters["locations"]!;
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return StatefulBuilder(
-            builder: (BuildContext context, StateSetter setState) {
-          return AlertDialog(
-            title: const Text('Filter notes'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    IconButton(
-                      tooltip: "Filter pinned notes",
-                      onPressed: () {
-                        setState(() {
-                          pinned = !pinned;
-                          _toggleFilter("pinned");
-                        });
-                      },
-                      icon: Icon(
-                        LucideIcons.pin,
-                        color: pinned
-                            ? null
-                            : Theme.of(context).colorScheme.inversePrimary,
-                      ),
+          builder: (BuildContext context, StateSetter setState) {
+            final cs = Theme.of(context).colorScheme;
+
+            Widget filterChip(String key, IconData icon, String label) {
+              final active = _filters[key]!;
+              return GestureDetector(
+                onTap: () {
+                  setState(() => _filters[key] = !active);
+                  _toggleFilter(key);
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: active
+                        ? cs.onSurface.withValues(alpha: 0.12)
+                        : cs.onSurface.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: active
+                          ? cs.onSurface.withValues(alpha: 0.3)
+                          : Colors.transparent,
+                      width: 0.75,
                     ),
-                    IconButton(
-                      tooltip: "Filter starred notes",
-                      onPressed: () {
-                        setState(() {
-                          starred = !starred;
-                          _toggleFilter("starred");
-                        });
-                      },
-                      icon: Icon(
-                        LucideIcons.star,
-                        color: starred
-                            ? null
-                            : Theme.of(context).colorScheme.inversePrimary,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(icon,
+                          size: 16,
+                          color: active
+                              ? cs.onSurface
+                              : cs.onSurfaceVariant.withValues(alpha: 0.5)),
+                      const SizedBox(width: 6),
+                      Text(
+                        label,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: active
+                              ? cs.onSurface
+                              : cs.onSurfaceVariant.withValues(alpha: 0.6),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-                const SizedBox(
-                  height: 15,
+              );
+            }
+
+            return AlertDialog(
+              backgroundColor: cs.surfaceContainerHigh,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20)),
+              title: Text('Filter notes',
+                  style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w500,
+                      color: cs.onSurface)),
+              content: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  filterChip("pinned", LucideIcons.pin, "Pinned"),
+                  filterChip("starred", LucideIcons.star, "Starred"),
+                  filterChip("notes", LucideIcons.text, "Notes"),
+                  filterChip("tasks", LucideIcons.checkCircle, "Tasks"),
+                  filterChip("links", LucideIcons.link, "Links"),
+                  filterChip("images", LucideIcons.image, "Images"),
+                  filterChip("audio", LucideIcons.music2, "Audio"),
+                  filterChip("video", LucideIcons.video, "Video"),
+                  filterChip("documents", LucideIcons.file, "Files"),
+                  filterChip("contacts", LucideIcons.contact, "Contacts"),
+                  filterChip("locations", LucideIcons.mapPin, "Locations"),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  style: TextButton.styleFrom(
+                      foregroundColor: cs.onSurfaceVariant),
+                  onPressed: () {
+                    _clearFilters();
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('Clear'),
                 ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    IconButton(
-                      tooltip: "Filter text notes",
-                      onPressed: () {
-                        setState(() {
-                          notes = !notes;
-                          _toggleFilter("notes");
-                        });
-                      },
-                      icon: Icon(
-                        LucideIcons.text,
-                        color: notes
-                            ? null
-                            : Theme.of(context).colorScheme.inversePrimary,
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: "Filter tasks",
-                      onPressed: () {
-                        setState(() {
-                          tasks = !tasks;
-                          _toggleFilter("tasks");
-                        });
-                      },
-                      icon: Icon(
-                        LucideIcons.checkCircle,
-                        color: tasks
-                            ? null
-                            : Theme.of(context).colorScheme.inversePrimary,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(
-                  height: 15,
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    IconButton(
-                      tooltip: "Filter links",
-                      onPressed: () {
-                        setState(() {
-                          links = !links;
-                          _toggleFilter("links");
-                        });
-                      },
-                      icon: Icon(
-                        LucideIcons.link,
-                        color: links
-                            ? null
-                            : Theme.of(context).colorScheme.inversePrimary,
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: "Filter images",
-                      onPressed: () {
-                        setState(() {
-                          images = !images;
-                          _toggleFilter("images");
-                        });
-                      },
-                      icon: Icon(
-                        LucideIcons.image,
-                        color: images
-                            ? null
-                            : Theme.of(context).colorScheme.inversePrimary,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(
-                  height: 15,
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    IconButton(
-                      tooltip: "Filter audio",
-                      onPressed: () {
-                        setState(() {
-                          audio = !audio;
-                          _toggleFilter("audio");
-                        });
-                      },
-                      icon: Icon(
-                        LucideIcons.music2,
-                        color: audio
-                            ? null
-                            : Theme.of(context).colorScheme.inversePrimary,
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: "Filter video",
-                      onPressed: () {
-                        setState(() {
-                          video = !video;
-                          _toggleFilter("video");
-                        });
-                      },
-                      icon: Icon(
-                        LucideIcons.video,
-                        color: video
-                            ? null
-                            : Theme.of(context).colorScheme.inversePrimary,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(
-                  height: 15,
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    IconButton(
-                      tooltip: "Filter files",
-                      onPressed: () {
-                        setState(() {
-                          documents = !documents;
-                          _toggleFilter("documents");
-                        });
-                      },
-                      icon: Icon(
-                        LucideIcons.file,
-                        color: documents
-                            ? null
-                            : Theme.of(context).colorScheme.inversePrimary,
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: "Filter contacts",
-                      onPressed: () {
-                        setState(() {
-                          contacts = !contacts;
-                          _toggleFilter("contacts");
-                        });
-                      },
-                      icon: Icon(
-                        LucideIcons.contact,
-                        color: contacts
-                            ? null
-                            : Theme.of(context).colorScheme.inversePrimary,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(
-                  height: 15,
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    IconButton(
-                      tooltip: "Filter location",
-                      onPressed: () {
-                        setState(() {
-                          locations = !locations;
-                          _toggleFilter("locations");
-                        });
-                      },
-                      icon: Icon(
-                        LucideIcons.mapPin,
-                        color: locations
-                            ? null
-                            : Theme.of(context).colorScheme.inversePrimary,
-                      ),
-                    ),
-                  ],
+                TextButton(
+                  style: TextButton.styleFrom(foregroundColor: cs.primary),
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Done'),
                 ),
               ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  _clearFilters();
-                  Navigator.of(context).pop(); // Close the dialog
-                },
-                child: const Text('Clear'),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop(); // Close the dialog
-                },
-                child: const Text('Show'),
-              ),
-            ],
-          );
-        });
+            );
+          },
+        );
       },
     );
   }
@@ -747,9 +504,7 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
     selectionHasPinnedItem = true;
     selectionHasOnlyTextOrTaskItem = true;
     for (ModelItem item in _selectedItems) {
-      if (item.starred == 0) {
-        selectionHasStarredItems = false;
-      }
+      if (item.starred == 0) selectionHasStarredItems = false;
       if (item.type.value < ItemType.task.value ||
           item.type.value > ItemType.task.value + 10000) {
         selectionHasOnlyTaskItems = false;
@@ -758,12 +513,8 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
           item.type.value < ItemType.task.value) {
         selectionHasOnlyTextOrTaskItem = false;
       }
-      if (item.type != ItemType.text) {
-        selectionHasOnlyTextItems = false;
-      }
-      if (item.pinned! == 0) {
-        selectionHasPinnedItem = false;
-      }
+      if (item.type != ItemType.text) selectionHasOnlyTextItems = false;
+      if (item.pinned! == 0) selectionHasPinnedItem = false;
     }
   }
 
@@ -771,9 +522,7 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
     setState(() {
       if (_selectedItems.contains(item)) {
         _selectedItems.remove(item);
-        if (_selectedItems.isEmpty) {
-          _hasNotesSelected = false;
-        }
+        if (_selectedItems.isEmpty) _hasNotesSelected = false;
       } else {
         _selectedItems.add(item);
         if (!_hasNotesSelected) _hasNotesSelected = true;
@@ -788,9 +537,7 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
     } else if (_hasNotesSelected) {
       if (_selectedItems.contains(item)) {
         _selectedItems.remove(item);
-        if (_selectedItems.isEmpty) {
-          _hasNotesSelected = false;
-        }
+        if (_selectedItems.isEmpty) _hasNotesSelected = false;
       } else {
         _selectedItems.add(item);
       }
@@ -809,7 +556,6 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
     for (ModelItem item in _selectedItems) {
       item.archivedAt = DateTime.now().toUtc().millisecondsSinceEpoch;
       await item.update(["archived_at"]);
-
       EventStream()
           .publish(AppEvent(type: EventType.changedItemId, value: item.id));
     }
@@ -852,8 +598,7 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
   }
 
   Future<void> copyToClipboard() async {
-    String textToCopy = getTextsFromSelectedItems();
-    Clipboard.setData(ClipboardData(text: textToCopy));
+    Clipboard.setData(ClipboardData(text: getTextsFromSelectedItems()));
     if (mounted) {
       displaySnackBar(context, message: 'Copied to clipboard', seconds: 1);
     }
@@ -862,78 +607,45 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
 
   void shareNotes() {
     List<String> texts = [];
+    List<XFile> medias = [];
     for (ModelItem item in _selectedItems) {
       switch (item.type) {
         case ItemType.text:
-          texts.add(item.text);
-          break;
         case ItemType.task:
-          texts.add(item.text);
-          break;
         case ItemType.completedTask:
           texts.add(item.text);
           break;
         case ItemType.location:
           Map<String, dynamic> locationData = item.data!;
-          double lat = locationData["lat"];
-          double lng = locationData["lng"];
-          Map<String, String> mapUrls = getMapUrls(lat, lng);
-          List<String> locationParts = [
-            "Location:",
-            mapUrls["google"]!,
-            mapUrls["apple"]!
-          ];
-          texts.add(locationParts.join("\n"));
+          Map<String, String> mapUrls =
+              getMapUrls(locationData["lat"], locationData["lng"]);
+          texts.add(
+              ["Location:", mapUrls["google"]!, mapUrls["apple"]!].join("\n"));
           break;
         case ItemType.contact:
-          Map<String, dynamic> contactData = item.data!;
-          String phones =
-              ["Contact:", contactData["phones"].join("\n")].join("\n");
-          String emails =
-              ["Emails:", contactData["emails"].join("\n")].join("\n");
-          String addresses =
-              ["Addresses:", contactData["addresses"].join("\n")].join("\n");
-          texts
-              .add([contactData["name"], phones, emails, addresses].join("\n"));
+          Map<String, dynamic> d = item.data!;
+          texts.add([
+            d["name"],
+            ["Contact:", d["phones"].join("\n")].join("\n"),
+            ["Emails:", d["emails"].join("\n")].join("\n"),
+            ["Addresses:", d["addresses"].join("\n")].join("\n")
+          ].join("\n"));
           break;
-        default:
-          break;
-      }
-    }
-    List<XFile> medias = [];
-    for (ModelItem item in _selectedItems) {
-      switch (item.type) {
         case ItemType.image:
-          Map<String, dynamic> imageData = item.data!;
-          String imagePath = imageData["path"];
-          File imageFile = File(imagePath);
-          if (imageFile.existsSync()) {
-            medias.add(XFile(imagePath));
-          }
+          final f = File(item.data!["path"]);
+          if (f.existsSync()) medias.add(XFile(item.data!["path"]));
           break;
         case ItemType.audio:
-          Map<String, dynamic> audioData = item.data!;
-          String audioPath = audioData["path"];
-          File audioFile = File(audioPath);
-          if (audioFile.existsSync()) {
-            medias.add(XFile(audioPath));
-          }
+          final f = File(item.data!["path"]);
+          if (f.existsSync()) medias.add(XFile(item.data!["path"]));
           break;
         case ItemType.video:
-          Map<String, dynamic> videoData = item.data!;
-          String videoPath = videoData["path"];
-          File videoFile = File(videoPath);
-          if (videoFile.existsSync()) {
-            medias.add(XFile(videoPath));
-          }
+          final f = File(item.data!["path"]);
+          if (f.existsSync()) medias.add(XFile(item.data!["path"]));
           break;
         case ItemType.document:
-          Map<String, dynamic> docData = item.data!;
-          String docPath = docData["path"];
-          File docFile = File(docPath);
-          if (docFile.existsSync()) {
-            medias.add(XFile(docPath));
-          }
+          final f = File(item.data!["path"]);
+          if (f.existsSync()) medias.add(XFile(item.data!["path"]));
           break;
         default:
           break;
@@ -967,8 +679,8 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
       for (ModelItem item in _selectedItems) {
         if (setType == ItemType.text) {
           item.type = setType;
-        } else if (setType == ItemType.task) {
-          if (item.type == ItemType.text) item.type = setType;
+        } else if (setType == ItemType.task && item.type == ItemType.text) {
+          item.type = setType;
         }
         item.update(["type"]);
       }
@@ -984,16 +696,12 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
   }
 
   void _onInputTextChanged(String text) {
-    setState(() {
-      _isTyping = _textController.text.trim().isNotEmpty;
-    });
+    setState(() => _isTyping = _textController.text.trim().isNotEmpty);
   }
 
   Future<void> _startRecording() async {
-    logger.info("Starting Recording");
     if (await _audioRecorder.hasPermission()) {
       final tempDir = await getTemporaryDirectory();
-      logger.info("Temp Dir: ${tempDir.path}");
       final int utcSeconds = DateTime.now().millisecondsSinceEpoch ~/ 1000;
       _audioFilePath = path.join(tempDir.path, 'recording_$utcSeconds.m4a');
       try {
@@ -1016,8 +724,7 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
     } else {
       if (mounted) {
         displaySnackBar(context,
-            message: "Microphone permission is required to record audio.",
-            seconds: 1);
+            message: "Microphone permission is required.", seconds: 1);
       }
     }
   }
@@ -1025,63 +732,45 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
   Future<void> _pauseResumeRecording() async {
     if (_recordingState == 1) {
       await _audioRecorder.pause();
-      setState(() {
-        _recordingState = 2;
-      });
+      setState(() => _recordingState = 2);
     } else {
       await _audioRecorder.resume();
-      setState(() {
-        _recordingState = 1;
-      });
+      setState(() => _recordingState = 1);
     }
   }
 
   Future<void> _stopRecording() async {
     _recordingTimer?.cancel();
-    String? path = await _audioRecorder.stop();
+    String? p = await _audioRecorder.stop();
     setState(() {
       _isRecording = false;
       _recordingState = 0;
     });
-    if (path != null) {
-      await processFiles([path]);
+    if (p != null) {
+      await processFiles([p]);
       await _audioRecorder.cancel();
-    } else {
-      logger.error("Recording path is null");
     }
   }
 
   void addToContacts(ModelItem item) {
-    if (_hasNotesSelected) {
-      onItemTapped(item);
-    }
-    // TO-DO implement
+    if (_hasNotesSelected) onItemTapped(item);
   }
 
-  // seed data for this group
   Future<void> generateAddSeedItems() async {
     showProcessing();
     const int daysToGenerate = 10;
     const int messagesPerDay = 50;
-
     final now = DateTime.now();
-
     for (int dayOffset = 0; dayOffset < daysToGenerate; dayOffset++) {
       final date = now.subtract(Duration(days: dayOffset));
       final dateString =
           "${date.year} ${date.month.toString().padLeft(2, '0')} ${date.day.toString().padLeft(2, '0')}";
-
       for (int messageCount = 1;
           messageCount <= messagesPerDay;
           messageCount++) {
-        final timestamp = DateTime(
-          date.year,
-          date.month,
-          date.day,
-          14, // 2:00 PM
-          messageCount, // Increment minutes
-        ).millisecondsSinceEpoch;
-
+        final timestamp =
+            DateTime(date.year, date.month, date.day, 14, messageCount)
+                .millisecondsSinceEpoch;
         final text = "$dateString, $messageCount";
         final ModelItem item = await ModelItem.fromMap({
           "group_id": noteGroup!.id,
@@ -1093,12 +782,9 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
       }
     }
     hideProcessing();
-    if (mounted) {
-      setState(() {});
-    }
+    if (mounted) setState(() {});
   }
 
-  // Handle adding item
   void _addItemToDbAndDisplayList(
     String text,
     ItemType type,
@@ -1106,11 +792,8 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
     Map<String, dynamic>? data,
   ) async {
     if (replyOnItem != null) {
-      if (data != null) {
-        data["reply_on"] = replyOnItem!.id;
-      } else {
-        data = {"reply_on": replyOnItem!.id};
-      }
+      data = data ?? {};
+      data["reply_on"] = replyOnItem!.id;
     }
     ModelItem item = await ModelItem.fromMap({
       "group_id": noteGroup!.id,
@@ -1124,15 +807,12 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
         .publish(AppEvent(type: EventType.changedItemId, value: item.id));
     await checkAddItemFileHash(item);
     setState(() {
-      int existingIndex = _displayItemList.indexOf(item);
-      if (existingIndex == -1) {
+      if (!_displayItemList.contains(item)) {
         _addItemsToDisplayList([item], false);
       }
       replyOnItem = null;
     });
-    if (type == ItemType.text) {
-      checkFetchUrlMetadata(item);
-    }
+    if (type == ItemType.text) checkFetchUrlMetadata(item);
   }
 
   Future<void> checkAddItemFileHash(ModelItem item) async {
@@ -1140,9 +820,8 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
       String? fileHashName =
           getValueFromMap(item.data!, "name", defaultValue: null);
       if (fileHashName != null) {
-        String itemId = item.id!;
         ModelItemFile itemFile =
-            ModelItemFile(id: itemId, fileHash: fileHashName);
+            ModelItemFile(id: item.id!, fileHash: fileHashName);
         await itemFile.insert();
       }
     }
@@ -1152,11 +831,8 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
     final RegExp linkRegExp = RegExp(r'(https?://[^\s]+)');
     final matches = linkRegExp.allMatches(item.text);
     String link = "";
-    // get only first link
     for (final match in matches) {
-      final start = match.start;
-      final end = match.end;
-      link = item.text.substring(start, end);
+      link = item.text.substring(match.start, match.end);
       break;
     }
     if (link.isNotEmpty) {
@@ -1164,7 +840,6 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
         final Metadata? metaData = await MetadataFetch.extract(link);
         if (metaData != null) {
           int portrait = 1;
-          // download the url image if available
           if (metaData.image != null) {
             portrait =
                 await checkDownloadNetworkImage(item.id!, metaData.image!);
@@ -1176,44 +851,26 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
             "image": metaData.image,
             "portrait": portrait
           };
-          Map<String, dynamic>? data = item.data;
-          if (data != null) {
-            data["url_info"] = urlInfo;
-            item.data = data;
-            await item.update(["data"]);
-          } else {
-            item.data = {"url_info": urlInfo};
-            await item.update(["data"]);
-          }
-
-          if (mounted) {
-            setState(() {});
-          }
+          item.data = {...?item.data, "url_info": urlInfo};
+          await item.update(["data"]);
+          if (mounted) setState(() {});
         }
       } catch (e) {
         logger.error("error fetch metadata", error: e);
       }
     } else {
-      // may happen after editing note
       Map<String, dynamic>? data = item.data;
       if (data != null && data.containsKey("url_info")) {
         data.remove("url_info");
         item.data = data;
         await item.update(["data"]);
-        if (mounted) {
-          setState(() {});
-        }
+        if (mounted) setState(() {});
       }
     }
   }
 
-  void showProcessing() {
-    showProcessingDialog(context);
-  }
-
-  void hideProcessing() {
-    Navigator.pop(context);
-  }
+  void showProcessing() => showProcessingDialog(context);
+  void hideProcessing() => Navigator.pop(context);
 
   Future<void> processFiles(List<String> filePaths) async {
     if (filePaths.isEmpty) return;
@@ -1230,159 +887,128 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
           Uint8List fileBytes = await File(newPath).readAsBytes();
           Uint8List? thumbnail = await compute(getImageThumbnail, fileBytes);
           if (thumbnail != null) {
-            Map<String, dynamic> data = {
+            final decodedImage = await decodeImageFromList(fileBytes);
+            _addItemToDbAndDisplayList(
+                'DND|#image|$fileName', ItemType.image, thumbnail, {
               "path": newPath,
-              "mime": attrs["mime"],
+              "mime": mime,
               "name": fileName,
-              "size": attrs["size"]
-            };
-            String text = 'DND|#image|$fileName';
-            _addItemToDbAndDisplayList(text, ItemType.image, thumbnail, data);
+              "size": attrs["size"],
+              "width": decodedImage.width.toDouble(),
+              "height": decodedImage.height.toDouble(),
+            });
           }
+          break;
         case "video":
           VideoInfoExtractor extractor = VideoInfoExtractor(newPath);
           try {
             final mediaInfo = await extractor.getVideoInfo();
             int durationSeconds = mediaInfo['duration'];
-            String duration = mediaFileDurationFromSeconds(durationSeconds);
-            double aspect = mediaInfo['aspect'];
             Uint8List? thumbnail = await extractor.getThumbnail(
                 seekPosition:
                     Duration(milliseconds: (durationSeconds * 500).toInt()));
-            Map<String, dynamic> data = {
+            _addItemToDbAndDisplayList(
+                'DND|#video|$fileName', ItemType.video, thumbnail, {
               "path": newPath,
-              "mime": attrs["mime"],
+              "mime": mime,
               "name": fileName,
               "size": attrs["size"],
-              "aspect": aspect,
-              "duration": duration
-            };
-            String text = 'DND|#video|$fileName';
-            _addItemToDbAndDisplayList(text, ItemType.video, thumbnail, data);
+              "aspect": mediaInfo['aspect'],
+              "duration": mediaFileDurationFromSeconds(durationSeconds)
+            });
           } catch (e, s) {
             logger.error("ExtractingVideoInfo", error: e, stackTrace: s);
           } finally {
             extractor.dispose();
           }
+          break;
         case "audio":
           String? duration = await getAudioDuration(newPath);
           if (duration != null) {
-            Map<String, dynamic> data = {
+            _addItemToDbAndDisplayList(
+                'DND|#audio|$fileName', ItemType.audio, null, {
               "path": newPath,
-              "mime": attrs["mime"],
+              "mime": mime,
               "name": fileName,
               "size": attrs["size"],
               "duration": duration
-            };
-            String text = 'DND|#audio|$fileName';
-            _addItemToDbAndDisplayList(text, ItemType.audio, null, data);
-          } else {
-            logger.warning("Could not get duration");
+            });
           }
+          break;
         default:
-          Map<String, dynamic> data = {
+          _addItemToDbAndDisplayList(
+              'DND|#document|$fileName', ItemType.document, null, {
             "path": newPath,
-            "mime": attrs["mime"],
+            "mime": mime,
             "name": fileName,
             "size": attrs["size"],
             "title": attrs.containsKey("title") ? attrs["title"] : fileName
-          };
-          String text = 'DND|#document|$fileName';
-          _addItemToDbAndDisplayList(text, ItemType.document, null, data);
+          });
       }
     }
     hideProcessing();
   }
 
-  // Handle adding a media item
   void _addMedia(String type) async {
     if (type == "files") {
       try {
-        FilePickerResult? result = await FilePicker.platform.pickFiles(
-          allowMultiple: true,
-          type: FileType.any, // Allows picking files of any type
-        );
-
+        FilePickerResult? result = await FilePicker.platform
+            .pickFiles(allowMultiple: true, type: FileType.any);
         if (result != null) {
-          List<PlatformFile> pickedFiles = result.files;
-          List<String> filePaths = [];
-
-          for (var pickedFile in pickedFiles) {
-            final String? filePath = pickedFile.path; // Handle null safety
-            if (filePath != null) {
-              filePaths.add(filePath);
-            }
-          }
-          processFiles(filePaths);
+          processFiles(
+              result.files.map((f) => f.path).whereType<String>().toList());
         }
       } catch (e, s) {
         if (e is PlatformException &&
             e.code == 'read_external_storage_denied' &&
             mounted) {
           displaySnackBar(context,
-              message: 'Permission to access external storage was denied.',
-              seconds: 1);
+              message: 'Storage permission denied.', seconds: 1);
         } else {
           logger.error("Error opening files", error: e, stackTrace: s);
         }
       }
     } else if (type == "camera_image") {
-      XFile? pickedFile =
-          await ImagePicker().pickImage(source: ImageSource.camera);
-      if (pickedFile != null) {
-        processFiles([pickedFile.path]);
-      }
+      XFile? f = await ImagePicker().pickImage(source: ImageSource.camera);
+      if (f != null) processFiles([f.path]);
     } else if (type == "camera_video") {
-      XFile? pickedFile =
-          await ImagePicker().pickVideo(source: ImageSource.camera);
-      if (pickedFile != null) {
-        processFiles([pickedFile.path]);
-      }
+      XFile? f = await ImagePicker().pickVideo(source: ImageSource.camera);
+      if (f != null) processFiles([f.path]);
     } else if (type == "location") {
       Navigator.of(context)
           .push(MaterialPageRoute(
-        builder: (context) => const LocationPicker(),
-        settings: const RouteSettings(name: "LocationPicker"),
-      ))
+              builder: (_) => const LocationPicker(),
+              settings: const RouteSettings(name: "LocationPicker")))
           .then((value) {
         if (value != null) {
           LatLng position = value as LatLng;
-          Map<String, dynamic> data = {
-            "lat": position.latitude,
-            "lng": position.longitude
-          };
-          _addItemToDbAndDisplayList(
-              "DND|#location", ItemType.location, null, data);
+          _addItemToDbAndDisplayList("DND|#location", ItemType.location, null,
+              {"lat": position.latitude, "lng": position.longitude});
         }
       });
     } else if (type == "contact") {
       Navigator.of(context)
           .push(MaterialPageRoute(
-        builder: (context) => const PageContacts(),
-        settings: const RouteSettings(name: "ContactPicker"),
-      ))
+              builder: (_) => const PageContacts(),
+              settings: const RouteSettings(name: "ContactPicker")))
           .then((value) {
         if (value != null) {
           Contact contact = value as Contact;
-          List<String> phones =
-              contact.phones.map((phone) => phone.number).toList();
-          List<String> emails =
-              contact.emails.map((email) => email.address).toList();
+          List<String> phones = contact.phones.map((p) => p.number).toList();
+          List<String> emails = contact.emails.map((e) => e.address).toList();
           List<String> addresses =
-              contact.addresses.map((address) => address.address).toList();
-          String phoneNumbers = phones.join("|");
-          String details =
-              'DND|#contact|${contact.displayName}|${contact.name.first}|${contact.name.last}|$phoneNumbers';
-          Map<String, dynamic> data = {
+              contact.addresses.map((a) => a.address).toList();
+          _addItemToDbAndDisplayList(
+              'DND|#contact|${contact.displayName}|${contact.name.first}|${contact.name.last}|${phones.join("|")}',
+              ItemType.contact,
+              contact.thumbnail, {
             "name": contact.displayName,
             "first": contact.name.first,
             "last": contact.name.last,
             "phones": phones,
             "emails": emails,
             "addresses": addresses
-          };
-          _addItemToDbAndDisplayList(
-              details, ItemType.contact, contact.thumbnail, data);
+          });
         }
       });
     }
@@ -1391,8 +1017,8 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
   void _handleTextInput(String text) {
     text = text.trim();
     if (text.isNotEmpty) {
-      ItemType itemType = _isCreatingTask ? ItemType.task : ItemType.text;
-      _addItemToDbAndDisplayList(text, itemType, null, null);
+      _addItemToDbAndDisplayList(
+          text, _isCreatingTask ? ItemType.task : ItemType.text, null, null);
       _textController.clear();
       _onInputTextChanged("");
       _textControllerFocus.requestFocus();
@@ -1416,57 +1042,124 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
   }
 
   Future<void> setTaskMode() async {
-    setState(() {
-      _isCreatingTask = !_isCreatingTask;
-      canScrollToBottom = false;
-    });
-    int taskMode = _isCreatingTask ? 1 : 0;
-    Map<String, dynamic>? data = noteGroup!.data;
-    if (data != null) {
-      data["task_mode"] = taskMode;
-      noteGroup!.data = data;
-      await noteGroup!.update(["data"]);
-    } else {
-      noteGroup!.data = {"task_mode": taskMode};
-      await noteGroup!.update(["data"]);
-    }
+    setState(() => _isCreatingTask = !_isCreatingTask);
+    Map<String, dynamic> data = noteGroup!.data ?? {};
+    data["task_mode"] = _isCreatingTask ? 1 : 0;
+    noteGroup!.data = data;
+    await noteGroup!.update(["data"]);
+  }
+
+  // ── Popup menu item (same style as home page) ─────────────────────────────
+  Widget _menuItem({
+    required BuildContext context,
+    required int value,
+    required IconData icon,
+    required String label,
+    bool extraTopRadius = false,
+    bool extraBottomRadius = false,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    final radius = BorderRadius.only(
+      topLeft: Radius.circular(extraTopRadius ? 12 : 8),
+      topRight: Radius.circular(extraTopRadius ? 12 : 8),
+      bottomLeft: Radius.circular(extraBottomRadius ? 12 : 8),
+      bottomRight: Radius.circular(extraBottomRadius ? 12 : 8),
+    );
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      child: ClipRRect(
+        borderRadius: radius,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => Navigator.pop(context, value),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+              child: Row(
+                children: [
+                  Container(
+                    width: 30,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      color: cs.onSurfaceVariant.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(extraTopRadius ? 9 : 7),
+                        topRight: Radius.circular(7),
+                        bottomLeft: Radius.circular(extraBottomRadius ? 9 : 7),
+                        bottomRight: Radius.circular(7),
+                      ),
+                    ),
+                    child: Icon(icon, size: 16, color: cs.onSurfaceVariant),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(label,
+                      style: TextStyle(fontSize: 14, color: cs.onSurface)),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   List<Widget> _buildAppbarDefaultOptions() {
     return [
       PopupMenuButton<int>(
+        padding: EdgeInsets.zero,
         onSelected: (value) {
-          switch (value) {
-            case 0:
-              navigateToPageGroupEdit();
-              break;
-            case 1:
-              _openFilterDialog();
-              break;
-          }
+          if (value == 0) navigateToPageGroupEdit();
+          if (value == 1) _openFilterDialog();
         },
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
+            width: 0.75,
+          ),
+        ),
+        color: Theme.of(context).colorScheme.surfaceContainerLowest,
+        elevation: 4,
+        constraints: const BoxConstraints(minWidth: 180, maxWidth: 220),
         itemBuilder: (context) => [
           PopupMenuItem<int>(
             value: 0,
-            child: Row(
-              children: [
-                Icon(LucideIcons.edit3, color: Colors.grey),
-                Container(width: 8),
-                const SizedBox(width: 8),
-                const Text('Edit'),
-              ],
+            padding: EdgeInsets.zero,
+            height: 0,
+            child: _menuItem(
+                context: context,
+                value: 0,
+                icon: LucideIcons.edit3,
+                label: 'Edit',
+                extraTopRadius: true,
+                ),
+          ),
+          PopupMenuItem(
+            enabled: false,
+            height: 0,
+            padding: EdgeInsets.zero,
+            child: Divider(
+              height: 6,
+              thickness: 0.75,
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.1),
             ),
           ),
           PopupMenuItem<int>(
             value: 1,
-            child: Row(
-              children: [
-                Icon(LucideIcons.filter, color: Colors.grey),
-                Container(width: 8),
-                const SizedBox(width: 8),
-                const Text('Filters'),
-              ],
-            ),
+            padding: EdgeInsets.zero,
+            height: 0,
+            child: _menuItem(
+                context: context,
+                value: 1,
+                icon: LucideIcons.filter,
+                label: 'Filters',
+                extraBottomRadius: true,
+                ),
           ),
         ],
       ),
@@ -1474,55 +1167,48 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
   }
 
   Future<void> replyOnSwipe(ModelItem item) async {
-    setState(() {
-      replyOnItem = item;
-    });
+    setState(() => replyOnItem = item);
   }
 
   Future<void> cancelReplyItem() async {
-    setState(() {
-      replyOnItem = null;
-    });
+    setState(() => replyOnItem = null);
   }
 
   Future<void> showHideScrollToBottomButton(double scrolledHeight) async {
     bool requiresUpdate = false;
-    if (scrolledHeight > 100) {
-      if (canScrollToBottom == false) {
-        canScrollToBottom = true;
-        requiresUpdate = true;
-      }
-    } else if (canScrollToBottom == true) {
+    if (scrolledHeight > 100 && !canScrollToBottom) {
+      canScrollToBottom = true;
+      requiresUpdate = true;
+    } else if (scrolledHeight <= 100 && canScrollToBottom) {
       canScrollToBottom = false;
       requiresUpdate = true;
     }
     if (requiresUpdate) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          setState(() {});
-        }
+        if (mounted) setState(() {});
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
     if (noteGroup != widget.group) {
       noteGroup = widget.group;
       loadGroupSettings(noteGroup!);
       if (showItemId != widget.loadItemIdOnInit) {
         showItemId = widget.loadItemIdOnInit;
       }
-
       WidgetsBinding.instance.addPostFrameCallback((_) {
         fetchItems(showItemId);
         loadImageDirectoryPath();
-        if (widget.sharedContents.isNotEmpty) {
-          loadSharedContents();
-        }
+        if (widget.sharedContents.isNotEmpty) loadSharedContents();
       });
     }
+
     final edgeToEdgePadding = MediaQuery.of(context).padding;
+
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: !widget.runningOnDesktop,
@@ -1530,223 +1216,202 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
         title: Text(
           noteGroup == null ? "" : noteGroup!.title,
           overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: 18,
-          ),
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
         ),
       ),
       body: Padding(
         padding: EdgeInsets.only(bottom: edgeToEdgePadding.bottom),
         child: Column(
           children: [
-            // Items view (displaying the messages)
             Expanded(
               child: Stack(
                 children: [
                   NotificationListener<ScrollNotification>(
-                      onNotification: (ScrollNotification scrollInfo) {
-                        showHideScrollToBottomButton(scrollInfo.metrics.pixels);
-                        return false;
-                      },
-                      child: ScrollablePositionedList.builder(
-                        itemScrollController: _itemScrollController,
-                        itemPositionsListener: _itemPositionsListener,
-                        reverse: true,
-                        itemCount: _displayItemList.length,
-                        itemBuilder: (context, index) {
-                          if (index < 0 || index >= _displayItemList.length) {
-                            return const SizedBox.shrink();
-                          }
-                          final ModelItem item = _displayItemList[index];
+                    onNotification: (ScrollNotification scrollInfo) {
+                      showHideScrollToBottomButton(scrollInfo.metrics.pixels);
+                      return false;
+                    },
+                    child: ScrollablePositionedList.builder(
+                      itemScrollController: _itemScrollController,
+                      itemPositionsListener: _itemPositionsListener,
+                      reverse: true,
+                      itemCount: _displayItemList.length,
+                      itemBuilder: (context, index) {
+                        if (index < 0 || index >= _displayItemList.length) {
+                          return const SizedBox.shrink();
+                        }
+                        final ModelItem item = _displayItemList[index];
 
-                          // Grouping logic: Show time pill if gap > 5 mins
-                          bool showTimePill = false;
-                          if (index == _displayItemList.length - 1) {
+                        bool showTimePill = false;
+                        if (index == _displayItemList.length - 1) {
+                          showTimePill = true;
+                        } else {
+                          final olderItem = _displayItemList[index + 1];
+                          if (olderItem.type == ItemType.date) {
                             showTimePill = true;
                           } else {
-                            final olderItem = _displayItemList[index + 1];
-                            if (olderItem.type == ItemType.date) {
-                              showTimePill = true;
-                            } else {
-                              final diff = DateTime.fromMillisecondsSinceEpoch(
-                                      item.at!,
-                                      isUtc: true)
-                                  .difference(DateTime.fromMillisecondsSinceEpoch(
-                                      olderItem.at!,
-                                      isUtc: true));
-                              if (diff.abs().inMinutes >= 5) {
-                                showTimePill = true;
-                              }
-                            }
+                            final diff = DateTime.fromMillisecondsSinceEpoch(
+                                    item.at!,
+                                    isUtc: true)
+                                .difference(DateTime.fromMillisecondsSinceEpoch(
+                                    olderItem.at!,
+                                    isUtc: true));
+                            if (diff.abs().inMinutes >= 5) showTimePill = true;
                           }
+                        }
 
-                          final bool isAttachment =
-                              item.type == ItemType.image ||
-                                  item.type == ItemType.video ||
-                                  item.type == ItemType.audio ||
-                                  item.type == ItemType.document ||
-                                  item.type == ItemType.location ||
-                                  item.type == ItemType.contact;
+                        final bool isAttachment = item.type == ItemType.image ||
+                            item.type == ItemType.video ||
+                            item.type == ItemType.audio ||
+                            item.type == ItemType.document ||
+                            item.type == ItemType.location ||
+                            item.type == ItemType.contact;
 
-                          Widget mainItem;
-                          if (item.type == ItemType.date) {
-                            mainItem = showDateTime
-                                ? ItemWidgetDate(item: item)
-                                : const SizedBox.shrink();
-                          } else {
-                            Map<String, dynamic>? urlInfo = item.data != null &&
-                                    item.data!.containsKey("url_info")
-                                ? item.data!["url_info"]
-                                : null;
-                            mainItem = Dismissible(
-                              key: ValueKey(item.id),
-                              direction: DismissDirection.startToEnd,
-                              confirmDismiss: (direction) async {
-                                replyOnSwipe(item);
-                                return false;
-                              },
-                              background: Container(
-                                alignment: Alignment.centerLeft,
-                                padding: const EdgeInsets.only(left: 20),
-                                child: Row(
-                                  children: [
-                                    const Icon(LucideIcons.reply, size: 20),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      getFormattedTime(item.at!),
-                                      style: TextStyle(
+                        Widget mainItem;
+                        if (item.type == ItemType.date) {
+                          mainItem = showDateTime
+                              ? ItemWidgetDate(item: item)
+                              : const SizedBox.shrink();
+                        } else {
+                          Map<String, dynamic>? urlInfo = item.data != null &&
+                                  item.data!.containsKey("url_info")
+                              ? item.data!["url_info"]
+                              : null;
+
+                          mainItem = Dismissible(
+                            key: ValueKey(item.id),
+                            direction: DismissDirection.startToEnd,
+                            confirmDismiss: (direction) async {
+                              replyOnSwipe(item);
+                              return false;
+                            },
+                            background: Container(
+                              alignment: Alignment.centerLeft,
+                              padding: const EdgeInsets.only(left: 20),
+                              child: Row(
+                                children: [
+                                  Icon(LucideIcons.reply,
+                                      size: 18, color: cs.onSurfaceVariant),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    getFormattedTime(item.at!),
+                                    style: TextStyle(
                                         fontSize: 12,
-                                        color: Theme.of(context).colorScheme.outline,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                                        color: cs.onSurfaceVariant
+                                            .withValues(alpha: 0.6)),
+                                  ),
+                                ],
                               ),
-                              child: GestureDetector(
-                                onLongPress: () => onItemLongPressed(item),
-                                onTap: () => onItemTapped(item),
-                                child: Container(
-                                  width: double.infinity,
-                                  color: _selectedItems.contains(item)
-                                      ? Theme.of(context)
-                                          .colorScheme
-                                          .inversePrimary
-                                      : _shouldBlinkItem &&
-                                              showItemId != null &&
-                                              showItemId == item.id
-                                          ? Theme.of(context)
-                                              .colorScheme
-                                              .inversePrimary
-                                          : Colors.transparent,
-                                  child: Align(
-                                    alignment: Alignment.centerRight,
-                                    child: Container(
-                                      margin: EdgeInsets.only(
-                                        top: isAttachment ? 0 : 2,
-                                        bottom: isAttachment ? 0 : 2,
-                                        right: 12,
-                                      ),
-                                      child: Material(
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: const BorderRadius.only(
-                                            topLeft: Radius.circular(16),
-                                            topRight: Radius.circular(16),
-                                            bottomLeft: Radius.circular(16),
-                                            bottomRight: Radius.circular(4),
-                                          ),
-                                          side: BorderSide(
-                                            color: (showNoteBorder &&
-                                                    !isAttachment)
-                                                ? Theme.of(context)
-                                                    .colorScheme
-                                                    .outlineVariant
-                                                    .withValues(alpha: 0.4)
-                                                : Colors.transparent,
-                                            width: 0.5,
-                                          ),
+                            ),
+                            child: GestureDetector(
+                              onLongPress: () => onItemLongPressed(item),
+                              onTap: () => onItemTapped(item),
+                              child: Container(
+                                width: double.infinity,
+                                color: _selectedItems.contains(item) ||
+                                        (_shouldBlinkItem &&
+                                            showItemId != null &&
+                                            showItemId == item.id)
+                                    ? cs.onSurface.withValues(alpha: 0.1)
+                                    : Colors.transparent,
+                                child: Align(
+                                  alignment: Alignment.centerRight,
+                                  child: Container(
+                                  margin: EdgeInsets.only(
+                                      top: 2,
+                                      bottom: 2,
+                                      right: 12,
+                                      left: isAttachment ? 0 : 12,
+                                    ),
+                                    child: Material(
+                                      shape: RoundedRectangleBorder(
+                                       borderRadius: BorderRadius.circular(16),
+                                        side: BorderSide(
+                                          color:
+                                              (showNoteBorder && !isAttachment)
+                                                  ? cs.onSurface
+                                                      .withValues(alpha: 0.1)
+                                                  : Colors.transparent,
+                                          width: 0.5,
                                         ),
-                                        color: isAttachment
-                                            ? Colors.transparent
-                                            : Theme.of(context)
-                                                .colorScheme
-                                                .onSurfaceVariant
-                                                .withValues(alpha: 0.09),
-                                        child: Container(
-                                          margin: EdgeInsets.symmetric(
-                                              vertical: isAttachment ? 4 : 8,
-                                              horizontal: isAttachment ? 4 : 8),
-                                          padding: EdgeInsets.all(
-                                              isAttachment ? 4 : 6),
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              if (item.replyOn != null)
-                                                GestureDetector(
-                                                  onTap: () => fetchItems(
-                                                      item.replyOn!.id),
-                                                  child: NotePreviewSummary(
-                                                    item: item.replyOn!,
-                                                    showImagePreview: true,
-
-                                                    expanded: false,
-                                                  ),
+                                      ),
+                                      color: isAttachment
+                                          ? Colors.transparent
+                                          : cs.onSurface
+                                              .withValues(alpha: 0.07),
+                                      child: Container(
+                                        margin: EdgeInsets.symmetric(
+                                            vertical: isAttachment ? 2 : 8,
+                                            horizontal: isAttachment ? 0 : 8),
+                                        padding: EdgeInsets.all(
+                                            isAttachment ? 0 : 6),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            if (item.replyOn != null)
+                                              GestureDetector(
+                                                onTap: () => fetchItems(
+                                                    item.replyOn!.id),
+                                                child: NotePreviewSummary(
+                                                  item: item.replyOn!,
+                                                  showImagePreview: true,
+                                                  expanded: false,
                                                 ),
-                                              if (urlInfo != null)
-                                                GestureDetector(
-                                                  onTap: () async {
-                                                    if (_hasNotesSelected) {
-                                                      onItemTapped(item);
-                                                    } else {
-                                                      final String linkText =
-                                                          urlInfo["url"];
-                                                      final linkUri =
-                                                          Uri.parse(linkText);
-                                                      if (await canLaunchUrl(
-                                                          linkUri)) {
-                                                        await launchUrl(
-                                                            linkUri);
-                                                      }
+                                              ),
+                                            if (urlInfo != null)
+                                              GestureDetector(
+                                                onTap: () async {
+                                                  if (_hasNotesSelected) {
+                                                    onItemTapped(item);
+                                                  } else {
+                                                    final linkUri = Uri.parse(
+                                                        urlInfo["url"]);
+                                                    if (await canLaunchUrl(
+                                                        linkUri)) {
+                                                      await launchUrl(linkUri);
                                                     }
-                                                  },
-                                                  child: NoteUrlPreview(
-                                                    urlInfo: urlInfo,
-                                                    imageDirectory:
-                                                        imageDirPath,
-                                                    itemId: item.id!,
-                                                  ),
+                                                  }
+                                                },
+                                                child: NoteUrlPreview(
+                                                  urlInfo: urlInfo,
+                                                  imageDirectory: imageDirPath,
+                                                  itemId: item.id!,
                                                 ),
-                                              _buildNoteItem(item),
-                                            ],
-                                          ),
+                                              ),
+                                            _buildNoteItem(item),
+                                          ],
                                         ),
                                       ),
                                     ),
                                   ),
                                 ),
                               ),
-                            );
-                          }
+                            ),
+                          );
+                        }
 
-                          if (showTimePill && item.type != ItemType.date) {
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                ItemWidgetTimePill(
-                                  timeText: getFormattedTime(item.at!),
-                                ),
-                                mainItem,
-                              ],
-                            );
-                          }
-                          return mainItem;
-                        },
-                      ),
+                        if (showTimePill &&
+                            showDateTime &&
+                            item.type != ItemType.date) {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              ItemWidgetTimePill(
+                                  timeText: getFormattedTime(item.at!)),
+                              mainItem,
+                            ],
+                          );
+                        }
+                        return mainItem;
+                      },
                     ),
+                  ),
 
+                  // Scroll-to-bottom FAB
                   if (canScrollToBottom)
                     Positioned(
-                      bottom: 10, // Adjust for FAB height and margin
+                      bottom: 10,
                       right: 20,
                       child: FloatingActionButton(
                         heroTag: "scroll_to_bottom",
@@ -1756,81 +1421,55 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                           fetchItems(null);
                         },
                         shape: const CircleBorder(),
-                        backgroundColor:
-                            Theme.of(context).colorScheme.surfaceContainerHigh,
+                        backgroundColor: cs.onSurface.withValues(alpha: 0.06),
+                        foregroundColor: cs.onSurface,
                         child: const Icon(LucideIcons.chevronsDown),
                       ),
                     ),
+
+                  // Active filter indicator
                   if (_filtersEnabled)
                     Positioned(
                       right: 0,
                       child: IconButton(
                         tooltip: "Filter notes",
-                        onPressed: () {
-                          _openFilterDialog();
-                        },
-                        icon: Icon(
-                          LucideIcons.filter,
-                        ),
+                        onPressed: _openFilterDialog,
+                        icon: const Icon(LucideIcons.filter),
                       ),
                     ),
                 ],
               ),
             ),
             AnimatedWidgetSwap(
-                firstWidget: widgetBottomSection(),
-                secondWidget: widgetSelectionOptions(),
-                showFirst: !_hasNotesSelected),
+              firstWidget: widgetBottomSection(),
+              secondWidget: widgetSelectionOptions(),
+              showFirst: !_hasNotesSelected,
+            ),
           ],
         ),
       ),
     );
   }
 
-  // Widget for displaying different item types
   Widget _buildNoteItem(ModelItem item) {
     switch (item.type) {
       case ItemType.text:
-        return ItemWidgetText(
-          item: item,
-        );
+        return ItemWidgetText(item: item);
       case ItemType.image:
-        return ItemWidgetImage(
-          item: item,
-          onTap: viewImageVideo,
-        );
+        return ItemWidgetImage(item: item, onTap: viewImageVideo);
       case ItemType.video:
-        return ItemWidgetVideo(
-          item: item,
-          onTap: viewImageVideo,
-        );
+        return ItemWidgetVideo(item: item, onTap: viewImageVideo);
       case ItemType.audio:
-        return ItemWidgetAudio(
-          item: item,
-        );
+        return ItemWidgetAudio(item: item);
       case ItemType.document:
-        return ItemWidgetDocument(
-          item: item,
-          onTap: openDocument,
-        );
+        return ItemWidgetDocument(item: item, onTap: openDocument);
       case ItemType.location:
-        return ItemWidgetLocation(
-          item: item,
-          onTap: openLocation,
-        );
+        return ItemWidgetLocation(item: item, onTap: openLocation);
       case ItemType.contact:
-        return ItemWidgetContact(
-          item: item,
-          onTap: addToContacts,
-        );
+        return ItemWidgetContact(item: item, onTap: addToContacts);
       case ItemType.completedTask:
-        return ItemWidgetTask(
-          item: item,
-        );
       case ItemType.task:
-        return ItemWidgetTask(
-          item: item,
-        );
+        return ItemWidgetTask(item: item);
       default:
         return const SizedBox.shrink();
     }
@@ -1875,8 +1514,7 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
       onItemTapped(item);
     } else {
       String filePath = item.data!["path"];
-      File file = File(filePath);
-      if (!file.existsSync()) {
+      if (!File(filePath).existsSync()) {
         if (mounted) {
           showAlertMessage(context, "Please wait", "File not available yet");
         }
@@ -1906,17 +1544,12 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          TimerWidget(
-            runningState: _recordingState,
-          ),
+          TimerWidget(runningState: _recordingState),
           if (_recordingState == 1)
             Flexible(
               child: SiriWaveform.ios7(
                 controller: controller,
-                options: const IOS7SiriWaveformOptions(
-                  height: 40,
-                  // width: 150
-                ),
+                options: const IOS7SiriWaveformOptions(height: 40),
               ),
             ),
           IconButton(
@@ -1928,106 +1561,80 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
     );
   }
 
+  // ── Selection action bar ──────────────────────────────────────────────────
   Widget widgetSelectionOptions() {
-    double iconSize = 20;
-    return Padding(
-      padding: const EdgeInsets.only(top: 8.0, bottom: 8.0),
+    final cs = Theme.of(context).colorScheme;
+    const double iconSize = 20;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+      decoration: BoxDecoration(
+        color: cs.onSurface.withValues(alpha: 0.05),
+        border: Border(
+          top: BorderSide(
+              color: cs.onSurface.withValues(alpha: 0.08), width: 0.5),
+        ),
+      ),
       child: ConstrainedBox(
-        constraints: BoxConstraints(minHeight: 55.0),
+        constraints: const BoxConstraints(minHeight: 48),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            Flexible(
-              child: IconButton(
-                  tooltip: "Clear selection",
-                  iconSize: iconSize,
-                  onPressed: () {
-                    clearSelection();
-                  },
-                  icon: const Icon(
-                    LucideIcons.x,
-                  )),
+            IconButton(
+              tooltip: "Clear selection",
+              iconSize: iconSize,
+              onPressed: clearSelection,
+              icon: const Icon(LucideIcons.x),
             ),
             if (selectionHasOnlyTextOrTaskItem)
-              Flexible(
-                child: IconButton(
-                  tooltip: "Copy notes",
-                  iconSize: iconSize,
-                  onPressed: () {
-                    copyToClipboard();
-                  },
-                  icon: const Icon(
-                    LucideIcons.copy,
-                  ),
-                ),
+              IconButton(
+                tooltip: "Copy",
+                iconSize: iconSize,
+                onPressed: copyToClipboard,
+                icon: const Icon(LucideIcons.copy),
               ),
             if (selectionHasOnlyTextOrTaskItem)
-              Flexible(
-                child: IconButton(
-                  tooltip: "Change task type",
-                  iconSize: iconSize,
-                  onPressed: () {
-                    updateSelectedItemsTaskType();
-                  },
-                  icon: selectionHasOnlyTaskItems
-                      ? const Icon(LucideIcons.text)
-                      : const Icon(LucideIcons.checkCircle),
-                ),
-              ),
-            Flexible(
-              child: IconButton(
-                tooltip: "Share notes",
+              IconButton(
+                tooltip: "Toggle task",
                 iconSize: iconSize,
-                onPressed: () {
-                  shareNotes();
-                },
-                icon: const Icon(LucideIcons.share2),
+                onPressed: updateSelectedItemsTaskType,
+                icon: Icon(selectionHasOnlyTaskItems
+                    ? LucideIcons.text
+                    : LucideIcons.checkCircle),
               ),
+            IconButton(
+              tooltip: "Share",
+              iconSize: iconSize,
+              onPressed: shareNotes,
+              icon: const Icon(LucideIcons.share2),
             ),
             if (selectionHasOnlyTextOrTaskItem && _selectedItems.length == 1)
-              Flexible(
-                child: IconButton(
-                  tooltip: "Edit note",
-                  iconSize: iconSize,
-                  onPressed: () {
-                    editNote();
-                  },
-                  icon: const Icon(LucideIcons.edit2),
-                ),
-              ),
-            Flexible(
-              child: IconButton(
-                tooltip: "Star/unstar notes",
+              IconButton(
+                tooltip: "Edit note",
                 iconSize: iconSize,
-                onPressed: () {
-                  updateSelectedItemsStarred();
-                },
-                icon: selectionHasStarredItems
-                    ? const Icon(LucideIcons.starOff)
-                    : const Icon(LucideIcons.star),
+                onPressed: editNote,
+                icon: const Icon(LucideIcons.edit2),
               ),
+            IconButton(
+              tooltip: "Star/unstar",
+              iconSize: iconSize,
+              onPressed: updateSelectedItemsStarred,
+              icon: Icon(selectionHasStarredItems
+                  ? LucideIcons.starOff
+                  : LucideIcons.star),
             ),
-            Flexible(
-              child: IconButton(
-                tooltip: "Move to trash",
-                iconSize: iconSize,
-                onPressed: () {
-                  archiveSelectedItems();
-                },
-                icon: const Icon(LucideIcons.trash),
-              ),
+            IconButton(
+              tooltip: "Move to trash",
+              iconSize: iconSize,
+              onPressed: archiveSelectedItems,
+              icon: const Icon(LucideIcons.trash),
             ),
-            Flexible(
-              child: IconButton(
-                tooltip: "Pin/unpin notes",
-                iconSize: iconSize,
-                onPressed: () {
-                  updateSelectedItemsPinned();
-                },
-                icon: selectionHasPinnedItem
-                    ? const Icon(LucideIcons.pinOff)
-                    : const Icon(LucideIcons.pin),
-              ),
+            IconButton(
+              tooltip: "Pin/unpin",
+              iconSize: iconSize,
+              onPressed: updateSelectedItemsPinned,
+              icon: Icon(selectionHasPinnedItem
+                  ? LucideIcons.pinOff
+                  : LucideIcons.pin),
             ),
           ],
         ),
@@ -2035,15 +1642,37 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
     );
   }
 
-  // Input box with attachment and send button
+  // ── Input bar ─────────────────────────────────────────────────────────────
   Widget widgetBottomSection() {
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(10, 8, 8, 8),
+      color: Colors.transparent,
       child: ConstrainedBox(
-        constraints: BoxConstraints(minHeight: 55.0),
+        constraints: const BoxConstraints(minHeight: 52),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
+            // Standalone + button (always visible)
+            if (!_isRecording)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 2, right: 6),
+                child: Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: cs.onSurface.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: IconButton(
+                    tooltip: "Attach",
+                    icon: const Icon(LucideIcons.plus, size: 20),
+                    color: cs.onSurfaceVariant,
+                    onPressed: _showAttachmentOptions,
+                    padding: EdgeInsets.zero,
+                  ),
+                ),
+              ),
             Expanded(
               child: _isRecording
                   ? _buildRecordingSection()
@@ -2052,12 +1681,9 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                         if (replyOnItem != null)
                           Container(
                             padding: const EdgeInsets.all(4),
-                            margin: const EdgeInsets.symmetric(
-                                horizontal: 2, vertical: 1),
+                            margin: const EdgeInsets.only(bottom: 4),
                             decoration: BoxDecoration(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .secondaryContainer,
+                              color: cs.onSurface.withValues(alpha: 0.06),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Row(
@@ -2070,10 +1696,9 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                                   ),
                                 ),
                                 IconButton(
-                                  tooltip: "Cancel reply item",
+                                  tooltip: "Cancel reply",
                                   icon: const Icon(LucideIcons.x),
-                                  onPressed:
-                                      cancelReplyItem, // Cancel reply action
+                                  onPressed: cancelReplyItem,
                                 ),
                               ],
                             ),
@@ -2086,117 +1711,82 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                           keyboardType: TextInputType.multiline,
                           textCapitalization: TextCapitalization.sentences,
                           onSubmitted: _handleTextInput,
-                          style: TextStyle(
-                              color: Theme.of(context).colorScheme.onSurface),
+                          style: TextStyle(color: cs.onSurface),
                           decoration: InputDecoration(
                             filled: true,
                             hintText: _isCreatingTask
                                 ? "Create a task"
                                 : "Add a note...",
                             hintStyle: TextStyle(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .outlineVariant,
+                                color:
+                                    cs.onSurfaceVariant.withValues(alpha: 0.5),
                                 fontWeight: FontWeight.w400),
-                            fillColor: Colors.transparent,
+                            fillColor: cs.onSurface.withValues(alpha: 0.06),
                             hoverColor: Colors.transparent,
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(25.0),
-                              borderSide: BorderSide(
-                                  width: 1.0,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .outlineVariant),
+                              borderRadius: BorderRadius.circular(22),
+                              borderSide: BorderSide.none,
                             ),
                             focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(25.0),
+                              borderRadius: BorderRadius.circular(22),
                               borderSide: BorderSide(
-                                  width: 0.5,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .outlineVariant),
+                                  color: cs.onSurface.withValues(alpha: 0.15),
+                                  width: 0.75),
                             ),
                             enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(25.0),
-                              borderSide: BorderSide(
-                                  width: 0.5,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .outlineVariant),
+                              borderRadius: BorderRadius.circular(22),
+                              borderSide: BorderSide.none,
                             ),
                             contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 15, vertical: 10),
-                            suffixIcon: _isTyping
-                                ? null
-                                : IconButton(
-                                    tooltip: "Attach",
-                                    icon: const Icon(LucideIcons.plus),
-                                    color:
-                                        Theme.of(context).colorScheme.outline,
-                                    onPressed: () {
-                                      _showAttachmentOptions();
-                                    },
-                                  ),
+                                horizontal: 16, vertical: 10),
                           ),
-                          onChanged: (value) => _onInputTextChanged(value),
+                          onChanged: _onInputTextChanged,
                           scrollController: ScrollController(),
-                          // Enable scrolling
-                          textAlignVertical:
-                              TextAlignVertical.top, // Align text to the top
+                          textAlignVertical: TextAlignVertical.top,
                         ),
                       ],
                     ),
             ),
+            const SizedBox(width: 6),
+            // Send / record button
             GestureDetector(
               onLongPress: () async {
                 if (!_isTyping) {
                   _recordtooltipKey.currentState?.ensureTooltipVisible();
-                  await Future.delayed(Duration(seconds: 1), () {
-                    if (mounted) {
-                      Tooltip.dismissAllToolTips();
-                    }
+                  await Future.delayed(const Duration(seconds: 1), () {
+                    if (mounted) Tooltip.dismissAllToolTips();
                   });
                 }
-                if (!_isTyping && !_isRecording) {
-                  await _startRecording();
-                }
+                if (!_isTyping && !_isRecording) await _startRecording();
               },
               onTap: () async {
                 if (_isRecording) {
                   await _stopRecording();
                 } else if (_isTyping) {
-                  final String text = _textController.text;
-                  _handleTextInput(text);
-                } else if (!_isTyping && !_isRecording) {
+                  _handleTextInput(_textController.text);
+                } else {
                   if (mounted) {
                     displaySnackBar(context,
-                        message: 'Press long to start recording.', seconds: 1);
+                        message: 'Hold to start recording.', seconds: 1);
                   }
                 }
               },
               child: Align(
                 alignment: Alignment.bottomCenter,
                 child: Padding(
-                  padding: const EdgeInsets.all(4.0),
+                  padding: const EdgeInsets.only(bottom: 2),
                   child: Container(
-                    width: 44,
-                    height: 44,
+                    width: 42,
+                    height: 42,
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primaryContainer,
+                      color: cs.onSurface.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     alignment: Alignment.center,
                     child: AnimatedSwitcher(
                       duration: const Duration(milliseconds: 200),
-                      transitionBuilder:
-                          (Widget child, Animation<double> animation) {
-                        // Using ScaleTransition to animate the icon change
-                        return ScaleTransition(
-                          scale: animation, // The scale factor of the animation
-                          child:
-                              child, // The widget to be animated (the IconButton)
-                        );
-                      },
+                      transitionBuilder: (child, animation) =>
+                          ScaleTransition(scale: animation, child: child),
                       child: Tooltip(
                         message: _isTyping ? "Add note" : "Record/stop audio",
                         key: _recordtooltipKey,
@@ -2216,7 +1806,8 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                                       ? Icons.check
                                       : Icons.send
                                   : Icons.mic,
-                          color: Theme.of(context).colorScheme.primary,
+                          size: 20,
+                          color: cs.onSurface,
                         ),
                       ),
                     ),
@@ -2230,72 +1821,105 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
     );
   }
 
-  // Show attachment options
+  // ── Attachment bottom sheet ───────────────────────────────────────────────
   void _showAttachmentOptions() {
+    final cs = Theme.of(context).colorScheme;
     showModalBottomSheet(
       context: context,
+      backgroundColor: cs.surfaceContainerHigh,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (BuildContext context) {
         return SafeArea(
-          child: Wrap(
-            children: [
-              if (Platform.isAndroid || Platform.isIOS)
-                ListTile(
-                  leading: const Icon(LucideIcons.contact, color: Colors.grey),
-                  title: const Text("Contact"),
-                  horizontalTitleGap: 24.0,
-                  onTap: () {
-                    Navigator.pop(context);
-                    _addMedia('contact');
-                  },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 2-column grid of attachment options
+                GridView.count(
+                  crossAxisCount: 4,
+                  shrinkWrap: true,
+                  mainAxisSpacing: 8,
+                  crossAxisSpacing: 8,
+                  childAspectRatio: 0.9,
+                  physics: const NeverScrollableScrollPhysics(),
+                  children: [
+                    if (Platform.isAndroid || Platform.isIOS)
+                      _attachmentGridItem(
+                          context, LucideIcons.contact, "Contact", () {
+                        Navigator.pop(context);
+                        _addMedia('contact');
+                      }),
+                    _attachmentGridItem(context, LucideIcons.mapPin, "Location",
+                        () {
+                      Navigator.pop(context);
+                      _addMedia('location');
+                    }),
+                    if (ImagePicker().supportsImageSource(ImageSource.camera))
+                      _attachmentGridItem(context, LucideIcons.camera, "Camera",
+                          () {
+                        Navigator.pop(context);
+                        _addMedia("camera_image");
+                      }),
+                    _attachmentGridItem(context, LucideIcons.file, "Files", () {
+                      Navigator.pop(context);
+                      _addMedia('files');
+                    }),
+                    _attachmentGridItem(
+                        context, LucideIcons.checkCircle, "Checklist", () {
+                      Navigator.pop(context);
+                      setTaskMode();
+                    }, active: _isCreatingTask),
+                  ],
                 ),
-              ListTile(
-                leading: const Icon(LucideIcons.mapPin, color: Colors.grey),
-                title: const Text("Location"),
-                horizontalTitleGap: 24.0,
-                onTap: () {
-                  Navigator.pop(context);
-                  _addMedia('location');
-                },
-              ),
-              if (ImagePicker().supportsImageSource(ImageSource.camera))
-                ListTile(
-                  leading: const Icon(LucideIcons.camera, color: Colors.grey),
-                  title: const Text("Camera"),
-                  horizontalTitleGap: 24.0,
-                  onTap: () {
-                    Navigator.pop(context);
-                    _addMedia("camera_image");
-                  },
-                ),
-              ListTile(
-                leading: const Icon(LucideIcons.file, color: Colors.grey),
-                title: const Text("Files"),
-                horizontalTitleGap: 24.0,
-                onTap: () {
-                  Navigator.pop(context);
-                  _addMedia('files');
-                },
-              ),
-              ListTile(
-                leading:
-                    const Icon(LucideIcons.checkCircle, color: Colors.grey),
-                title: const Text("Checklist"),
-                horizontalTitleGap: 24.0,
-                onTap: () {
-                  Navigator.pop(context);
-                  setTaskMode();
-                },
-                trailing: _isCreatingTask
-                    ? Icon(
-                        LucideIcons.checkCircle2,
-                        color: Theme.of(context).colorScheme.primary,
-                      )
-                    : const SizedBox.shrink(),
-              ),
-            ],
+                const SizedBox(height: 8),
+              ],
+            ),
           ),
         );
       },
+    );
+  }
+
+  Widget _attachmentGridItem(
+    BuildContext context,
+    IconData icon,
+    String label,
+    VoidCallback onTap, {
+    bool active = false,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    final color = cs.onSurfaceVariant;
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: active
+                  ? cs.onSurface.withValues(alpha: 0.12)
+                  : cs.onSurface.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(14),
+              border: active
+                  ? Border.all(
+                      color: cs.onSurface.withValues(alpha: 0.2), width: 0.75)
+                  : null,
+            ),
+            child: Icon(icon, size: 22, color: color),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            label,
+            style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
     );
   }
 }

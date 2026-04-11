@@ -1,5 +1,7 @@
 // main.dart
 
+// ignore_for_file: experimental_member_use
+
 import 'dart:async';
 import 'dart:io';
 
@@ -288,13 +290,15 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
         }
         SyncUtils().startAutoSync();
         logger.info("Started Foreground Sync");
-      } else if (state == AppLifecycleState.paused) {
+      } else if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive || state == AppLifecycleState.hidden) {
         if (ModelSetting.get("local_auth", "no") == "yes") {
           AuthGuard.isLocked.value = true;
         }
         AuthGuard.lastActiveAt = DateTime.now();
-        SyncUtils().stopAutoSync();
-        logger.info("Stopped Foreground Sync");
+        if (state == AppLifecycleState.paused) {
+          SyncUtils().stopAutoSync();
+          logger.info("Stopped Foreground Sync");
+        }
       }
     }
   }
@@ -477,6 +481,14 @@ class PrivacyShield extends StatelessWidget {
                   fontWeight: FontWeight.bold,
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
+              ),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: () {
+                  EventStream().publish(AppEvent(type: EventType.authorise));
+                },
+                icon: const Icon(LucideIcons.unlock, size: 18),
+                label: const Text("Unlock"),
               ),
             ],
           ),

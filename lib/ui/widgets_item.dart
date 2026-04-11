@@ -1,5 +1,4 @@
-
-
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:ntsapp/utils/enums.dart';
@@ -31,6 +30,7 @@ class ItemWidgetTimePill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Center(
       child: Row(
         mainAxisSize: MainAxisSize.min, // Shrinks to fit the text width
@@ -39,18 +39,55 @@ class ItemWidgetTimePill extends StatelessWidget {
             margin: const EdgeInsets.symmetric(vertical: 10),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.05),
+              color: cs.onSurfaceVariant.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(18),
             ),
             child: Text(
               timeText,
               style: TextStyle(
                 fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.3,
+                color: cs.onSurfaceVariant.withValues(alpha: 0.7),
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class WidgetPinnedStarredPills extends StatelessWidget {
+  final ModelItem item;
+  const WidgetPinnedStarredPills({super.key, required this.item});
+
+  Widget _pill(BuildContext context, IconData icon) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+      decoration: BoxDecoration(
+        color: cs.onSurfaceVariant.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(
+            color: cs.onSurfaceVariant.withValues(alpha: 0.15), width: 0.75),
+      ),
+      child: Icon(icon,
+          size: 9, color: cs.onSurfaceVariant.withValues(alpha: 0.75)),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (item.pinned != 1 && item.starred != 1) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (item.pinned == 1) _pill(context, LucideIcons.pin),
+          if (item.pinned == 1 && item.starred == 1) const SizedBox(width: 3),
+          if (item.starred == 1) _pill(context, LucideIcons.star),
         ],
       ),
     );
@@ -88,22 +125,10 @@ class WidgetTimeStampPinnedStarred extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        item.pinned == 1
-            ? Icon(LucideIcons.pin,
-                size: 12, color: Theme.of(context).colorScheme.inversePrimary)
-            : const SizedBox.shrink(),
-        const SizedBox(width: 2),
-        item.starred == 1
-            ? Icon(LucideIcons.star,
-                size: 12, color: Theme.of(context).colorScheme.inversePrimary)
-            : const SizedBox.shrink(),
-        const SizedBox(
-          width: 2,
-        ),
         itemStateIcon(item),
         const SizedBox(width: 4),
-
       ],
     );
   }
@@ -123,15 +148,20 @@ class ItemWidgetText extends StatefulWidget {
 class _ItemWidgetTextState extends State<ItemWidgetText> {
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        SizedBox(width: 4),
-        Flexible(child: WidgetTextWithLinks(text: widget.item.text)),
-        WidgetTimeStampPinnedStarred(
-          item: widget.item,
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            SizedBox(width: 4),
+            Flexible(child: WidgetTextWithLinks(text: widget.item.text)),
+          ],
         ),
+        WidgetTimeStampPinnedStarred(item: widget.item),
+        WidgetPinnedStarredPills(item: widget.item),
       ],
     );
   }
@@ -151,31 +181,31 @@ class ItemWidgetTask extends StatefulWidget {
 class _ItemWidgetTaskState extends State<ItemWidgetTask> {
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Flexible(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Flexible(child: WidgetTextWithLinks(text: widget.item.text)),
-              const SizedBox(width: 8),
-              Icon(
-                widget.item.type == ItemType.completedTask
-                    ? Icons.check_circle
-                    : Icons.radio_button_unchecked,
-                color: widget.item.type == ItemType.task
-                    ? Theme.of(context).colorScheme.inversePrimary
-                    : Theme.of(context).colorScheme.primary,
-              ),
-            ],
-          ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Flexible(child: WidgetTextWithLinks(text: widget.item.text)),
+            const SizedBox(width: 8),
+            Icon(
+              widget.item.type == ItemType.completedTask
+                  ? Icons.check_circle
+                  : Icons.radio_button_unchecked,
+              color: widget.item.type == ItemType.task
+                  ? Theme.of(context)
+                      .colorScheme
+                      .onSurfaceVariant
+                      .withValues(alpha: 0.5)
+                  : Theme.of(context).colorScheme.primary,
+            ),
+          ],
         ),
-        WidgetTimeStampPinnedStarred(
-          item: widget.item,
-        )
+        WidgetTimeStampPinnedStarred(item: widget.item),
+        WidgetPinnedStarredPills(item: widget.item),
       ],
     );
   }
@@ -221,10 +251,54 @@ class _ItemWidgetImageState extends State<ItemWidgetImage> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _measureAndStoreDimensionsIfNeeded();
+  }
+
+  Future<void> _measureAndStoreDimensionsIfNeeded() async {
+    final data = widget.item.data;
+    if (data == null) return;
+    if (data.containsKey("width") && data.containsKey("height")) return;
+    if (widget.item.thumbnail == null) return;
+
+    final decoded = await decodeImageFromList(widget.item.thumbnail!);
+    widget.item.data!["width"] = decoded.width.toDouble();
+    widget.item.data!["height"] = decoded.height.toDouble();
+    await widget.item.update(["data"]);
+    if (mounted) setState(() {});
+  }
+
+  @override
   Widget build(BuildContext context) {
     bool displayDownloadButton =
         widget.item.state == SyncState.downloadable.value;
-    double size = 200;
+    bool hasPinStar = widget.item.pinned == 1 || widget.item.starred == 1;
+
+    final screenWidth = MediaQuery.of(context).size.width;
+    final maxWidth = screenWidth * 0.6;
+
+    double imgW, imgH;
+
+    final data = widget.item.data;
+    if (data != null &&
+        data.containsKey("width") &&
+        data.containsKey("height")) {
+      imgW = (data["width"] as num).toDouble() * 0.85;
+      imgH = (data["height"] as num).toDouble() * 0.85;
+      if (imgW > maxWidth) {
+        imgH = imgH * (maxWidth / imgW);
+        imgW = maxWidth;
+      }
+      if (imgH > maxWidth) {
+        imgW = imgW * (maxWidth / imgH);
+        imgH = maxWidth;
+      }
+    } else {
+      imgW = maxWidth * 0.7;
+      imgH = imgW;
+    }
+
     return GestureDetector(
       onTap: () {
         widget.onTap(widget.item);
@@ -232,32 +306,62 @@ class _ItemWidgetImageState extends State<ItemWidgetImage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: SizedBox(
-              width: size,
-              child: widget.item.thumbnail == null
-                  ? Image.asset(
-                      "assets/image.webp",
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                    )
-                  : Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Image.memory(
-                          widget.item.thumbnail!,
-                          width: double.infinity, // Full width of container
-                          fit: BoxFit.cover,
+          Stack(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: SizedBox(
+                  width: imgW,
+                  height: imgH,
+                  child: widget.item.thumbnail == null
+                      ? Image.asset(
+                          "assets/image.webp",
+                          width: double.infinity,
+                          fit: BoxFit.contain,
+                        )
+                      : Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Image.memory(
+                              widget.item.thumbnail!,
+                              width: double.infinity,
+                              fit: BoxFit.contain,
+                            ),
+                            if (displayDownloadButton)
+                              ImageDownloadButton(
+                                  item: widget.item,
+                                  onPressed: downloadMedia,
+                                  iconSize: 50)
+                          ],
                         ),
-                        if (displayDownloadButton)
-                          ImageDownloadButton(
-                              item: widget.item,
-                              onPressed: downloadMedia,
-                              iconSize: 50)
+                ),
+              ),
+              // Pin / star overlay pills — top-right corner
+              if (hasPinStar)
+                Positioned(
+                  top: 6,
+                  right: 6,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.45),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (widget.item.pinned == 1)
+                          Icon(LucideIcons.pin, size: 11, color: Colors.white),
+                        if (widget.item.pinned == 1 && widget.item.starred == 1)
+                          const SizedBox(width: 4),
+                        if (widget.item.starred == 1)
+                          Icon(LucideIcons.star, size: 11, color: Colors.white),
                       ],
                     ),
-            ),
+                  ),
+                ),
+            ],
           ),
           WidgetTimeStampPinnedStarred(
             item: widget.item,
@@ -343,19 +447,16 @@ class _ItemWidgetVideoState extends State<ItemWidgetVideo> {
           ),
           SizedBox(
             width: size,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                // File size text at the left
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     Opacity(
                         opacity: 0.6,
-                        child: const Icon(LucideIcons.video, size: 20)),
-                    const SizedBox(
-                      width: 2,
-                    ),
+                        child: const Icon(LucideIcons.video, size: 14)),
+                    const SizedBox(width: 3),
                     Opacity(
                       opacity: 0.6,
                       child: Text(
@@ -363,11 +464,11 @@ class _ItemWidgetVideoState extends State<ItemWidgetVideo> {
                         style: const TextStyle(fontSize: 10),
                       ),
                     ),
+                    const SizedBox(width: 4),
+                    WidgetTimeStampPinnedStarred(item: widget.item),
                   ],
                 ),
-                WidgetTimeStampPinnedStarred(
-                  item: widget.item,
-                ),
+                WidgetPinnedStarredPills(item: widget.item),
               ],
             ),
           ),
@@ -402,7 +503,13 @@ class _ItemWidgetAudioState extends State<ItemWidgetAudio> {
 }
 
 Widget widgetAudioDetails(ModelItem item) {
-  return WidgetTimeStampPinnedStarred(item: item);
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.end,
+    children: [
+      WidgetTimeStampPinnedStarred(item: item),
+      WidgetPinnedStarredPills(item: item),
+    ],
+  );
 }
 
 class ItemWidgetDocument extends StatefulWidget {
@@ -447,12 +554,15 @@ class _ItemWidgetDocumentState extends State<ItemWidgetDocument> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     String title = widget.item.data!.containsKey("title")
         ? widget.item.data!["title"]
         : widget.item.data!["name"];
     bool hasThumbnail = widget.item.thumbnail != null;
     String fileName = widget.item.data!["name"] ?? "";
-    String ext = fileName.contains('.') ? fileName.split('.').last.toUpperCase() : "FILE";
+    String ext = fileName.contains('.')
+        ? fileName.split('.').last.toUpperCase()
+        : "FILE";
     String size = readableFileSizeFromBytes(widget.item.data!["size"]);
 
     return Column(
@@ -461,10 +571,10 @@ class _ItemWidgetDocumentState extends State<ItemWidgetDocument> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
+            color: cs.primary.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
+              color: cs.primary.withValues(alpha: 0.15),
               width: 0.75,
             ),
           ),
@@ -475,19 +585,17 @@ class _ItemWidgetDocumentState extends State<ItemWidgetDocument> {
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                  color: cs.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
-                      width: 0.75),
+                      color: cs.primary.withValues(alpha: 0.2), width: 0.75),
                 ),
                 child: hasThumbnail
                     ? ClipRRect(
                         borderRadius: BorderRadius.circular(8),
-                        child:
-                            Image.memory(widget.item.thumbnail!, fit: BoxFit.cover))
-                    : Icon(LucideIcons.file,
-                        size: 18, color: Theme.of(context).colorScheme.primary),
+                        child: Image.memory(widget.item.thumbnail!,
+                            fit: BoxFit.cover))
+                    : Icon(LucideIcons.file, size: 18, color: cs.primary),
               ),
               const SizedBox(width: 10),
               Column(
@@ -505,36 +613,28 @@ class _ItemWidgetDocumentState extends State<ItemWidgetDocument> {
                   Row(
                     children: [
                       Container(
-                        padding:
-                            const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 5, vertical: 1),
                         decoration: BoxDecoration(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .primary
-                              .withValues(alpha: 0.1),
+                          color: cs.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(4),
                           border: Border.all(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .primary
-                                  .withValues(alpha: 0.2),
+                              color: cs.primary.withValues(alpha: 0.2),
                               width: 0.75),
                         ),
                         child: Text(ext,
                             style: TextStyle(
                                 fontSize: 9,
                                 fontWeight: FontWeight.w800,
-                                color: Theme.of(context).colorScheme.primary,
+                                color: cs.primary,
                                 letterSpacing: 0.3)),
                       ),
                       const SizedBox(width: 6),
                       Text(size,
                           style: TextStyle(
                               fontSize: 10,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurfaceVariant
-                                  .withValues(alpha: 0.5))),
+                              color:
+                                  cs.onSurfaceVariant.withValues(alpha: 0.6))),
                     ],
                   ),
                 ],
@@ -542,8 +642,8 @@ class _ItemWidgetDocumentState extends State<ItemWidgetDocument> {
             ],
           ),
         ),
-          WidgetTimeStampPinnedStarred(
-              item: widget.item),
+        WidgetTimeStampPinnedStarred(item: widget.item),
+        WidgetPinnedStarredPills(item: widget.item),
       ],
     );
   }
@@ -561,6 +661,7 @@ class ItemWidgetLocation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return GestureDetector(
       onTap: () => onTap(item),
       child: Column(
@@ -569,11 +670,10 @@ class ItemWidgetLocation extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
             decoration: BoxDecoration(
-              color: Colors.red.withValues(alpha: 0.08),
+              color: cs.error.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
-                  color: Colors.red.withValues(alpha: 0.15),
-                  width: 0.75),
+                  color: cs.error.withValues(alpha: 0.15), width: 0.75),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -582,24 +682,26 @@ class ItemWidgetLocation extends StatelessWidget {
                   width: 36,
                   height: 36,
                   decoration: BoxDecoration(
-                    color: Colors.red.withValues(alpha: 0.1),
+                    color: cs.error.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                        color: Colors.red.withValues(alpha: 0.2), width: 0.75),
+                        color: cs.error.withValues(alpha: 0.2), width: 0.75),
                   ),
-                  child:
-                      const Icon(LucideIcons.mapPin, size: 18, color: Colors.red),
+                  child: Icon(LucideIcons.mapPin, size: 18, color: cs.error),
                 ),
                 const SizedBox(width: 10),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text("Location",
+                    Text("Location",
                         style: TextStyle(
-                            fontSize: 13, fontWeight: FontWeight.w600)),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: cs.onSurface)),
                     const SizedBox(height: 2),
-                    const Text("Tap to open in maps",
-                        style: TextStyle(fontSize: 10)),
+                    Text("Tap to open in maps",
+                        style: TextStyle(
+                            fontSize: 10, color: cs.onSurfaceVariant)),
                   ],
                 ),
                 const SizedBox(width: 12),
@@ -607,22 +709,22 @@ class ItemWidgetLocation extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: Colors.red.withValues(alpha: 0.1),
+                    color: cs.error.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(6),
                     border: Border.all(
-                        color: Colors.red.withValues(alpha: 0.2), width: 0.75),
+                        color: cs.error.withValues(alpha: 0.2), width: 0.75),
                   ),
-                  child: const Text("View",
+                  child: Text("View",
                       style: TextStyle(
                           fontSize: 10,
-                          color: Colors.red,
+                          color: cs.error,
                           fontWeight: FontWeight.w600)),
                 ),
               ],
             ),
           ),
-          WidgetTimeStampPinnedStarred(
-              item: item),
+          WidgetTimeStampPinnedStarred(item: item),
+          WidgetPinnedStarredPills(item: item),
         ],
       ),
     );
@@ -641,7 +743,8 @@ class ItemWidgetContact extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color avatarColor = Colors.green;
+    final cs = Theme.of(context).colorScheme;
+    final Color avatarColor = cs.tertiary;
     String initials = (item.data!["name"] as String? ?? "?").isNotEmpty
         ? (item.data!["name"] as String).trim()[0].toUpperCase()
         : "?";
@@ -654,11 +757,10 @@ class ItemWidgetContact extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
             decoration: BoxDecoration(
-              color: Colors.green.withValues(alpha: 0.08),
+              color: cs.tertiary.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
-                  color: Colors.green.withValues(alpha: 0.15),
-                  width: 0.75),
+                  color: cs.tertiary.withValues(alpha: 0.15), width: 0.75),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -690,18 +792,16 @@ class ItemWidgetContact extends StatelessWidget {
                       Text(item.data!["phones"][0],
                           style: TextStyle(
                               fontSize: 11,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurfaceVariant
-                                  .withValues(alpha: 0.55))),
+                              color:
+                                  cs.onSurfaceVariant.withValues(alpha: 0.6))),
                     ],
                   ],
                 ),
               ],
             ),
           ),
-          WidgetTimeStampPinnedStarred(
-              item: item),
+          WidgetTimeStampPinnedStarred(item: item),
+          WidgetPinnedStarredPills(item: item),
         ],
       ),
     );
@@ -748,23 +848,94 @@ class NotePreviewSummary extends StatelessWidget {
     }
   }
 
-  Widget _previewImage(ModelItem item) {
+  Widget _previewImage(BuildContext context, ModelItem item) {
     switch (item.type) {
       case ItemType.image:
       case ItemType.video:
       case ItemType.contact:
-        return item.thumbnail == null
-            ? const SizedBox.shrink()
-            : ClipRRect(
-                borderRadius: BorderRadius.circular(5),
-                child: SizedBox(
-                  width: 40,
+        if (item.thumbnail == null) return const SizedBox.shrink();
+
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () {
+            showDialog(
+              context: context,
+              barrierColor: Colors.black87,
+              builder: (context) => Dialog(
+                backgroundColor: Colors.transparent,
+                child: Stack(
+                  children: [
+                    Center(
+                      child: InteractiveViewer(
+                        maxScale: 3.5,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.memory(
+                            item.thumbnail!,
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      top: 16,
+                      right: 16,
+                      child: IconButton(
+                        icon: const Icon(Icons.close,
+                            color: Colors.white, size: 28),
+                        onPressed: () => Navigator.pop(context),
+                        style: IconButton.styleFrom(
+                          backgroundColor: Colors.black.withValues(alpha: 0.5),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+          child: Stack(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.04),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
                   child: Image.memory(
-                    item.thumbnail!, // Full width of container
-                    fit: BoxFit.cover,
+                    item.thumbnail!,
+                    fit: BoxFit.contain,
+                    filterQuality: FilterQuality.medium,
                   ),
                 ),
-              );
+              ),
+              // Expand icon — top-right, always visible
+              Positioned(
+                top: 2,
+                right: 2,
+                child: Container(
+                  width: 18,
+                  height: 18,
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.55),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Icon(
+                    Icons.zoom_out_map,
+                    size: 11,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
       default:
         return const SizedBox.shrink();
     }
@@ -804,9 +975,8 @@ class NotePreviewSummary extends StatelessWidget {
                 ),
               ),
         const SizedBox(width: 8),
-        if (showImagePreview!) _previewImage(item!),
+        if (showImagePreview!) _previewImage(context, item!),
         const SizedBox(width: 8),
-        
       ],
     );
   }
@@ -829,82 +999,206 @@ class NoteUrlPreview extends StatefulWidget {
 
 class _NoteUrlPreviewState extends State<NoteUrlPreview> {
   bool removed = false;
+  // null = not yet checked, false = not found, true = found
+  bool? _imageExists;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkImageFile();
+  }
+
+  @override
+  void didUpdateWidget(NoteUrlPreview oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Re-check if the imageDirectory or itemId changed (e.g. directory loaded late)
+    if (oldWidget.imageDirectory != widget.imageDirectory ||
+        oldWidget.itemId != widget.itemId) {
+      _checkImageFile();
+    }
+  }
+
+  Future<void> _checkImageFile() async {
+    if (widget.imageDirectory.isEmpty) {
+      // Directory not ready yet — wait a bit and retry
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (!mounted) return;
+      _checkImageFile();
+      return;
+    }
+    final file = File("${widget.imageDirectory}/${widget.itemId}-urlimage.png");
+    final exists = file.existsSync();
+    if (mounted && exists != _imageExists) {
+      setState(() => _imageExists = exists);
+    }
+  }
 
   Future<void> remove() async {
     removed = await ModelItem.removeUrlInfo(widget.itemId);
-    setState(() {});
+    if (mounted) setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
-    return removed
-        ? const SizedBox.shrink()
-        : Container(
-            margin: const EdgeInsets.only(bottom: 6),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .outlineVariant
-                      .withValues(alpha: 0.35),
-                  width: 0.75),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // accent bar
-                  Container(
-                      width: 3, color: Theme.of(context).colorScheme.primary),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(10),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (widget.urlInfo["title"] != null)
-                            Text(widget.urlInfo["title"],
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                    fontSize: 12, fontWeight: FontWeight.w600)),
-                          if (widget.urlInfo["desc"] != null) ...[
-                            const SizedBox(height: 3),
-                            Text(widget.urlInfo["desc"],
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                    fontSize: 11,
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurfaceVariant
-                                        .withValues(alpha: 0.6))),
-                          ],
-                          const SizedBox(height: 4),
+    final cs = Theme.of(context).colorScheme;
+    if (removed) return const SizedBox.shrink();
+
+    final imgFile = _imageExists == true
+        ? File("${widget.imageDirectory}/${widget.itemId}-urlimage.png")
+        : null;
+
+    // portrait == 1 means tall/square image → side thumbnail
+    // portrait == 0 means landscape/banner image → full-width bottom strip
+    final bool isLandscape =
+        imgFile != null && (widget.urlInfo["portrait"] == 0);
+    final bool isPortrait =
+        imgFile != null && (widget.urlInfo["portrait"] != 0);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 6),
+      decoration: BoxDecoration(
+        color: cs.onSurface.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+            color: cs.onSurface.withValues(alpha: 0.08), width: 0.75),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Top row: accent bar + text + optional portrait thumbnail ──
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // left accent bar
+                Container(width: 3, color: cs.primary),
+                // text block
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(10, 10, 6, 10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (widget.urlInfo["title"] != null)
                           Text(
-                              Uri.tryParse(widget.urlInfo["url"] ?? "")?.host ??
-                                  widget.urlInfo["url"] ??
-                                  "",
-                              style: TextStyle(
-                                  fontSize: 10,
-                                  color:
-                                      Theme.of(context).colorScheme.primary)),
+                            widget.urlInfo["title"],
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: cs.onSurface),
+                          ),
+                        if (widget.urlInfo["desc"] != null) ...[
+                          const SizedBox(height: 3),
+                          Text(
+                            widget.urlInfo["desc"],
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                fontSize: 11,
+                                color: cs.onSurfaceVariant
+                                    .withValues(alpha: 0.65)),
+                          ),
                         ],
+                        const SizedBox(height: 4),
+                        Text(
+                          Uri.tryParse(widget.urlInfo["url"] ?? "")?.host ??
+                              widget.urlInfo["url"] ??
+                              "",
+                          style: TextStyle(fontSize: 10, color: cs.primary),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                // portrait thumbnail — tall/square image on the right
+                if (isPortrait)
+                  Container(
+                    width: 72,
+                    margin: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(6),
+                      image: DecorationImage(
+                        image: FileImage(imgFile),
+                        fit: BoxFit.cover,
                       ),
                     ),
                   ),
-                  IconButton(
+                // action buttons: expand (if image exists) + dismiss
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (imgFile != null)
+                      IconButton(
+                        onPressed: () {
+                          showDialog(
+                            context: context,
+                            barrierColor: Colors.black87,
+                            builder: (context) => Dialog(
+                              backgroundColor: Colors.transparent,
+                              child: Stack(
+                                children: [
+                                  Center(
+                                    child: InteractiveViewer(
+                                      maxScale: 3.5,
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: Image.file(
+                                          imgFile,
+                                          fit: BoxFit.contain,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    top: 16,
+                                    right: 16,
+                                    child: IconButton(
+                                      icon: const Icon(Icons.close,
+                                          color: Colors.white, size: 28),
+                                      onPressed: () => Navigator.pop(context),
+                                      style: IconButton.styleFrom(
+                                        backgroundColor:
+                                            Colors.black.withValues(alpha: 0.5),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                        icon: Icon(Icons.zoom_out_map,
+                            size: 16,
+                            color: cs.onSurfaceVariant.withValues(alpha: 0.6)),
+                        padding: const EdgeInsets.all(8),
+                      ),
+                    IconButton(
                       onPressed: remove,
                       icon: Icon(LucideIcons.x,
                           size: 16,
-                          color: Theme.of(context).colorScheme.outline),
-                      padding: const EdgeInsets.all(8)),
-                ],
+                          color: cs.onSurfaceVariant.withValues(alpha: 0.6)),
+                      padding: const EdgeInsets.all(8),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          // ── Bottom banner — landscape image full-width strip ──────────
+          if (isLandscape)
+            SizedBox(
+              height: 120,
+              width: double.infinity,
+              child: Image.file(
+                imgFile,
+                fit: BoxFit.cover,
               ),
             ),
-          );
+        ],
+      ),
+    );
   }
 }

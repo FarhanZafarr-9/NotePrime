@@ -216,18 +216,24 @@ class _PageStarredItemsState extends State<PageStarredItems> {
               child: Container(
                 width: double.infinity,
                 color: _selection.contains(item)
-                    ? Theme.of(context).colorScheme.inversePrimary
+                    ? Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.1)
                     : Colors.transparent,
                 margin: const EdgeInsets.symmetric(vertical: 1),
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: Container(
                       margin: const EdgeInsets.symmetric(
-                          vertical: 5, horizontal: 10),
-                      padding: const EdgeInsets.all(10),
+                          vertical: 3, horizontal: 12),
+                      padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surface,
-                        borderRadius: BorderRadius.circular(10),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       child: _buildItem(item)),
                 ),
@@ -245,52 +251,43 @@ class _PageStarredItemsState extends State<PageStarredItems> {
       case ItemType.text:
         return ItemWidgetText(
           item: item,
-
         );
       case ItemType.task:
         return ItemWidgetTask(
           item: item,
-
         );
       case ItemType.completedTask:
         return ItemWidgetTask(
           item: item,
-
         );
       case ItemType.image:
         return ItemWidgetImage(
           item: item,
           onTap: onItemTapped,
-
         );
       case ItemType.video:
         return ItemWidgetVideo(
           item: item,
           onTap: onItemTapped,
-
         );
       case ItemType.audio:
         return ItemWidgetAudio(
           item: item,
-
         );
       case ItemType.document:
         return ItemWidgetDocument(
           item: item,
           onTap: onItemTapped,
-
         );
       case ItemType.location:
         return ItemWidgetLocation(
           item: item,
           onTap: onItemTapped,
-
         );
       case ItemType.contact:
         return ItemWidgetContact(
           item: item,
           onTap: onItemTapped,
-
         );
       default:
         return const SizedBox.shrink();

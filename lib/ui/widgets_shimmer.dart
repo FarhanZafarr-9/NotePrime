@@ -7,8 +7,10 @@ class CategoryGroupShimmer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Shimmer.fromColors(
-      baseColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-      highlightColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.1),
+      baseColor:
+          Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
+      highlightColor:
+          Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.18),
       child: ListTile(
         leading: Container(
           width: 36,

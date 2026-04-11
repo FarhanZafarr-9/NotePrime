@@ -77,7 +77,7 @@ class _PageEditNoteState extends State<PageEditNote> {
             : null,
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
         child: SingleChildScrollView(
           child: TextField(
             controller: controller,
@@ -85,21 +85,26 @@ class _PageEditNoteState extends State<PageEditNote> {
             textCapitalization: TextCapitalization.sentences,
             autofocus: true,
             maxLines: null,
-            style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontSize: 16,
+              height: 1.6,
+            ),
             onSubmitted: saveItem,
-            decoration: InputDecoration(
+            decoration: const InputDecoration(
               border: InputBorder.none,
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+              contentPadding: EdgeInsets.symmetric(horizontal: 4, vertical: 8),
             ),
           ),
         ),
       ),
       floatingActionButton: FloatingActionButton.small(
         heroTag: "save_note",
-        onPressed: () {
-          saveItem(controller.text);
-        },
+        backgroundColor:
+            Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
+        elevation: 0,
+        onPressed: () => saveItem(controller.text),
         child: const Icon(Icons.check),
       ),
     );

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import 'package:ntsapp/ui/common_widgets.dart';
 import 'package:ntsapp/models/model_category.dart';
 import 'package:ntsapp/models/model_category_group.dart';
@@ -6,15 +7,17 @@ import 'package:ntsapp/models/model_category_group.dart';
 import '../../utils/common.dart';
 
 class PageArchivedCategories extends StatefulWidget {
-  final Function(bool) onSelectionChange;
+  final Function(bool, int) onSelectionChange;
   final Function(VoidCallback) setDeleteCallback;
   final Function(VoidCallback) setRestoreCallback;
+  final Function(VoidCallback) setSelectAllCallback;
 
   const PageArchivedCategories({
     super.key,
     required this.onSelectionChange,
     required this.setDeleteCallback,
     required this.setRestoreCallback,
+    required this.setSelectAllCallback,
   });
 
   @override
@@ -24,31 +27,18 @@ class PageArchivedCategories extends StatefulWidget {
 class _PageArchivedCategoriesState extends State<PageArchivedCategories> {
   final List<ModelCategory> _archivedCategories = [];
   final List<ModelCategory> _selection = [];
+  // ignore: unused_field
   bool _isSelecting = false;
 
   @override
   void initState() {
     super.initState();
-    widget.setDeleteCallback(() {
-      setState(() {
-        deleteSelectedItems();
-        widget.onSelectionChange(false);
-      });
-    });
-    widget.setRestoreCallback(() {
-      setState(() {
-        restoreSelectedItems();
-        widget.onSelectionChange(false);
-      });
-    });
+    widget.setDeleteCallback(deleteSelectedItems);
+    widget.setRestoreCallback(restoreSelectedItems);
+    widget.setSelectAllCallback(selectAllItems);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       fetchArchivedCategories();
     });
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
   }
 
   Future<void> fetchArchivedCategories() async {
@@ -65,25 +55,35 @@ class _PageArchivedCategoriesState extends State<PageArchivedCategories> {
         _selection.remove(item);
         if (_selection.isEmpty) {
           _isSelecting = false;
-          widget.onSelectionChange(false);
+          widget.onSelectionChange(false, 0);
+        } else {
+          widget.onSelectionChange(true, _selection.length);
         }
       } else {
         _selection.add(item);
-        if (!_isSelecting) {
-          _isSelecting = true;
-          widget.onSelectionChange(true);
-        }
+        _isSelecting = true;
+        widget.onSelectionChange(true, _selection.length);
       }
     });
   }
 
+  void selectAllItems() {
+    setState(() {
+      _selection.clear();
+      _selection.addAll(_archivedCategories);
+      _isSelecting = true;
+      widget.onSelectionChange(true, _selection.length);
+    });
+  }
+
   Future<void> restoreSelectedItems() async {
-    for (ModelCategory category in _selection) {
+    final toRestore = List<ModelCategory>.from(_selection);
+    clearSelection();
+    for (ModelCategory category in toRestore) {
       category.archivedAt = 0;
       await category.update(["archived_at"]);
     }
     if (mounted) {
-      clearSelection();
       displaySnackBar(context, message: "Restored.", seconds: 1);
     }
     await fetchArchivedCategories();
@@ -91,12 +91,13 @@ class _PageArchivedCategoriesState extends State<PageArchivedCategories> {
   }
 
   Future<void> deleteSelectedItems() async {
-    for (ModelCategory category in _selection) {
+    final toDelete = List<ModelCategory>.from(_selection);
+    clearSelection();
+    for (ModelCategory category in toDelete) {
       _archivedCategories.remove(category);
       await category.deleteCascade(withServerSync: true);
     }
     if (mounted) {
-      clearSelection();
       displaySnackBar(context, message: "Deleted permanently.", seconds: 1);
     }
     await fetchArchivedCategories();
@@ -107,40 +108,101 @@ class _PageArchivedCategoriesState extends State<PageArchivedCategories> {
       _selection.clear();
       _isSelecting = false;
     });
+    widget.onSelectionChange(false, 0);
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: ListView.builder(
-        itemCount: _archivedCategories
-            .length, // Additional item for the loading indicator
-        itemBuilder: (context, index) {
-          final archivedGroup = _archivedCategories[index];
-          final ModelCategoryGroup categoryGroup = ModelCategoryGroup(
-              id: archivedGroup.id!,
-              type: "group",
-              position: archivedGroup.position!,
-              color: archivedGroup.color,
-              title: archivedGroup.title);
-          return GestureDetector(
-            onTap: () {
-              onItemTapped(archivedGroup);
-            },
-            child: Container(
-              width: double.infinity,
-              color: _selection.contains(archivedGroup)
-                  ? Theme.of(context).colorScheme.inversePrimary
-                  : Colors.transparent,
-              margin: const EdgeInsets.symmetric(vertical: 1),
-              child: WidgetCategoryGroup(
-                categoryGroup: categoryGroup,
-                showSummary: false,
-                showCategorySign: false,
+    final cs = Theme.of(context).colorScheme;
+
+    if (_archivedCategories.isEmpty) {
+      return _ArchivedEmptyState(
+        icon: LucideIcons.layoutGrid,
+        message: "No archived categories",
+        subtitle: "Categories you archive will appear here",
+      );
+    }
+
+    return ListView.separated(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      itemCount: _archivedCategories.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 3),
+      itemBuilder: (context, index) {
+        final archivedCategory = _archivedCategories[index];
+        final isSelected = _selection.contains(archivedCategory);
+        final categoryGroup = ModelCategoryGroup(
+          id: archivedCategory.id!,
+          type: "category",
+          position: archivedCategory.position!,
+          color: archivedCategory.color,
+          title: archivedCategory.title,
+        );
+        return GestureDetector(
+          onTap: () => onItemTapped(archivedCategory),
+          onLongPress: () => onItemTapped(archivedCategory),
+          child: Material(
+            color: isSelected
+                ? cs.onSurface.withValues(alpha: 0.1)
+                : cs.onSurface.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(12),
+            child: WidgetCategoryGroup(
+              categoryGroup: categoryGroup,
+              showSummary: false,
+              showCategorySign: false,
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _ArchivedEmptyState extends StatelessWidget {
+  final IconData icon;
+  final String message;
+  final String subtitle;
+
+  const _ArchivedEmptyState({
+    required this.icon,
+    required this.message,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: cs.onSurface.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Icon(icon, size: 28, color: cs.onSurfaceVariant),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              message,
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w500,
+                color: cs.onSurface,
               ),
             ),
-          );
-        },
+            const SizedBox(height: 8),
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14, color: cs.onSurfaceVariant),
+            ),
+          ],
+        ),
       ),
     );
   }

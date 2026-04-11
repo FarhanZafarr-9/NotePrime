@@ -46,7 +46,7 @@ bool simulateOnboarding() {
 }
 
 bool revenueCatSupported =
-    Platform.isIOS || Platform.isAndroid; // TODO || Platform.isMacOS
+    Platform.isIOS || Platform.isAndroid; //Platform.isMacOS
 
 bool runningOnMobile = Platform.isAndroid || Platform.isIOS;
 
@@ -398,10 +398,19 @@ int mediaFileDurationFromString(String duration) {
 /* date/time conversion -- ends */
 
 Uint8List? getImageThumbnail(Uint8List bytes) {
-  int maxSize = 200;
+  const int maxSize = 400;
   img.Image? src = img.decodeImage(bytes);
   if (src != null) {
-    img.Image resized = img.copyResize(src, width: maxSize);
+    final int targetWidth =
+        src.width > src.height ? maxSize : (maxSize * src.width ~/ src.height);
+    final int targetHeight =
+        src.height > src.width ? maxSize : (maxSize * src.height ~/ src.width);
+    img.Image resized = img.copyResize(
+      src,
+      width: targetWidth,
+      height: targetHeight,
+      interpolation: img.Interpolation.cubic,
+    );
     return Uint8List.fromList(img.encodePng(resized));
   }
   return null;
@@ -574,22 +583,35 @@ Future<int> checkDownloadNetworkImage(String itemId, String imageUrl) async {
   await checkAndCreateDirectory(newPath);
   int portrait = 1;
   try {
-    final response = await http.get(Uri.parse(imageUrl));
+    final response = await http.get(
+      Uri.parse(imageUrl),
+      headers: {
+        // Some CDNs block requests without a browser user-agent
+        'User-Agent':
+            'Mozilla/5.0 (compatible; NTSApp/1.0; +https://github.com/jeerovan/ntsapp)',
+      },
+    ).timeout(const Duration(seconds: 10));
+
     if (response.statusCode == 200) {
       Uint8List imageBytes = response.bodyBytes;
-      Uint8List? thumbnail = getImageThumbnail(imageBytes);
-      if (thumbnail != null) {
-        final file = File(newPath);
-        await file.writeAsBytes(thumbnail);
-        Map<String, int> imageDimension = getImageDimension(thumbnail);
-        int imageWidth = imageDimension["width"]!;
-        int imageHeight = imageDimension["height"]!;
-        if (imageWidth > 0 && imageHeight > 0) {
-          if (imageWidth > imageHeight) {
-            portrait = 0;
-          }
-        }
+      if (imageBytes.isEmpty) {
+        logger.warning("Empty image bytes for $imageUrl");
+        return portrait;
       }
+
+      // Always write the original bytes — never downscale what we store on disk
+      final file = File(newPath);
+      await file.writeAsBytes(imageBytes);
+
+      // Determine portrait/landscape from the original image dimensions
+      Map<String, int> imageDimension = getImageDimension(imageBytes);
+      int imageWidth = imageDimension["width"]!;
+      int imageHeight = imageDimension["height"]!;
+      if (imageWidth > 0 && imageHeight > 0 && imageWidth > imageHeight) {
+        portrait = 0;
+      }
+    } else {
+      logger.warning("Non-200 response (${response.statusCode}) for $imageUrl");
     }
   } catch (e, s) {
     logger.error("Exception", error: e, stackTrace: s);
