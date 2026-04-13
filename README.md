@@ -12,6 +12,9 @@ Notes app with a chat-like interface and end-to-end encrypted cloud backup/sync.
 
 ## Install
 
+> [!WARNING]  
+> **Important Migration Notice:** If you are installing this fork seamlessly over the original Note Safe application, **you must safely back up your data first!** Because cryptographic security signatures and local database architectures may incrementally differ, please ensure you export all your notes as a secure `.zip` backup from within the original app *before* overwriting it with this version. You can then instantly restore your data inside the fork!
+
 * Android — [GitHub Releases](https://github.com/FarhanZafarr-9/ntsapp/releases/)
 * Original Play Store — [Note Safe on Play Store](https://play.google.com/store/apps/details?id=com.makenotetoself) *(original app by jeerovan)*
 * Fork support for Windows / Linux / macOS / iOS — Coming soon

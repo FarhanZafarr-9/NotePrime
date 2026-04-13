@@ -17,6 +17,7 @@ import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../utils/common.dart';
+import '../common_widgets.dart';
 
 class SettingsPage extends StatefulWidget {
   final bool isDarkMode;
@@ -312,7 +313,7 @@ class SettingsPageState extends State<SettingsPage> {
                     borderRadius: radius,
                     child: ListTile(
                       leading: tile.leading,
-                      title: tile.titleWidget ?? tile.title,
+                      title: tile.title,
                       subtitle: tile.subtitle,
                       trailing: tile.trailing,
                       enabled: tile.enabled,
@@ -387,65 +388,29 @@ class SettingsPageState extends State<SettingsPage> {
                 leading: _buildLeadingIcon(LucideIcons.droplets, cs.primary),
                 title: const Text("App Accent Color"),
                 subtitle: const Text("Hand-picked custom theme"),
-                titleWidget: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text("App Accent Color"),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      height: 44,
-                      child: ListView.separated(
-                        padding: const EdgeInsets.symmetric(vertical: 4),
-                        scrollDirection: Axis.horizontal,
-                        itemCount: predefinedColors.length,
-                        separatorBuilder: (_, __) => const SizedBox(width: 8),
-                        itemBuilder: (context, index) {
-                          final color = predefinedColors[index];
-                          final isSelected = widget.accentColor == color ||
-                              (widget.accentColor == null &&
-                                  color == const Color(0xFF6750A4));
-                          return GestureDetector(
-                            onTap: () =>
-                                widget.onAccentColorChange?.call(color),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              width: 34,
-                              height: 34,
-                              decoration: BoxDecoration(
-                                color: color,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: isSelected
-                                      ? cs.primary
-                                      : Colors.transparent,
-                                  width: 2.5,
-                                ),
-                                boxShadow: isSelected
-                                    ? [
-                                        BoxShadow(
-                                          color: color.withValues(alpha: 0.4),
-                                          blurRadius: 8,
-                                          offset: const Offset(0, 2),
-                                        )
-                                      ]
-                                    : null,
-                              ),
-                              child: isSelected
-                                  ? Icon(
-                                      Icons.check,
-                                      size: 16,
-                                      color: color.computeLuminance() > 0.5
-                                          ? Colors.black
-                                          : Colors.white,
-                                    )
-                                  : null,
-                            ),
-                          );
-                        },
-                      ),
+                trailing: Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: widget.accentColor ?? const Color(0xFF6750A4),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: cs.onSurface.withValues(alpha: 0.1),
                     ),
-                  ],
+                  ),
                 ),
+                onTap: () async {
+                  final currentColor =
+                      widget.accentColor ?? const Color(0xFF6750A4);
+                  Color? pickedColor = await showDialog<Color>(
+                    context: context,
+                    builder: (context) =>
+                        ColorPickerDialog(color: colorToHex(currentColor)),
+                  );
+                  if (pickedColor != null) {
+                    widget.onAccentColorChange?.call(pickedColor);
+                  }
+                },
               ),
             _SettingsTile(
               leading: _buildLeadingIcon(LucideIcons.type, cs.tertiary),
@@ -783,7 +748,6 @@ class SettingsPageState extends State<SettingsPage> {
 class _SettingsTile {
   final Widget? leading;
   final Widget? title;
-  final Widget? titleWidget;
   final Widget? subtitle;
   final Widget? trailing;
   final VoidCallback? onTap;
@@ -792,7 +756,6 @@ class _SettingsTile {
   const _SettingsTile({
     this.leading,
     this.title,
-    this.titleWidget,
     this.subtitle,
     this.trailing,
     this.onTap,

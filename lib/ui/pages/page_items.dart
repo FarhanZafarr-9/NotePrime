@@ -418,26 +418,22 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
     });
   }
 
-  void _toggleFilter(String filter) {
-    setState(() => _filters[filter] = !_filters[filter]!);
-    _applyFilters();
-  }
-
   // ── Filter dialog — icon grid with chip-style toggle ─────────────────────
   void _openFilterDialog() {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setState) {
+          builder: (BuildContext context, StateSetter dialogSetState) {
             final cs = Theme.of(context).colorScheme;
 
             Widget filterChip(String key, IconData icon, String label) {
               final active = _filters[key]!;
               return GestureDetector(
                 onTap: () {
-                  setState(() => _filters[key] = !active);
-                  _toggleFilter(key);
+                  dialogSetState(() => _filters[key] = !active);
+                  setState(() {});
+                  _applyFilters();
                 },
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 150),
