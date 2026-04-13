@@ -439,15 +439,7 @@ class _ItemWidgetVideoState extends State<ItemWidgetVideo> {
           Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(18),
-              border: widget.showBorder
-                  ? Border.all(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .primary
-                          .withValues(alpha: 0.15),
-                      width: 0.75,
-                    )
-                  : null,
+              border: null,
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(18),
@@ -479,6 +471,7 @@ class _ItemWidgetVideoState extends State<ItemWidgetVideo> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
+                const SizedBox(height: 4),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
