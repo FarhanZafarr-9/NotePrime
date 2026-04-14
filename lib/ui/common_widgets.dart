@@ -47,6 +47,95 @@ class MessageInCenter extends StatelessWidget {
   }
 }
 
+class PrivacyShield extends StatefulWidget {
+  final Widget child;
+  final BorderRadius borderRadius;
+  final bool isEnabled;
+
+  const PrivacyShield({
+    super.key,
+    required this.child,
+    required this.borderRadius,
+    this.isEnabled = true,
+  });
+
+  @override
+  State<PrivacyShield> createState() => _PrivacyShieldState();
+}
+
+class _PrivacyShieldState extends State<PrivacyShield> {
+  bool _isRevealed = false;
+  Timer? _timer;
+
+  void _reveal() {
+    if (_isRevealed) return;
+    setState(() => _isRevealed = true);
+    _timer?.cancel();
+    _timer = Timer(const Duration(seconds: 3), () {
+      if (mounted) setState(() => _isRevealed = false);
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!widget.isEnabled) return widget.child;
+
+    return GestureDetector(
+      onTap: _reveal,
+      behavior: HitTestBehavior.opaque,
+      child: Stack(
+        children: [
+          // Content with stable ImageFiltered blur
+          ClipRRect(
+            borderRadius: widget.borderRadius,
+            child: ImageFiltered(
+              imageFilter: ui.ImageFilter.blur(
+                sigmaX: _isRevealed ? 0.0 : 16.0,
+                sigmaY: _isRevealed ? 0.0 : 16.0,
+              ),
+              child: AbsorbPointer(
+                absorbing: !_isRevealed,
+                child: widget.child,
+              ),
+            ),
+          ),
+          // Clean Gradient Overlay matching the shape
+          if (!_isRevealed)
+            Positioned.fill(
+              child: ClipRRect(
+                borderRadius: widget.borderRadius,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Theme.of(context)
+                            .colorScheme
+                            .surface
+                            .withValues(alpha: 0.4),
+                        Theme.of(context)
+                            .colorScheme
+                            .surface
+                            .withValues(alpha: 0.1),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 
 class FloatingActionButtonWithBadge extends StatelessWidget {
   final int filterCount;

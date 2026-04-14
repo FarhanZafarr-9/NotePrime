@@ -64,6 +64,7 @@ class SettingsPageState extends State<SettingsPage> {
   late bool globalSortOldestFirst;
   late bool globalMediaGallery;
   late bool globalGroupLock;
+  late bool privacyShieldEnabled;
 
   @override
   void initState() {
@@ -85,6 +86,8 @@ class SettingsPageState extends State<SettingsPage> {
         ModelSetting.get("global_media_gallery", "no") == "yes";
     globalGroupLock =
         ModelSetting.get("global_group_lock", "no") == "yes";
+    privacyShieldEnabled =
+        ModelSetting.get("privacy_shield_enabled", "no") == "yes";
   }
 
   Future<void> checkDeviceAuth() async {
@@ -135,6 +138,11 @@ class SettingsPageState extends State<SettingsPage> {
   Future<void> _setGlobalGroupLock(bool value) async {
     setState(() => globalGroupLock = value);
     await ModelSetting.set("global_group_lock", value ? "yes" : "no");
+  }
+
+  Future<void> _setPrivacyShield(bool value) async {
+    setState(() => privacyShieldEnabled = value);
+    await ModelSetting.set("privacy_shield_enabled", value ? "yes" : "no");
   }
 
   Future<void> _authenticate() async {
@@ -567,6 +575,19 @@ class SettingsPageState extends State<SettingsPage> {
               ),
               onTap: !useGroupSettings
                   ? () => _setGlobalGroupLock(!globalGroupLock)
+                  : null,
+            ),
+            _SettingsTile(
+              enabled: !useGroupSettings,
+              leading: _buildLeadingIcon(LucideIcons.eyeOff, cs.onSurfaceVariant),
+              title: const Text("Privacy Shield"),
+              subtitle: const Text("Gradiant blur until tapped"),
+              trailing: Switch(
+                value: privacyShieldEnabled,
+                onChanged: !useGroupSettings ? _setPrivacyShield : null,
+              ),
+              onTap: !useGroupSettings
+                  ? () => _setPrivacyShield(!privacyShieldEnabled)
                   : null,
             ),
           ]),

@@ -43,6 +43,7 @@ class PageGroupAddEditState extends State<PageGroupAddEdit> {
   bool sortOldestFirst = false;
   bool mediaGallery = false;
   bool groupLock = false;
+  bool privacyShield = false;
 
   String title = "";
   Uint8List? thumbnail;
@@ -93,6 +94,9 @@ class PageGroupAddEditState extends State<PageGroupAddEdit> {
         }
         if (groupData!.containsKey("group_lock")) {
           groupLock = groupData!["group_lock"] == 1;
+        }
+        if (groupData!.containsKey("privacy_shield")) {
+          privacyShield = groupData!["privacy_shield"] == 1;
         }
       }
     }
@@ -284,6 +288,17 @@ class PageGroupAddEditState extends State<PageGroupAddEdit> {
       groupData!["group_lock"] = v;
     } else {
       groupData = {"group_lock": v};
+    }
+  }
+
+  Future<void> setPrivacyShield(bool value) async {
+    itemChanged = true;
+    setState(() => privacyShield = value);
+    int v = privacyShield ? 1 : 0;
+    if (groupData != null) {
+      groupData!["privacy_shield"] = v;
+    } else {
+      groupData = {"privacy_shield": v};
     }
   }
 
@@ -571,6 +586,16 @@ class PageGroupAddEditState extends State<PageGroupAddEdit> {
                 value: groupLock,
                 onChanged: ModelSetting.get("use_group_settings", "yes") == "yes"
                     ? setGroupLock
+                    : (v) {},
+              ),
+              const SizedBox(height: 3),
+              _settingsToggleTile(
+                context: context,
+                icon: LucideIcons.eyeOff,
+                label: 'Privacy shield',
+                value: privacyShield,
+                onChanged: ModelSetting.get("use_group_settings", "yes") == "yes"
+                    ? setPrivacyShield
                     : (v) {},
               ),
               if (ModelSetting.get("use_group_settings", "yes") != "yes") ...[

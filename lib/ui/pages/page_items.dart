@@ -96,6 +96,7 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
   bool linkPreview = true;
   bool sortOldestFirst = false;
   bool mediaGallery = false;
+  bool privacyShield = false;
 
   String imageDirPath = "";
 
@@ -145,6 +146,9 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
         break;
       case EventType.changedItemId:
         if (mounted) changedItem(event.value);
+        break;
+      case EventType.exitSettings:
+        if (mounted && noteGroup != null) loadGroupSettings(noteGroup!);
         break;
       default:
         break;
@@ -234,6 +238,12 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
           } else {
             mediaGallery = false; // default off
           }
+          if (data.containsKey("privacy_shield")) {
+            privacyShield = data["privacy_shield"] == 1;
+          } else {
+            privacyShield =
+                ModelSetting.get("privacy_shield_enabled", "no") == "yes";
+          }
         } else {
           showDateTime =
               ModelSetting.get("global_show_date_time", "yes") == "yes";
@@ -245,6 +255,8 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
               ModelSetting.get("global_sort_order", "newest") == "oldest";
           mediaGallery =
               ModelSetting.get("global_media_gallery", "no") == "yes";
+          privacyShield =
+              ModelSetting.get("privacy_shield_enabled", "no") == "yes";
         }
 
         // task_mode is always group-specific as per user feedback
@@ -1560,6 +1572,10 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                     child: ScrollablePositionedList.builder(
                       itemScrollController: _itemScrollController,
                       itemPositionsListener: _itemPositionsListener,
+                      physics: privacyShield
+                          ? const ClampingScrollPhysics()
+                          : const BouncingScrollPhysics(
+                              parent: AlwaysScrollableScrollPhysics()),
                       reverse: !sortOldestFirst,
                       itemCount: _displayItemList.length,
                       itemBuilder: (context, index) {
@@ -1672,12 +1688,17 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                                             left: 12, right: 12, top: 2),
                                         child: Align(
                                           alignment: Alignment.centerLeft,
-                                          child: ReplyQuoteBubble(
-                                            replyOn: item.replyOn!,
-                                            showBorder: showNoteBorder,
-                                            onTap: () =>
-                                                _showReplyThreadOverlay(
-                                                    context, item),
+                                          child: PrivacyShield(
+                                            isEnabled: privacyShield,
+                                            borderRadius:
+                                                BorderRadius.circular(10),
+                                            child: ReplyQuoteBubble(
+                                              replyOn: item.replyOn!,
+                                              showBorder: showNoteBorder,
+                                              onTap: () =>
+                                                  _showReplyThreadOverlay(
+                                                      context, item),
+                                            ),
                                           ),
                                         ),
                                       ),
@@ -1691,87 +1712,111 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                                           right: 12,
                                           left: 12,
                                         ),
-                                        child: Material(
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(
-                                                bubbleRadius),
-                                            side: (!isAttachment &&
-                                                    showNoteBorder)
-                                                ? BorderSide(
-                                                    color: cs.onSurface
-                                                        .withValues(alpha: 0.1),
-                                                    width: 0.5,
-                                                  )
-                                                : BorderSide.none,
-                                          ),
-                                          color: isAttachment
-                                              ? Colors.transparent
-                                              : cs.onSurface
-                                                  .withValues(alpha: 0.07),
-                                          child: Container(
-                                            margin: EdgeInsets.symmetric(
-                                                vertical: isAttachment ? 2 : 8,
-                                                horizontal:
-                                                    isAttachment ? 0 : 8),
-                                            padding: EdgeInsets.symmetric(
-                                              vertical: isAttachment ? 0 : 2,
-                                              horizontal: isAttachment ? 0 : 6,
+                                        child: PrivacyShield(
+                                          isEnabled: privacyShield,
+                                          borderRadius: BorderRadius.circular(
+                                              bubbleRadius),
+                                          child: Material(
+                                            color: Colors.transparent,
+                                            elevation: 0,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(
+                                                      bubbleRadius),
+                                              side: (!isAttachment &&
+                                                      showNoteBorder)
+                                                  ? BorderSide(
+                                                      color: cs.onSurface
+                                                          .withValues(
+                                                              alpha: 0.1),
+                                                      width: 0.5,
+                                                    )
+                                                  : BorderSide.none,
                                             ),
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                if (linkPreview &&
-                                                    (urlInfo != null ||
-                                                    (item.data != null &&
-                                                        (item.data!.containsKey(
-                                                                "url_info_list") ||
-                                                            item.data!.containsKey(
-                                                                "url_metadata_state"))) ||
-                                                    _linkRegExp
-                                                        .hasMatch(item.text)))
-                                                  GestureDetector(
-                                                    onTap: () async {
-                                                      if (_hasNotesSelected) {
-                                                        onItemTapped(item);
-                                                      } else if (urlInfo !=
-                                                          null) {
-                                                        final linkUri =
-                                                            Uri.parse(
-                                                                urlInfo["url"]);
-                                                        if (await canLaunchUrl(
-                                                            linkUri)) {
-                                                          await launchUrl(
-                                                              linkUri);
-                                                        }
-                                                      }
-                                                    },
-                                                    child: NoteUrlPreview(
-                                                      urlInfo: urlInfo,
-                                                      urlInfoList: item.data?[
-                                                          "url_info_list"],
-                                                      urlMetadataState: item
-                                                                  .data?[
-                                                              "url_metadata_state"] ??
-                                                          (urlInfo == null &&
-                                                                  item.data?[
-                                                                          "url_info_list"] ==
-                                                                      null &&
-                                                                  _linkRegExp.hasMatch(
-                                                                      item.text)
-                                                              ? "none"
-                                                              : null),
-                                                      imageDirectory:
-                                                          imageDirPath,
-                                                      itemId: item.id!,
-                                                      onRetry: () =>
-                                                          checkFetchUrlMetadata(
-                                                              item,
-                                                              force: true),
-                                                    ),
-                                                  ),
-                                                _buildNoteItem(item, index: index),
-                                              ],
+                                            child: Container(
+                                              decoration: BoxDecoration(
+                                                borderRadius:
+                                                    BorderRadius.circular(
+                                                        bubbleRadius),
+                                                color: isAttachment
+                                                    ? Colors.transparent
+                                                    : cs.onSurface.withValues(
+                                                        alpha: 0.07),
+                                              ),
+                                              child: Container(
+                                                margin: EdgeInsets.symmetric(
+                                                    vertical:
+                                                        isAttachment ? 2 : 8,
+                                                    horizontal:
+                                                        isAttachment ? 0 : 8),
+                                                padding: EdgeInsets.symmetric(
+                                                  vertical:
+                                                      isAttachment ? 0 : 2,
+                                                  horizontal:
+                                                      isAttachment ? 0 : 6,
+                                                ),
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    _buildNoteItem(item,
+                                                        index: index),
+                                                    if (linkPreview &&
+                                                        (urlInfo != null ||
+                                                            (item.data != null &&
+                                                                (item.data!.containsKey(
+                                                                        "url_info_list") ||
+                                                                    item.data!.containsKey(
+                                                                        "url_metadata_state"))) ||
+                                                            _linkRegExp
+                                                                .hasMatch(
+                                                                    item.text)))
+                                                      GestureDetector(
+                                                        onTap: () async {
+                                                          if (_hasNotesSelected) {
+                                                            onItemTapped(item);
+                                                          } else if (urlInfo !=
+                                                              null) {
+                                                            final linkUri =
+                                                                Uri.parse(
+                                                                    urlInfo[
+                                                                        "url"]);
+                                                            if (await canLaunchUrl(
+                                                                linkUri)) {
+                                                              await launchUrl(
+                                                                  linkUri);
+                                                            }
+                                                          }
+                                                        },
+                                                        child: NoteUrlPreview(
+                                                          urlInfo: urlInfo,
+                                                          urlInfoList:
+                                                              item.data?[
+                                                                  "url_info_list"],
+                                                          urlMetadataState:
+                                                              item.data?[
+                                                                      "url_metadata_state"] ??
+                                                                  (urlInfo ==
+                                                                              null &&
+                                                                          item.data?[
+                                                                                  "url_info_list"] ==
+                                                                              null &&
+                                                                          _linkRegExp.hasMatch(
+                                                                              item.text)
+                                                                      ? "none"
+                                                                      : null),
+                                                          imageDirectory:
+                                                              imageDirPath,
+                                                          itemId: item.id!,
+                                                          onRetry: () =>
+                                                              checkFetchUrlMetadata(
+                                                                  item,
+                                                                  force: true),
+                                                        ),
+                                                      ),
+                                                  ],
+                                                ),
+                                              ),
                                             ),
                                           ),
                                         ),
