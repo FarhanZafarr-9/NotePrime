@@ -34,7 +34,8 @@ This fork builds on the solid foundation of the original Note Safe app and compl
 *   **Refined Chat UI** — Overhauled the conversation view featuring asymmetric message bubbles, dynamic width constraints, dedicated swipe-to-reveal exact timestamps, and day-based visual grouping (`Today`, `Yesterday`).
 *   **Intelligent Media Viewer** — Re-engineered standard viewers to automatically scale exceptionally wide panoramas and tall screenshots, enabling natural scrolling and edge-to-edge boundary tracking with 10.0x pinch-to-zoom limits and native *Save to Downloads* functionality.
 *   **Advanced Formatting** — Restyled embedded location, contact, audio, and file widgets with sleek tonal backgrounds, circular borders, and contextual padding algorithms.
-*   **Enhanced Security Layers** — Integrated a highly robust generic "Privacy Shield" locking state covering background modes and biometric-gated authentication setups that properly restore active screen matrices on unlock.
+*   **Glance-Privacy Shield** — Introduced a granular per-group "Privacy Shield" that blurs sensitive text and media thumbnails with a premium glassmorphic effect. Content remains hidden until revealed with a tap, strictly gating all message interactions while active.
+*   **Enhanced Security Layers** — Integrated a highly robust "App-Lock Shield" covering background modes and biometric-gated authentication setups that properly restore active screen matrices on unlock.
 *   **Sleek Menus & Settings** — Standardized floating popup menus and completely refactored the settings layouts into deeply integrated Material 3 list tiles featuring inline high-precision color-picker dialogs.
 
 ### Differences at a Glance
@@ -45,7 +46,8 @@ This fork builds on the solid foundation of the original Note Safe app and compl
 | **Message Layouts** | Symmetrical blocks across the screen | Modern **asymmetric chat bubbles** adapting dynamically to content width |
 | **Feed Experience** | Timestamps attached to every internal item | Grouped chronological headers with **swipe-to-reveal** item timestamps |
 | **Media Previews** | Distorted borders or unscalable limits on long images | **Edge-to-edge** rendering, smart panorama detection, and smooth native panning |
-| **Security Gates** | Basic lock overlays | Sophisticated **Privacy Shield** routing handling app-lifecycle obfuscation |
+| **Glance-Privacy** | No way to hide sensitive content from onlookers | Granular **per-group blur** with tap-to-reveal gesture |
+| **Security Gates** | Basic lock overlays | Sophisticated **App-Lock Shield** routing handling app-lifecycle obfuscation |
 
 ---
 
