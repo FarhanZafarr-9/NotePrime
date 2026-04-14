@@ -284,8 +284,11 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
           });
         }
       } else {
-        WidgetsBinding.instance.addPostFrameCallback(
-            (_) => _itemScrollController.jumpTo(index: 0));
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _displayItemList.isNotEmpty) {
+            _itemScrollController.jumpTo(index: 0);
+          }
+        });
       }
     });
     if (newItems.isEmpty) {
@@ -301,69 +304,84 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
 
   Future<void> _addItemsToDisplayList(
       List<ModelItem> items, bool addOlder) async {
-    DateTime? lastDate;
-    int? lastItemAt;
+    if (items.isEmpty) return;
+
     if (addOlder) {
-      ModelItem? lastDisplayItem =
-          _displayItemList.isEmpty ? null : _displayItemList.last;
-      DateTime? lastDisplayItemDate = lastDisplayItem == null
-          ? null
-          : lastDisplayItem.type == ItemType.date
-              ? getLocalDateFromUtcMilliSeconds(lastDisplayItem.at!)
-              : null;
-      for (ModelItem item in items) {
+      // Initial load or loading more (cleared list)
+      DateTime? lastDate;
+      for (var item in items) {
         final currentDate = getLocalDateFromUtcMilliSeconds(item.at!);
-        if (lastDisplayItemDate != null && lastDisplayItemDate == currentDate) {
-          _displayItemList.removeLast();
-          lastDisplayItemDate = null;
+
+        if (sortOldestFirst) {
+          // [Date1, Msg1, Date2, Msg2...]
+          if (currentDate != lastDate) {
+            final dateItem = await ModelItem.fromMap({
+              "group_id": noteGroup!.id,
+              "text": getReadableDate(currentDate),
+              "type": 170000,
+              "at": item.at! - 1
+            });
+            _displayItemList.add(dateItem);
+          }
+          _displayItemList.add(item);
+        } else {
+          // [MsgN, MsgN-1, DateN, MsgN-2...] - Reversed view
+          _displayItemList.add(item);
+          final nextIndex = items.indexOf(item) + 1;
+          final nextItemDate = nextIndex < items.length
+              ? getLocalDateFromUtcMilliSeconds(items[nextIndex].at!)
+              : null;
+
+          if (currentDate != nextItemDate) {
+            final dateItem = await ModelItem.fromMap({
+              "group_id": noteGroup!.id,
+              "text": getReadableDate(currentDate),
+              "type": 170000,
+              "at": item.at! - 1
+            });
+            _displayItemList.add(dateItem);
+          }
         }
-        if (lastDate != null && currentDate != lastDate) {
-          final ModelItem dateItem = await ModelItem.fromMap({
-            "group_id": noteGroup!.id,
-            "text": getReadableDate(lastDate),
-            "type": 170000,
-            "at": lastItemAt! - 1
-          });
-          _displayItemList.add(dateItem);
-        }
-        _displayItemList.add(item);
         lastDate = currentDate;
-        lastItemAt = item.at!;
-      }
-      if (lastDate != null) {
-        final ModelItem dateItem = await ModelItem.fromMap({
-          "group_id": noteGroup!.id,
-          "text": getReadableDate(lastDate),
-          "type": 170000,
-          "at": lastItemAt! - 1
-        });
-        _displayItemList.add(dateItem);
       }
     } else {
-      if (_displayItemList.isNotEmpty) {
-        lastDate = getLocalDateFromUtcMilliSeconds(_displayItemList.first.at!);
-      }
-      for (ModelItem item in items) {
+      // Adding a single new item (e.g. from input bar)
+      for (var item in items) {
         final currentDate = getLocalDateFromUtcMilliSeconds(item.at!);
-        if (lastDate != null && currentDate != lastDate) {
-          final ModelItem dateItem = await ModelItem.fromMap({
-            "group_id": noteGroup!.id,
-            "text": getReadableDate(currentDate),
-            "type": 170000,
-            "at": item.at! - 1
-          });
-          _displayItemList.insert(0, dateItem);
-        } else if (lastDate == null) {
-          final ModelItem dateItem = await ModelItem.fromMap({
-            "group_id": noteGroup!.id,
-            "text": getReadableDate(currentDate),
-            "type": 170000,
-            "at": item.at! - 1
-          });
-          _displayItemList.insert(0, dateItem);
+
+        if (sortOldestFirst) {
+          // Add to END. Check if we need a new date pill.
+          DateTime? lastDisplayDate = _displayItemList.isEmpty
+              ? null
+              : getLocalDateFromUtcMilliSeconds(_displayItemList.last.at!);
+
+          if (currentDate != lastDisplayDate) {
+            final dateItem = await ModelItem.fromMap({
+              "group_id": noteGroup!.id,
+              "text": getReadableDate(currentDate),
+              "type": 170000,
+              "at": item.at! - 1
+            });
+            _displayItemList.add(dateItem);
+          }
+          _displayItemList.add(item);
+        } else {
+          // Add to START (Index 0). Check if we need a new date pill below it.
+          DateTime? firstDisplayDate = _displayItemList.isEmpty
+              ? null
+              : getLocalDateFromUtcMilliSeconds(_displayItemList.first.at!);
+
+          if (currentDate != firstDisplayDate) {
+            final dateItem = await ModelItem.fromMap({
+              "group_id": noteGroup!.id,
+              "text": getReadableDate(currentDate),
+              "type": 170000,
+              "at": item.at! - 1
+            });
+            _displayItemList.insert(0, dateItem);
+          }
+          _displayItemList.insert(0, item);
         }
-        _displayItemList.insert(0, item);
-        lastDate = currentDate;
       }
     }
   }
@@ -373,18 +391,30 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
       for (ModelItem item in items) {
         int itemIndex = _displayItemList.indexOf(item);
         if (itemIndex == -1) continue;
-        ModelItem nextItem = _displayItemList.elementAt(itemIndex + 1);
-        if (nextItem.type == ItemType.date) {
-          if (itemIndex > 0) {
-            ModelItem previousItem = _displayItemList.elementAt(itemIndex - 1);
-            if (previousItem.type == ItemType.date) {
+
+        // Try to clean up dangling date pills
+        if (sortOldestFirst) {
+          // Date pill is ABOVE item
+          if (itemIndex > 0 && _displayItemList[itemIndex - 1].type == ItemType.date) {
+            bool isLastInDateGroup = (itemIndex == _displayItemList.length - 1) ||
+                (_displayItemList[itemIndex + 1].type == ItemType.date);
+            if (isLastInDateGroup) {
+              _displayItemList.removeAt(itemIndex - 1);
+              itemIndex--;
+            }
+          }
+        } else {
+          // Date pill is BELOW item (in reversed list)
+          if (itemIndex < _displayItemList.length - 1 &&
+              _displayItemList[itemIndex + 1].type == ItemType.date) {
+            bool isLastInDateGroup = (itemIndex == 0) ||
+                (_displayItemList[itemIndex - 1].type == ItemType.date);
+            if (isLastInDateGroup) {
               _displayItemList.removeAt(itemIndex + 1);
             }
-          } else {
-            _displayItemList.removeAt(itemIndex + 1);
           }
         }
-        _displayItemList.remove(item);
+        _displayItemList.removeAt(itemIndex);
       }
     });
   }
@@ -1467,12 +1497,17 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
     );
   }
 
-  Future<void> showHideScrollToBottomButton(double scrolledHeight) async {
+  Future<void> showHideScrollToBottomButton(ScrollMetrics metrics) async {
     bool requiresUpdate = false;
-    if (scrolledHeight > 100 && !canScrollToBottom) {
+    final double scrolledHeight = metrics.pixels;
+    final bool isAtBottom = sortOldestFirst
+        ? metrics.maxScrollExtent - scrolledHeight <= 100
+        : scrolledHeight <= 100;
+
+    if (!isAtBottom && !canScrollToBottom) {
       canScrollToBottom = true;
       requiresUpdate = true;
-    } else if (scrolledHeight <= 100 && canScrollToBottom) {
+    } else if (isAtBottom && canScrollToBottom) {
       canScrollToBottom = false;
       requiresUpdate = true;
     }
@@ -1519,7 +1554,7 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                 children: [
                   NotificationListener<ScrollNotification>(
                     onNotification: (ScrollNotification scrollInfo) {
-                      showHideScrollToBottomButton(scrollInfo.metrics.pixels);
+                      showHideScrollToBottomButton(scrollInfo.metrics);
                       return false;
                     },
                     child: ScrollablePositionedList.builder(
@@ -1776,7 +1811,12 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                         mini: true,
                         onPressed: () {
                           clearSelection();
-                          fetchItems(null);
+                          if (sortOldestFirst && _displayItemList.isNotEmpty) {
+                            _itemScrollController.jumpTo(
+                                index: _displayItemList.length - 1);
+                          } else {
+                            fetchItems(null);
+                          }
                         },
                         shape: const CircleBorder(),
                         backgroundColor: cs.onSurface,

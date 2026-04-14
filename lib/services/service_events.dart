@@ -9,6 +9,7 @@ enum EventType {
   serverFirstFetchStarts,
   serverFirstFetchEnds,
   checkPlanStatus,
+  navigateToGroup,
 }
 
 class AppEvent {

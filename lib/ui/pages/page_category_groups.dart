@@ -367,6 +367,19 @@ class _PageCategoryGroupsState extends State<PageCategoryGroups> {
                 const SizedBox(height: 8),
                 _bottomSheetTile(
                   context: context,
+                  icon: group.pinned == 1 ? LucideIcons.pinOff : LucideIcons.pin,
+                  label: group.pinned == 1
+                      ? 'Unpin from Shortcut'
+                      : 'Pin to Shortcut',
+                  onTap: () async {
+                    Navigator.pop(context);
+                    group.pinned = group.pinned == 1 ? 0 : 1;
+                    await group.update(["pinned"]);
+                  },
+                ),
+                const SizedBox(height: 8),
+                _bottomSheetTile(
+                  context: context,
                   icon: LucideIcons.trash,
                   label: 'Delete',
                   isDanger: true,

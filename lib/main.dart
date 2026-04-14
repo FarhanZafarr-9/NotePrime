@@ -22,8 +22,10 @@ import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:window_size/window_size.dart';
+import 'package:quick_actions/quick_actions.dart';
 
 import 'ui/pages/page_media_migration.dart';
+import 'models/model_item_group.dart';
 import 'services/service_logger.dart';
 import 'services/service_notification.dart';
 import 'models/model_setting.dart';
@@ -210,6 +212,9 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
   StreamSubscription? _intentSub;
   final List<String> _sharedContents = [];
 
+  // quick actions
+  final QuickActions _quickActions = const QuickActions();
+
   final logger = AppLogger(prefixes: ["MainApp"]);
 
   @override
@@ -271,8 +276,54 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
           ReceiveSharingIntent.instance.reset();
         });
       });
+
+      // Quick Actions
+      _quickActions.initialize((String shortcutType) {
+        logger.info("QuickAction triggered: $shortcutType");
+        if (shortcutType == 'action_new_group') {
+          EventStream().publish(AppEvent(type: EventType.navigateToGroup, value: 'new'));
+        } else if (shortcutType.startsWith('group_')) {
+          final groupId = shortcutType.replaceFirst('group_', '');
+          EventStream().publish(AppEvent(type: EventType.navigateToGroup, value: groupId));
+        }
+      });
+
+      _quickActions.setShortcutItems(<ShortcutItem>[
+        const ShortcutItem(
+          type: 'action_new_group',
+          localizedTitle: 'New Group',
+          icon: 'ic_launcher', // Use app icon as fallback
+        ),
+      ]);
+      
+      _updateQuickActions();
     }
+    EventStream().notifier.addListener(_handleAppEvent);
     WidgetsBinding.instance.addObserver(this);
+  }
+
+  Future<void> _updateQuickActions() async {
+    final pinnedGroups = await ModelGroup.getPinned();
+    logger.info("Found ${pinnedGroups.length} pinned groups for shortcuts.");
+    final shortcuts = <ShortcutItem>[
+      const ShortcutItem(
+        type: 'action_new_group',
+        localizedTitle: 'New Group',
+        icon: 'ic_launcher',
+      ),
+    ];
+
+    for (var group in pinnedGroups.take(3)) {
+      shortcuts.add(ShortcutItem(
+        type: 'group_${group.id}',
+        localizedTitle: group.title,
+        icon: 'ic_launcher',
+      ));
+    }
+
+    await Future.delayed(const Duration(milliseconds: 500));
+    _quickActions.setShortcutItems(shortcuts);
+    logger.info("Shortcuts updated with ${shortcuts.length} items");
   }
 
   @override
@@ -312,8 +363,18 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    EventStream().notifier.removeListener(_handleAppEvent);
     _intentSub?.cancel();
     super.dispose();
+  }
+
+  void _handleAppEvent() {
+    final AppEvent? event = EventStream().notifier.value;
+    if (event == null) return;
+
+    if (event.type == EventType.changedGroupId) {
+      _updateQuickActions();
+    }
   }
 
   // Toggle between light and dark modes

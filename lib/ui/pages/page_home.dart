@@ -156,6 +156,20 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
       case EventType.checkPlanStatus:
         checkUpdateStateVariables();
         break;
+      case EventType.navigateToGroup:
+        _handleDeepLinkNavigation(event.value);
+        break;
+    }
+  }
+
+  Future<void> _handleDeepLinkNavigation(dynamic value) async {
+    if (value == 'new') {
+      createNoteGroup();
+    } else if (value is String) {
+      final group = await ModelGroup.get(value);
+      if (group != null && mounted) {
+        navigateToNotes(group, []);
+      }
     }
   }
 
@@ -1222,6 +1236,23 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
                   },
                 ),
                 const SizedBox(height: 3),
+                if (categoryGroup.type == "group")
+                  _bottomSheetTile(
+                    context: context,
+                    icon: categoryGroup.group!.pinned == 1
+                        ? LucideIcons.pinOff
+                        : LucideIcons.pin,
+                    label: categoryGroup.group!.pinned == 1
+                        ? 'Unpin from Shortcut'
+                        : 'Pin to Shortcut',
+                    onTap: () async {
+                      Navigator.pop(context);
+                      categoryGroup.group!.pinned =
+                          categoryGroup.group!.pinned == 1 ? 0 : 1;
+                      await categoryGroup.group!.update(["pinned"]);
+                    },
+                  ),
+                if (categoryGroup.type == "group") const SizedBox(height: 3),
                 _bottomSheetTile(
                   context: context,
                   icon: LucideIcons.trash,

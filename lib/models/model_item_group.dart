@@ -140,6 +140,18 @@ class ModelGroup {
     return inCategory(dndCategory.id!);
   }
 
+  static Future<List<ModelGroup>> getPinned() async {
+    final dbHelper = StorageSqlite.instance;
+    final db = await dbHelper.database;
+    List<Map<String, dynamic>> rows = await db.query(
+      "itemgroup",
+      where: "pinned = ? AND archived_at = ?",
+      whereArgs: [1, 0],
+      orderBy: 'position ASC',
+    );
+    return await Future.wait(rows.map((map) => fromMap(map)));
+  }
+
   static Future<List<ModelGroup>> getArchived() async {
     final dbHelper = StorageSqlite.instance;
     final db = await dbHelper.database;
