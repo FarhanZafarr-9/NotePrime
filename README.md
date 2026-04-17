@@ -34,19 +34,22 @@ This fork builds on the solid foundation of the original Note Safe app and compl
 *   **Intelligent Media Viewer** — Re-engineered standard viewers to automatically scale exceptionally wide panoramas and tall screenshots, enabling natural scrolling and edge-to-edge boundary tracking with 10.0x pinch-to-zoom limits and native *Save to Downloads* functionality.
 *   **Advanced Formatting** — Restyled embedded location, contact, audio, and file widgets with sleek tonal backgrounds, circular borders, and contextual padding algorithms.
 *   **Glance-Privacy Shield** — Introduced a granular per-group "Privacy Shield" that blurs sensitive text and media thumbnails with a premium glassmorphic effect. Content remains hidden until revealed with a tap, strictly gating all message interactions while active.
-*   **Enhanced Security Layers** — Integrated a highly robust "App-Lock Shield" covering background modes and biometric-gated authentication setups that properly restore active screen matrices on unlock.
+*   **Advanced Security Layers** — Integrated a highly robust "App-Lock Shield" featuring **Screenshot Protection** (blocking captures on Android) and **Biometric Grace Period** settings for adjustable lock delays.
+*   **Dynamic UI Controls** — Added **Immersive Mode** for distraction-free full-screen usage and **Custom Typography** support via Google Fonts integration (Inter, Lora, Roboto Mono).
+*   **Media & Storage Management** — Implemented granular **Auto-Download** controls (Wi-Fi vs Cellular) and a **Smart Cache Utility** with real-time size display and one-tap clearing.
 *   **Sleek Menus & Settings** — Standardized floating popup menus and completely refactored the settings layouts into deeply integrated Material 3 list tiles featuring inline high-precision color-picker dialogs.
 
 ### Differences at a Glance
 
-| Feature / Interface | Original Implementation | NotePrime |
+| Feature / Interface | Original Implementation | NotePrime (v1.0.0) |
 | :--- | :--- | :--- |
 | **Theming Engine** | Static custom themes and blocky elements | Full Material 3 support with system-level **Material You** integration |
 | **Message Layouts** | Symmetrical blocks across the screen | Modern **asymmetric chat bubbles** adapting dynamically to content width |
 | **Feed Experience** | Timestamps attached to every internal item | Grouped chronological headers with **swipe-to-reveal** item timestamps |
-| **Media Previews** | Distorted borders or unscalable limits on long images | **Edge-to-edge** rendering, smart panorama detection, and smooth native panning |
-| **Glance-Privacy** | No way to hide sensitive content from onlookers | Granular **per-group blur** with tap-to-reveal gesture |
-| **Security Gates** | Basic lock overlays | Sophisticated **App-Lock Shield** routing handling app-lifecycle obfuscation |
+| **Media Previews** | Distorted borders or unscalable limits on long images | **Edge-to-edge** rendering, panorama detection, and smooth native panning |
+| **Security Gates** | Basic lock overlays | **App-Lock Shield** with **Screenshot Blocking** and adjustable **Grace Periods** |
+| **Customization** | Standard system fonts only | **Google Fonts** integration and specialized **Immersive View** |
+| **Storage Control** | Black-box cache management | **Smart Cache Utility** with size visualization and control |
 
 ---
 

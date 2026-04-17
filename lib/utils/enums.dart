@@ -133,6 +133,12 @@ enum AppString {
   dataSeeded,
   timeFormat,
   simulateTesting,
+  immersiveMode,
+  screenshotProtection,
+  biometricGracePeriod,
+  fontFamily,
+  autoDownloadMedia,
+  mediaNetworkType,
 
   // Supabase
   supabaseInitialized,
@@ -234,6 +240,18 @@ extension AppStringExtension on AppString {
         return "decrypted";
       case AppString.debugCipherData:
         return "debug_cipher_data";
+      case AppString.immersiveMode:
+        return "immersive_mode";
+      case AppString.screenshotProtection:
+        return "screenshot_protection";
+      case AppString.biometricGracePeriod:
+        return "biometric_grace_period";
+      case AppString.fontFamily:
+        return "font_family";
+      case AppString.autoDownloadMedia:
+        return "auto_download_media";
+      case AppString.mediaNetworkType:
+        return "media_network_type";
     }
   }
 }

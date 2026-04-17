@@ -12,7 +12,11 @@ import 'package:ntsapp/services/service_logger.dart';
 import 'package:ntsapp/storage/storage_secure.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_windowmanager_plus/flutter_windowmanager_plus.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../utils/common.dart';
@@ -64,6 +68,14 @@ class SettingsPageState extends State<SettingsPage> {
   late bool globalMediaGallery;
   late bool globalGroupLock;
   late bool privacyShieldEnabled;
+  late bool immersiveMode;
+  late bool screenshotProtection;
+  late int biometricGracePeriod;
+  late String fontFamily;
+  late bool autoDownloadMedia;
+  late String mediaNetworkType;
+  String _cacheSize = "0 B";
+  String _appVersion = "1.0.0";
 
   @override
   void initState() {
@@ -87,6 +99,67 @@ class SettingsPageState extends State<SettingsPage> {
         ModelSetting.get("global_group_lock", "no") == "yes";
     privacyShieldEnabled =
         ModelSetting.get("privacy_shield_enabled", "no") == "yes";
+    immersiveMode = ModelSetting.get("immersive_mode", "no") == "yes";
+    screenshotProtection = ModelSetting.get("screenshot_protection", "no") == "yes";
+    biometricGracePeriod = int.parse(ModelSetting.get("biometric_grace_period", "0").toString());
+    fontFamily = ModelSetting.get("font_family", "Inter");
+    autoDownloadMedia = ModelSetting.get("auto_download_media", "yes") == "yes";
+    mediaNetworkType = ModelSetting.get("media_network_type", "wifi");
+    _loadVersion();
+    _calculateCacheSize();
+  }
+
+  Future<void> _calculateCacheSize() async {
+    int totalSize = 0;
+    try {
+      final docDir = await getApplicationDocumentsDirectory();
+      final cacheDir = await getTemporaryDirectory();
+      
+      String? mediaDirName = await secureStorage.read(key: "media_dir");
+      if (mediaDirName != null) {
+        final mediaDir = Directory(path.join(docDir.path, mediaDirName));
+        if (await mediaDir.exists()) {
+          totalSize += await _getDirSize(mediaDir);
+        }
+      }
+      
+      if (await cacheDir.exists()) {
+        totalSize += await _getDirSize(cacheDir);
+      }
+      
+      setState(() {
+        _cacheSize = readableFileSizeFromBytes(totalSize);
+      });
+    } catch (e) {
+      logger.error("Error calculating cache size", error: e);
+    }
+  }
+
+  Future<int> _getDirSize(Directory dir) async {
+    int size = 0;
+    try {
+      await for (var entity in dir.list(recursive: true, followLinks: false)) {
+        if (entity is File) {
+          size += await entity.length();
+        }
+      }
+    } catch (e) {
+      // Ignore errors for specific files
+    }
+    return size;
+  }
+
+  Future<void> _loadVersion() async {
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      if (mounted) {
+        setState(() {
+          _appVersion = packageInfo.version;
+        });
+      }
+    } catch (e) {
+      logger.error("Error loading version", error: e);
+    }
   }
 
   Future<void> checkDeviceAuth() async {
@@ -142,6 +215,326 @@ class SettingsPageState extends State<SettingsPage> {
   Future<void> _setPrivacyShield(bool value) async {
     setState(() => privacyShieldEnabled = value);
     await ModelSetting.set("privacy_shield_enabled", value ? "yes" : "no");
+  }
+
+  Future<void> _setImmersiveMode(bool value) async {
+    setState(() => immersiveMode = value);
+    await ModelSetting.set("immersive_mode", value ? "yes" : "no");
+    if (value) {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    } else {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    }
+  }
+
+  Future<void> _toggleScreenshotProtection(bool value) async {
+    setState(() => screenshotProtection = value);
+    await ModelSetting.set("screenshot_protection", value ? "yes" : "no");
+    if (Platform.isAndroid) {
+      if (value) {
+        await FlutterWindowManagerPlus.addFlags(FlutterWindowManagerPlus.FLAG_SECURE);
+      } else {
+        await FlutterWindowManagerPlus.clearFlags(FlutterWindowManagerPlus.FLAG_SECURE);
+      }
+    }
+  }
+
+  Future<void> _setBiometricGracePeriod(int minutes) async {
+    setState(() => biometricGracePeriod = minutes);
+    await ModelSetting.set("biometric_grace_period", minutes);
+  }
+
+  Future<void> _setFontFamily(String font) async {
+    setState(() => fontFamily = font);
+    await ModelSetting.set("font_family", font);
+    EventStream().publish(AppEvent(type: EventType.themeChanged));
+  }
+
+  Future<void> _setAutoDownloadMedia(bool value) async {
+    setState(() => autoDownloadMedia = value);
+    await ModelSetting.set("auto_download_media", value ? "yes" : "no");
+  }
+
+  Future<void> _setMediaNetworkType(String type) async {
+    setState(() => mediaNetworkType = type);
+    await ModelSetting.set("media_network_type", type);
+  }
+
+  Future<void> _showForkInfoDialog() async {
+    if (mounted) {
+      final cs = Theme.of(context).colorScheme;
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) {
+          return AlertDialog(
+            backgroundColor: cs.surfaceContainerHigh,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            title: Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: cs.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(LucideIcons.gitFork, size: 20, color: cs.primary),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'About This App',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: cs.onSurface,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  tooltip: "Close",
+                  icon:
+                      Icon(LucideIcons.x, size: 18, color: cs.onSurfaceVariant),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Fork notice
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: cs.primary.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: cs.primary.withValues(alpha: 0.2),
+                        width: 0.75,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(LucideIcons.info, size: 16, color: cs.primary),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'This is an Android-specific fork with Material You support. Support for other devices will be considered in the future.',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: cs.onSurface.withValues(alpha: 0.85),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Original app credit
+                  Text(
+                    'Based on the original app by jeerovan',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: cs.onSurfaceVariant.withValues(alpha: 0.8),
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // Improvements
+                  Text(
+                    'What\'s New:',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: cs.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _forkFeature(cs, '✨', 'Material You theming'),
+                  _forkFeature(cs, '🎨', 'Refined modern UI'),
+                  _forkFeature(cs, '🧩', 'Enhanced components'),
+                  _forkFeature(cs, '⚡', 'Better performance'),
+                  const SizedBox(height: 12),
+                  // Privacy note
+                  Text(
+                    'NotePrime is completely private. No data collection, no ads.',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: cs.onSurfaceVariant.withValues(alpha: 0.7),
+                      height: 1.4,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                style: TextButton.styleFrom(
+                  foregroundColor: cs.onSurfaceVariant,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                onPressed: () {
+                  Navigator.pop(context);
+                  const url = 'https://github.com/jeerovan/ntsapp'; // baseline
+                  openURL(url);
+                },
+                child: const Text('Original'),
+              ),
+              TextButton(
+                style: TextButton.styleFrom(
+                  foregroundColor: cs.primary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                onPressed: () {
+                  Navigator.pop(context);
+                  const url = 'https://github.com/FarhanZafarr-9/ntsapp';
+                  openURL(url);
+                },
+                child: const Text('View Fork'),
+              ),
+            ],
+          );
+        },
+      );
+    }
+  }
+
+  Widget _forkFeature(ColorScheme cs, String emoji, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        children: [
+          Text(emoji, style: const TextStyle(fontSize: 14)),
+          const SizedBox(width: 8),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 13,
+              color: cs.onSurface.withValues(alpha: 0.8),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showClearCacheDialog() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Clear Cache?"),
+        content: const Text("This will delete all locally cached media and link previews. Files on the cloud will not be affected."),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Cancel")),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
+            onPressed: () => Navigator.pop(context, true), 
+            child: const Text("Clear")
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      showProcessing();
+      try {
+        final docDir = await getApplicationDocumentsDirectory();
+        final cacheDir = await getTemporaryDirectory();
+        
+        String? mediaDirName = await secureStorage.read(key: "media_dir");
+        if (mediaDirName != null) {
+          final mediaDir = Directory(path.join(docDir.path, mediaDirName));
+          if (await mediaDir.exists()) {
+            await mediaDir.delete(recursive: true);
+            await mediaDir.create();
+          }
+        }
+        
+        if (await cacheDir.exists()) {
+          await cacheDir.delete(recursive: true);
+          await cacheDir.create();
+        }
+        
+        await _calculateCacheSize();
+      } catch (e) {
+        logger.error("Error clearing cache", error: e);
+      }
+      hideProcessing();
+    }
+  }
+
+  void _showFontPicker() {
+    final List<String> fonts = ["Inter", "Roboto Mono", "Lora", "Open Sans"];
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => ListView(
+        shrinkWrap: true,
+        children: fonts.map((f) => ListTile(
+          title: Text(f, style: GoogleFonts.getFont(f)),
+          trailing: fontFamily == f ? Icon(LucideIcons.check, color: Theme.of(context).colorScheme.primary) : null,
+          onTap: () {
+            _setFontFamily(f);
+            Navigator.pop(context);
+          },
+        )).toList(),
+      ),
+    );
+  }
+
+  void _showGracePeriodPicker() {
+    final List<int> periods = [0, 1, 5, 10, 30];
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => ListView(
+        shrinkWrap: true,
+        children: periods.map((p) => ListTile(
+          title: Text(p == 0 ? "Immediate" : "$p Minutes"),
+          trailing: biometricGracePeriod == p ? Icon(LucideIcons.check, color: Theme.of(context).colorScheme.primary) : null,
+          onTap: () {
+            _setBiometricGracePeriod(p);
+            Navigator.pop(context);
+          },
+        )).toList(),
+      ),
+    );
+  }
+
+  void _showNetworkTypePicker() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            title: const Text("Wi-Fi Only"),
+            trailing: mediaNetworkType == "wifi" ? Icon(LucideIcons.check, color: Theme.of(context).colorScheme.primary) : null,
+            onTap: () {
+              _setMediaNetworkType("wifi");
+              Navigator.pop(context);
+            },
+          ),
+          ListTile(
+            title: const Text("Wi-Fi & Cellular"),
+            trailing: mediaNetworkType == "all" ? Icon(LucideIcons.check, color: Theme.of(context).colorScheme.primary) : null,
+            onTap: () {
+              _setMediaNetworkType("all");
+              Navigator.pop(context);
+            },
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _authenticate() async {
@@ -468,6 +861,23 @@ Row(
               ),
               onTap: widget.onDynamicColorToggle,
             ),
+            _SettingsTile(
+              leading: _buildLeadingIcon(LucideIcons.maximize, cs.primary),
+              title: const Text("Immersive Mode"),
+              subtitle: const Text("Hide status bar for a clean look"),
+              trailing: Switch(
+                value: immersiveMode,
+                onChanged: _setImmersiveMode,
+              ),
+              onTap: () => _setImmersiveMode(!immersiveMode),
+            ),
+            _SettingsTile(
+              leading: _buildLeadingIcon(LucideIcons.type, cs.primary),
+              title: const Text("Font Family"),
+              subtitle: Text(fontFamily),
+              trailing: _buildTrailingChevron(),
+              onTap: _showFontPicker,
+            ),
             if (!widget.useDynamicColor)
               _SettingsTile(
                 leading: _buildLeadingIcon(LucideIcons.droplets, cs.primary),
@@ -647,11 +1057,88 @@ _buildSectionHeader("Interface"),
             ),
           ]),
 
+          // ── Privacy & Security ───────────────────────────────────────────
+          _buildSectionHeader("Privacy & Security"),
+          _buildSettingsGroup([
+            _SettingsTile(
+              leading: _buildLeadingIcon(LucideIcons.shieldAlert, cs.primary),
+              title: const Text("Screenshot Protection"),
+              subtitle: const Text("Block screenshots on Android"),
+              trailing: Switch(
+                value: screenshotProtection,
+                onChanged: _toggleScreenshotProtection,
+              ),
+              onTap: () => _toggleScreenshotProtection(!screenshotProtection),
+            ),
+            _SettingsTile(
+              leading: _buildLeadingIcon(LucideIcons.timer, cs.primary),
+              title: const Text("Biometric Grace Period"),
+              subtitle: Text(biometricGracePeriod == 0
+                  ? "Immediate lock"
+                  : "Lock after $biometricGracePeriod mins"),
+              trailing: _buildTrailingChevron(),
+              onTap: _showGracePeriodPicker,
+            ),
+            _SettingsTile(
+              leading: _buildLeadingIcon(LucideIcons.fingerprint, cs.primary),
+              title: const Text("Device Authentication"),
+              subtitle: const Text("Lock app with fingerprint/PIN"),
+              trailing: Switch(
+                value: isAuthEnabled,
+                onChanged: (value) => _authenticate(),
+              ),
+              onTap: _authenticate,
+            ),
+          ]),
+
+          // ── Media & Storage ──────────────────────────────────────────────
+          _buildSectionHeader("Media & Storage"),
+          _buildSettingsGroup([
+            _SettingsTile(
+              leading: _buildLeadingIcon(LucideIcons.download, cs.primary),
+              title: const Text("Auto-Download Previews"),
+              subtitle: const Text("For link previews & small media"),
+              trailing: Switch(
+                value: autoDownloadMedia,
+                onChanged: _setAutoDownloadMedia,
+              ),
+              onTap: () => _setAutoDownloadMedia(!autoDownloadMedia),
+            ),
+            _SettingsTile(
+              leading: _buildLeadingIcon(LucideIcons.wifi, cs.primary),
+              title: const Text("Download Network"),
+              subtitle: Text(mediaNetworkType == "wifi"
+                  ? "Wi-Fi Only"
+                  : "Wi-Fi & Cellular"),
+              trailing: _buildTrailingChevron(),
+              onTap: _showNetworkTypePicker,
+            ),
+            _SettingsTile(
+              leading: _buildLeadingIcon(LucideIcons.trash2, Colors.orange),
+              title: const Text("Clear Cache"),
+              subtitle: Text("Size: $_cacheSize"),
+              trailing: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Text("Clear",
+                    style: TextStyle(
+                        color: Colors.orange,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold)),
+              ),
+              onTap: _showClearCacheDialog,
+            ),
+          ]),
+
           // ── General ───────────────────────────────────────────────────────
           _buildSectionHeader("General"),
           _buildSettingsGroup([
             _SettingsTile(
-              leading: _buildLeadingIcon(LucideIcons.timer, cs.primary),
+              leading: _buildLeadingIcon(LucideIcons.watch, cs.primary),
               title: const Text('Time Format'),
               trailing: DropdownButton<String>(
                 value: timeFormat,
@@ -663,16 +1150,6 @@ _buildSectionHeader("Interface"),
                 ],
                 onChanged: (format) => updateTimeFormat(format),
               ),
-            ),
-            _SettingsTile(
-              leading: _buildLeadingIcon(LucideIcons.shieldCheck, cs.error),
-              title: const Text("App Lock"),
-              subtitle: const Text("Biometric or pattern lock"),
-              trailing: Switch(
-                value: isAuthEnabled,
-                onChanged: (_) => _authenticate(),
-              ),
-              onTap: _authenticate,
             ),
           ]),
 
@@ -739,24 +1216,25 @@ _buildSectionHeader("Interface"),
               ),
             ),
             _SettingsTile(
-              leading: _buildLeadingIcon(LucideIcons.info, Colors.grey),
+              leading: _buildLeadingIcon(LucideIcons.info, cs.secondary),
               title: const Text('App Version'),
               trailing: Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primaryContainer,
+                  color: cs.primaryContainer,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  'Material You',
+                  'Material You • v$_appVersion',
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 11,
                     fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onPrimaryContainer,
+                    color: cs.onPrimaryContainer,
                   ),
                 ),
               ),
+              onTap: _showForkInfoDialog,
             ),
           ]),
           const SizedBox(height: 32),

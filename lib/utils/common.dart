@@ -599,7 +599,7 @@ Future<int> checkDownloadNetworkImage(String itemId, String imageUrl) async {
       headers: {
         // Some CDNs block requests without a browser user-agent
         'User-Agent':
-            'Mozilla/5.0 (compatible; NTSApp/1.0; +https://github.com/jeerovan/ntsapp)',
+            'Mozilla/5.0 (compatible; NotePrime/1.0; +https://github.com/FarhanZafarr-9/ntsapp)',
       },
     ).timeout(const Duration(seconds: 10));
 

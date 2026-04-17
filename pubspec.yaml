@@ -1,7 +1,7 @@
 name: ntsapp
 description: "Private notes with prime protection and prime experience"
 publish_to: "none"
-version: 2.2.4+71
+version: 1.0.0+1
 
 environment:
   sdk: ^3.5.1
@@ -66,6 +66,8 @@ dependencies:
   video_player: ^2.9.2
   window_size: ^0.1.0
   workmanager: ^0.7.0
+  flutter_windowmanager_plus: ^1.0.1
+  google_fonts: ^6.2.1
 
 dev_dependencies:
   flutter_test:

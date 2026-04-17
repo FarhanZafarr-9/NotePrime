@@ -8,6 +8,8 @@ import 'dart:io';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_windowmanager_plus/flutter_windowmanager_plus.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:ntsapp/services/service_events.dart';
 import 'package:ntsapp/utils/auth_guard.dart';
@@ -214,6 +216,8 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
   late bool _isDarkMode;
   bool _useDynamicColor = false;
   Color? _accentColor;
+  String _fontFamily = "Inter";
+  DateTime? _lastBackgroundAt;
 
   // sharing intent
   StreamSubscription? _intentSub;
@@ -253,6 +257,14 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
     if (savedAccent != null) {
       _accentColor = colorFromHex(savedAccent);
     }
+    // Load font family
+    _fontFamily = ModelSetting.get("font_family", "Inter");
+    // Apply immersive mode
+    if (ModelSetting.get("immersive_mode", "no") == "yes") {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    }
+    // Apply screenshot protection
+    _applyScreenshotProtection();
     // Initialize lock state for cold start
     if (ModelSetting.get("local_auth", "no") == "yes") {
       AuthGuard.isLocked.value = true;
@@ -294,19 +306,21 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
           EventStream().publish(AppEvent(type: EventType.navigateToGroup, value: groupId));
         }
       });
-
-      _quickActions.setShortcutItems(<ShortcutItem>[
-        const ShortcutItem(
-          type: 'action_new_group',
-          localizedTitle: 'New Group',
-          icon: 'ic_launcher', // Use app icon as fallback
-        ),
-      ]);
-      
-      _updateQuickActions();
     }
-    EventStream().notifier.addListener(_handleAppEvent);
+
     WidgetsBinding.instance.addObserver(this);
+    EventStream().notifier.addListener(_handleAppEvent);
+  }
+
+  void _applyScreenshotProtection() {
+    if (Platform.isAndroid) {
+      bool enabled = ModelSetting.get("screenshot_protection", "no") == "yes";
+      if (enabled) {
+        FlutterWindowManagerPlus.addFlags(FlutterWindowManagerPlus.FLAG_SECURE);
+      } else {
+        FlutterWindowManagerPlus.clearFlags(FlutterWindowManagerPlus.FLAG_SECURE);
+      }
+    }
   }
 
   Future<void> _updateQuickActions() async {
@@ -335,6 +349,23 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      _lastBackgroundAt = DateTime.now();
+    }
+
+    if (state == AppLifecycleState.resumed) {
+      if (ModelSetting.get("local_auth", "no") == "yes" &&
+          _lastBackgroundAt != null) {
+        int graceMinutes = int.parse(
+            ModelSetting.get("biometric_grace_period", "0").toString());
+        if (DateTime.now().difference(_lastBackgroundAt!).inMinutes >=
+            graceMinutes) {
+          AuthGuard.isLocked.value = true;
+        }
+      }
+      _applyScreenshotProtection(); // Re-apply just in case
+    }
+    
     if (AuthGuard.isAuthenticating) {
       logger.info("Lifecycle change ignored due to active authentication");
       return;
@@ -382,6 +413,10 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
 
     if (event.type == EventType.changedGroupId) {
       _updateQuickActions();
+    } else if (event.type == EventType.themeChanged) {
+      setState(() {
+        _fontFamily = ModelSetting.get("font_family", "Inter");
+      });
     }
   }
 
@@ -486,9 +521,9 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
               );
             },
             theme: AppThemes.getTheme(Brightness.light, lightColorScheme,
-                seedColor: _accentColor),
+                seedColor: _accentColor, fontFamily: _fontFamily),
             darkTheme: AppThemes.getTheme(Brightness.dark, darkColorScheme,
-                seedColor: _accentColor),
+                seedColor: _accentColor, fontFamily: _fontFamily),
             themeMode: _themeMode,
             // Uses system theme by default
             home: page,

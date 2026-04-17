@@ -10,6 +10,7 @@ enum EventType {
   serverFirstFetchEnds,
   checkPlanStatus,
   navigateToGroup,
+  themeChanged,
 }
 
 class AppEvent {

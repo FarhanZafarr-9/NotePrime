@@ -8,7 +8,7 @@
 PRODUCT_NAME = NotePrime
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = app.noteprime
+PRODUCT_BUNDLE_IDENTIFIER = com.noteprime.app
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2025 PhoneSafe Inc. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2026 NotePrime. All rights reserved.

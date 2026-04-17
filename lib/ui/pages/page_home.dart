@@ -159,6 +159,8 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
       case EventType.navigateToGroup:
         _handleDeepLinkNavigation(event.value);
         break;
+      case EventType.themeChanged:
+        break;
     }
   }
 
@@ -776,7 +778,7 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
                 ),
                 onPressed: () {
                   Navigator.pop(context);
-                  const url = 'https://github.com/jeerovan/ntsapp';
+                  const url = 'https://github.com/jeerovan/ntsapp'; // baseline
                   openURL(url);
                 },
                 child: const Text('Original'),
