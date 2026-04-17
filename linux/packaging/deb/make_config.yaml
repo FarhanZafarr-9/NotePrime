@@ -1,5 +1,5 @@
-display_name: NoteSafe
-package_name: notesafe
+display_name: NotePrime
+package_name: noteprime
 maintainer:
   name: Jeevan Singh
   email: getphonesafe@gmail.com
@@ -22,7 +22,7 @@ icon: assets/icon_512.png
 postuninstall_scripts:
   - echo "Sorry to see you go."
 keywords:
-  - NoteSafe
+  - NotePrime
 generic_name: Note Application
 categories:
   - Utility

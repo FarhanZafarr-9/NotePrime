@@ -1,4 +1,4 @@
-display_name: NoteSafe
+display_name: NotePrime
 icon: assets/icon_512.png
 summary: A privacy focused note taking app with a chat like interface.
 group: Applications
@@ -24,7 +24,7 @@ requires:
   - mpv-libs
   - sqlite-libs
 keywords:
-  - NoteSafe
+  - NotePrime
 generic_name: Note Application
 categories:
   - Utility

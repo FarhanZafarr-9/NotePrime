@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # === Configuration ===
-APP_NAME="NoteSafe"                      # Change to your app name
+APP_NAME="NotePrime"                      # Change to your app name
 BUNDLE_DIR="/home/pi/ntsapp/build/linux/x64/release/bundle" # Path to Flutter bundle folder
 ICON_PATH="/home/pi/ntsapp/assets/icon_512.png"           # Path to app icon
-APP_EXECUTABLE="notesafe"  # Name of your Linux executable (in BUNDLE_DIR)
+APP_EXECUTABLE="noteprime"  # Name of your Linux executable (in BUNDLE_DIR)
 
 # === Derived ===
 APPDIR="${APP_NAME}.AppDir"
@@ -48,7 +48,7 @@ Terminal=false
 Type=Application
 Categories=Utility;Security;Office;
 Keywords=notes;encryption;security;
-StartupWMClass=NoteSafe
+StartupWMClass=NotePrime
 MimeType=text/plain;
 Actions=NewWindow;
 

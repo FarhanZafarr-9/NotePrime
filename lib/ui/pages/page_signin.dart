@@ -66,7 +66,7 @@ class _PageSigninState extends State<PageSignin> {
         processing = true;
       });
       try {
-        if (email == 'tester@notesafe.app') {
+        if (email == 'tester@noteprime.app') {
           await Future.delayed(const Duration(seconds: 1));
           await ModelSetting.set(AppString.simulateTesting.string, "yes");
         } else {

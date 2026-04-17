@@ -164,7 +164,7 @@ class SyncUtils {
 
   static String? getSignedInEmailId() {
     if (simulateOnboarding()) {
-      return "tester@notesafe.app";
+      return "tester@noteprime.app";
     }
     bool supabaseInitialized =
         ModelSetting.get(AppString.supabaseInitialized.string, "no") == "yes";

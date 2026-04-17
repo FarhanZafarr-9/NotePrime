@@ -1,5 +1,5 @@
 {
-  "title": "NoteSafe",
+  "title": "NotePrime",
   "icon": "assets/Icon.icns",
   "background": "assets/dmg_background.png",
   "window": {
@@ -13,7 +13,7 @@
       "x": 180,
       "y": 260,
       "type": "file",
-      "path": "dist/NoteSafe.app"
+      "path": "dist/NotePrime.app"
     },
     {
       "x": 590,
