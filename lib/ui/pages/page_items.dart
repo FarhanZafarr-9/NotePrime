@@ -2068,8 +2068,8 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                             fetchItems(null);
                           }
                         },
-                        shape: const ContinuousRectangleBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(28))),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16)),
                         backgroundColor: cs.onSurface,
                         foregroundColor: cs.surface,
                         child: const Icon(LucideIcons.chevronsDown),

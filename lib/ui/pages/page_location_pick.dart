@@ -189,8 +189,8 @@ class _LocationPickerState extends State<LocationPicker> {
               heroTag: "get_current_location",
               onPressed: _getCurrentLocation,
               tooltip: "Use current location",
-              shape: const ContinuousRectangleBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(28))),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
               child: const Icon(LucideIcons.locate),
             ),
     );

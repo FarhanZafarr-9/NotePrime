@@ -1500,8 +1500,8 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
                     createNoteGroup();
                   }
                 },
-                shape: const ContinuousRectangleBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(28)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
                 ),
                 child:
                     Icon(_isReordering ? LucideIcons.check : LucideIcons.plus),

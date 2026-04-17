@@ -694,8 +694,8 @@ class PageGroupAddEditState extends State<PageGroupAddEdit> {
       floatingActionButton: FloatingActionButton(
         heroTag: "save_new_group",
         onPressed: () async => saveGroup(titleController.text),
-        shape: const ContinuousRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(28))),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16)),
         backgroundColor:
             Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
         foregroundColor: Theme.of(context).colorScheme.onSurface,

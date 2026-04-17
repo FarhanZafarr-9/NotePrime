@@ -176,8 +176,8 @@ class FloatingActionButtonWithBadge extends StatelessWidget {
       children: [
         FloatingActionButton(
           heroTag: heroTag,
-          shape: const ContinuousRectangleBorder(
-              borderRadius: BorderRadius.all(Radius.circular(28))),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16)),
           onPressed: onPressed,
           child: icon,
         ),
