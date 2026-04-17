@@ -183,11 +183,13 @@ Future<void> initializePurchases() async {
 Future<void> initializeMediaParams() async {
   // initialized media params once before accessing sqlite
   SecureStorage secureStorage = SecureStorage();
+
+  // Force the app name to NotePrime to retro-actively update existing installations
+  await secureStorage.write(key: AppString.appName.string, value: "NotePrime");
+
   String mediaParamsInitialized =
       await secureStorage.read(key: "media_params_initialized") ?? "no";
   if (mediaParamsInitialized == "no") {
-    await secureStorage.write(
-        key: AppString.appName.string, value: "NotePrime");
     await secureStorage.write(key: "media_dir", value: "ntsmedia");
     await secureStorage.write(key: "backup_dir", value: "ntsbackup");
     await secureStorage.write(key: "db_file", value: "notetoself.db");
