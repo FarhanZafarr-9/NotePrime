@@ -1,4 +1,4 @@
-package com.makenotetoself
+package com.noteprime.app
 
 import io.flutter.embedding.android.FlutterFragmentActivity
 

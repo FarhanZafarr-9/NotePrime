@@ -489,9 +489,13 @@ class _PageCategoryGroupsState extends State<PageCategoryGroups> {
         body: Padding(
           padding: const EdgeInsets.only(top: 12.0),
           child: _isReordering
+              // Lines 491-537: Replace the ReorderableListView.builder with this:
+
               ? ReorderableListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   itemCount: categoryGroupsDisplayList.length,
                   itemBuilder: (context, index) {
+                    final cs = Theme.of(context).colorScheme;
                     final ModelGroup group = categoryGroupsDisplayList[index];
                     final ModelCategoryGroup categoryGroup = ModelCategoryGroup(
                         id: group.id!,
@@ -501,22 +505,30 @@ class _PageCategoryGroupsState extends State<PageCategoryGroups> {
                         thumbnail: group.thumbnail,
                         color: group.color,
                         title: group.title);
-                    return GestureDetector(
+                    return Container(
                       key: ValueKey(group.id),
-                      child: WidgetCategoryGroup(
-                        categoryGroup: categoryGroup,
-                        showSummary: true,
-                        showCategorySign: false,
+                      margin: const EdgeInsets.only(bottom: 3),
+                      child: Material(
+                        color: cs.onSurface.withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(12),
+                        child: InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: () {
+                          String dragTitle = "Drag handle to re-order";
+                          if (Platform.isAndroid || Platform.isIOS) {
+                            dragTitle = "Hold and drag to re-order";
+                          }
+                          displaySnackBar(context,
+                              message: dragTitle, seconds: 1);
+                        },
+                        child: WidgetCategoryGroup(
+                          categoryGroup: categoryGroup,
+                          showSummary: true,
+                          showCategorySign: false,
+                        ),
                       ),
-                      onTap: () {
-                        String dragTitle = "Drag handle to re-order";
-                        if (Platform.isAndroid || Platform.isIOS) {
-                          dragTitle = "Hold and drag to re-order";
-                        }
-                        displaySnackBar(context,
-                            message: dragTitle, seconds: 1);
-                      },
-                    );
+                    )
+                  );
                   },
                   onReorder: (int oldIndex, int newIndex) {
                     setState(() {

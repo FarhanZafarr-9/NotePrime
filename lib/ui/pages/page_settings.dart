@@ -310,6 +310,51 @@ class SettingsPageState extends State<SettingsPage> {
     );
   }
 
+  Widget _buildSubHeaderWithStatus(String title, bool isLocked) {
+    return Padding(
+      padding:
+          const EdgeInsets.only(left: 4.0, right: 4.0, top: 14.0, bottom: 6.0),
+      child: Row(
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 1.0,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const Spacer(),
+Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                isLocked ? "Group" : "Individual",
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Tooltip(
+                message: isLocked
+                    ? "Controlled by Individual Group Settings toggle"
+                    : "Can be customized per group",
+                child: Icon(
+                  Icons.info_outline,
+                  size: 14,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   /// Wraps a list of tiles so that:
   ///   - first tile  → large top corners    (12), small bottom corners (5)
   ///   - last tile   → small top corners    (5),  large bottom corners (12)
@@ -478,7 +523,7 @@ class SettingsPageState extends State<SettingsPage> {
           ]),
 
           // ── Interface ─────────────────────────────────────────────────────
-          _buildSectionHeader("Interface"),
+_buildSectionHeader("Interface"),
           _buildSettingsGroup([
             _SettingsTile(
               leading:
@@ -491,9 +536,14 @@ class SettingsPageState extends State<SettingsPage> {
               ),
               onTap: () => _setUseGroupSettings(!useGroupSettings),
             ),
+          ]),
+
+          _buildSubHeaderWithStatus("Display", useGroupSettings),
+          _buildSettingsGroup([
             _SettingsTile(
               enabled: !useGroupSettings,
-              leading: _buildLeadingIcon(LucideIcons.clock9, cs.onSurfaceVariant),
+              leading:
+                  _buildLeadingIcon(LucideIcons.clock9, cs.onSurfaceVariant),
               title: const Text("Show Date & Time"),
               subtitle: const Text("Display timestamp on messages"),
               trailing: Switch(
@@ -520,36 +570,6 @@ class SettingsPageState extends State<SettingsPage> {
             ),
             _SettingsTile(
               enabled: !useGroupSettings,
-              leading:
-                  _buildLeadingIcon(LucideIcons.link, cs.onSurfaceVariant),
-              title: const Text("Link Previews"),
-              subtitle: const Text("Auto-fetch URL metadata"),
-              trailing: Switch(
-                value: globalLinkPreview,
-                onChanged: !useGroupSettings ? _setGlobalLinkPreview : null,
-              ),
-              onTap: !useGroupSettings
-                  ? () => _setGlobalLinkPreview(!globalLinkPreview)
-                  : null,
-            ),
-            _SettingsTile(
-              enabled: !useGroupSettings,
-              leading: _buildLeadingIcon(
-                  LucideIcons.arrowUpDown, cs.onSurfaceVariant),
-              title: const Text("Sort Order"),
-              subtitle: Text(globalSortOldestFirst
-                  ? "Oldest first"
-                  : "Newest first"),
-              trailing: Switch(
-                value: globalSortOldestFirst,
-                onChanged: !useGroupSettings ? _setGlobalSortOrder : null,
-              ),
-              onTap: !useGroupSettings
-                  ? () => _setGlobalSortOrder(!globalSortOldestFirst)
-                  : null,
-            ),
-            _SettingsTile(
-              enabled: !useGroupSettings,
               leading: _buildLeadingIcon(
                   LucideIcons.layoutGrid, cs.onSurfaceVariant),
               title: const Text("Media Gallery"),
@@ -562,10 +582,45 @@ class SettingsPageState extends State<SettingsPage> {
                   ? () => _setGlobalMediaGallery(!globalMediaGallery)
                   : null,
             ),
+          ]),
+
+          _buildSubHeaderWithStatus("Behavior", useGroupSettings),
+          _buildSettingsGroup([
             _SettingsTile(
               enabled: !useGroupSettings,
-              leading:
-                  _buildLeadingIcon(LucideIcons.lock, cs.onSurfaceVariant),
+              leading: _buildLeadingIcon(
+                  LucideIcons.arrowUpDown, cs.onSurfaceVariant),
+              title: const Text("Sort Order"),
+              subtitle:
+                  Text(globalSortOldestFirst ? "Oldest first" : "Newest first"),
+              trailing: Switch(
+                value: globalSortOldestFirst,
+                onChanged: !useGroupSettings ? _setGlobalSortOrder : null,
+              ),
+              onTap: !useGroupSettings
+                  ? () => _setGlobalSortOrder(!globalSortOldestFirst)
+                  : null,
+            ),
+            _SettingsTile(
+              enabled: !useGroupSettings,
+              leading: _buildLeadingIcon(LucideIcons.link, cs.onSurfaceVariant),
+              title: const Text("Link Previews"),
+              subtitle: const Text("Auto-fetch URL metadata"),
+              trailing: Switch(
+                value: globalLinkPreview,
+                onChanged: !useGroupSettings ? _setGlobalLinkPreview : null,
+              ),
+              onTap: !useGroupSettings
+                  ? () => _setGlobalLinkPreview(!globalLinkPreview)
+                  : null,
+            ),
+          ]),
+
+          _buildSubHeaderWithStatus("Privacy", useGroupSettings),
+          _buildSettingsGroup([
+            _SettingsTile(
+              enabled: !useGroupSettings,
+              leading: _buildLeadingIcon(LucideIcons.lock, cs.onSurfaceVariant),
               title: const Text("Lock All Groups"),
               subtitle: const Text("Require auth to open any group"),
               trailing: Switch(
@@ -578,9 +633,10 @@ class SettingsPageState extends State<SettingsPage> {
             ),
             _SettingsTile(
               enabled: !useGroupSettings,
-              leading: _buildLeadingIcon(LucideIcons.eyeOff, cs.onSurfaceVariant),
+              leading:
+                  _buildLeadingIcon(LucideIcons.eyeOff, cs.onSurfaceVariant),
               title: const Text("Privacy Shield"),
-              subtitle: const Text("Gradiant blur until tapped"),
+              subtitle: const Text("Gradient blur until tapped"),
               trailing: Switch(
                 value: privacyShieldEnabled,
                 onChanged: !useGroupSettings ? _setPrivacyShield : null,
@@ -685,17 +741,24 @@ class SettingsPageState extends State<SettingsPage> {
             _SettingsTile(
               leading: _buildLeadingIcon(LucideIcons.info, Colors.grey),
               title: const Text('App Version'),
-              trailing: const Text(
-                'MaterialYou',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF6750A4), // Themed primary color
+              trailing: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  'Material You',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).colorScheme.onPrimaryContainer,
+                  ),
                 ),
               ),
             ),
           ]),
-
           const SizedBox(height: 32),
         ],
       ),
