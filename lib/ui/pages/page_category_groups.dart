@@ -7,6 +7,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:ntsapp/utils/common.dart';
 import 'package:ntsapp/models/model_category_group.dart';
 import 'package:ntsapp/models/model_item_group.dart';
+import 'package:ntsapp/utils/auth_guard.dart';
 import 'package:ntsapp/services/service_logger.dart';
 
 import '../common_widgets.dart';
@@ -221,6 +222,7 @@ class _PageCategoryGroupsState extends State<PageCategoryGroups> {
 
     if (isGroupLocked) {
       try {
+        AuthGuard.isAuthenticating = true;
         bool authenticated = await _auth.authenticate(
           localizedReason: 'Authenticate to open this group',
           options: const AuthenticationOptions(
@@ -242,6 +244,9 @@ class _PageCategoryGroupsState extends State<PageCategoryGroups> {
               message: "Authentication failed", seconds: 1);
         }
         return;
+      } finally {
+        AuthGuard.isAuthenticating = false;
+        AuthGuard.lastActiveAt = DateTime.now();
       }
     }
 

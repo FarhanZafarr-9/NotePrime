@@ -9,7 +9,9 @@ import 'package:sodium_libs/sodium_libs_sumo.dart';
 import '../utils/common.dart';
 import 'common_widgets.dart';
 import '../models/model_item.dart';
-import '../utils/utils_crypto.dart';
+import 'package:flutter/foundation.dart';
+import 'package:ntsapp/services/service_logger.dart';
+import 'package:ntsapp/utils/utils_crypto.dart';
 import 'widgets_shimmer.dart';
 
 class ItemWidgetDate extends StatelessWidget {
@@ -267,6 +269,28 @@ class _ItemWidgetImageState extends State<ItemWidgetImage> {
   void initState() {
     super.initState();
     _measureAndStoreDimensionsIfNeeded();
+    _repairThumbnailIfNeeded();
+  }
+
+  Future<void> _repairThumbnailIfNeeded() async {
+    if (widget.item.thumbnail != null) return;
+    final data = widget.item.data;
+    if (data == null || !data.containsKey("path")) return;
+
+    final file = File(data["path"]);
+    if (await file.exists()) {
+      try {
+        final bytes = await file.readAsBytes();
+        final thumbnail = await compute(getImageThumbnail, bytes);
+        if (thumbnail != null) {
+          widget.item.thumbnail = thumbnail;
+          await widget.item.update(["thumbnail"]);
+          if (mounted) setState(() {});
+        }
+      } catch (e) {
+        AppLogger(prefixes: ["ItemWidgetImage"]).error("Failed to repair thumbnail", error: e);
+      }
+    }
   }
 
   Future<void> _measureAndStoreDimensionsIfNeeded() async {
@@ -423,6 +447,34 @@ class _ItemWidgetVideoState extends State<ItemWidgetVideo> {
       widget.item.update(["state"], pushToSync: false);
       if (mounted) {
         setState(() {});
+      }
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _repairThumbnailIfNeeded();
+  }
+
+  Future<void> _repairThumbnailIfNeeded() async {
+    if (widget.item.thumbnail != null) return;
+    final data = widget.item.data;
+    if (data == null || !data.containsKey("path")) return;
+
+    final file = File(data["path"]);
+    if (await file.exists()) {
+      try {
+        VideoInfoExtractor extractor = VideoInfoExtractor(data["path"]);
+        final thumbnail = await extractor.getThumbnail();
+        if (thumbnail != null) {
+          widget.item.thumbnail = thumbnail;
+          await widget.item.update(["thumbnail"]);
+          if (mounted) setState(() {});
+        }
+        extractor.dispose();
+      } catch (e) {
+        AppLogger(prefixes: ["ItemWidgetVideo"]).error("Failed to repair thumbnail", error: e);
       }
     }
   }

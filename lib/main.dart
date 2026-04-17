@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_windowmanager_plus/flutter_windowmanager_plus.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:local_auth/local_auth.dart';
 import 'package:ntsapp/services/service_events.dart';
 import 'package:ntsapp/utils/auth_guard.dart';
 import 'package:ntsapp/utils/common.dart';
@@ -226,7 +227,33 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
   // quick actions
   final QuickActions _quickActions = const QuickActions();
 
+  final LocalAuthentication _auth = LocalAuthentication();
   final logger = AppLogger(prefixes: ["MainApp"]);
+
+  Future<void> _authenticate() async {
+    try {
+      AuthGuard.isAuthenticating = true;
+      bool isAuthenticated = await _auth.authenticate(
+        localizedReason: 'Please authenticate to access NotePrime',
+        options: const AuthenticationOptions(
+          biometricOnly: false,
+          stickyAuth: true,
+        ),
+      );
+
+      if (isAuthenticated) {
+        AuthGuard.isLocked.value = false;
+        AuthGuard.lastActiveAt = DateTime.now();
+      }
+    } catch (e, s) {
+      logger.error("_authenticate", error: e, stackTrace: s);
+      } finally {
+      // Small delay to allow lifecycle events (like 'resumed') to settle after the prompt closes
+      Future.delayed(const Duration(milliseconds: 600), () {
+        AuthGuard.isAuthenticating = false;
+      });
+    }
+  }
 
   @override
   void initState() {
@@ -349,53 +376,49 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (AuthGuard.isAuthenticating) {
+      logger.info("Lifecycle change ignored due to active authentication: $state");
+      return;
+    }
+
     if (state == AppLifecycleState.paused) {
       _lastBackgroundAt = DateTime.now();
+      AuthGuard.lastActiveAt = DateTime.now(); // Mark last active time when leaving
+      
+      if (ModelSetting.get("local_auth", "no") == "yes") {
+        int graceMinutes = int.parse(
+            ModelSetting.get("biometric_grace_period", "0").toString());
+        
+        // If Grace Period is 0 (Immediate), lock directly on paused
+        if (graceMinutes == 0) {
+           AuthGuard.isLocked.value = true;
+        }
+      }
+      
+      SyncUtils().stopAutoSync();
+      logger.info("Started Background (Paused)");
     }
 
     if (state == AppLifecycleState.resumed) {
-      if (ModelSetting.get("local_auth", "no") == "yes" &&
-          _lastBackgroundAt != null) {
-        int graceMinutes = int.parse(
-            ModelSetting.get("biometric_grace_period", "0").toString());
-        if (DateTime.now().difference(_lastBackgroundAt!).inMinutes >=
-            graceMinutes) {
-          AuthGuard.isLocked.value = true;
-        }
-      }
-      _applyScreenshotProtection(); // Re-apply just in case
-    }
-    
-    if (AuthGuard.isAuthenticating) {
-      logger.info("Lifecycle change ignored due to active authentication");
-      return;
-    }
-    logger.info("App State:$state");
-
-    if (Platform.isIOS || Platform.isAndroid) {
-      if (state == AppLifecycleState.resumed) {
-        if (ModelSetting.get("local_auth", "no") == "yes") {
-          if (DateTime.now().difference(AuthGuard.lastActiveAt).inSeconds > 60) {
-            AuthGuard.lastActiveAt = DateTime.now();
-            EventStream().publish(AppEvent(type: EventType.authorise));
-          } else if (!AuthGuard.isLocked.value) {
-            // Only re-unlock automatically if we were NOT already locked
-            // (i.e., this is a quick return from background, not a cancelled auth)
-            AuthGuard.isLocked.value = false;
+      if (ModelSetting.get("local_auth", "no") == "yes") {
+        if (_lastBackgroundAt != null) {
+          int graceMinutes = int.parse(
+              ModelSetting.get("biometric_grace_period", "0").toString());
+          
+          if (DateTime.now().difference(_lastBackgroundAt!).inMinutes >=
+              graceMinutes) {
+            AuthGuard.isLocked.value = true;
           }
         }
-        SyncUtils().startAutoSync();
-        logger.info("Started Foreground Sync");
-      } else if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive || state == AppLifecycleState.hidden) {
-        if (ModelSetting.get("local_auth", "no") == "yes") {
-          AuthGuard.isLocked.value = true;
-        }
-        AuthGuard.lastActiveAt = DateTime.now();
-        if (state == AppLifecycleState.paused) {
-          SyncUtils().stopAutoSync();
-          logger.info("Stopped Foreground Sync");
+        
+        if (AuthGuard.isLocked.value) {
+          EventStream().publish(AppEvent(type: EventType.authorise));
         }
       }
+      
+      SyncUtils().startAutoSync();
+      _applyScreenshotProtection();
+      logger.info("App Resumed, Locked: ${AuthGuard.isLocked.value}");
     }
   }
 
@@ -417,6 +440,8 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
       setState(() {
         _fontFamily = ModelSetting.get("font_family", "Inter");
       });
+    } else if (event.type == EventType.authorise) {
+      _authenticate();
     }
   }
 

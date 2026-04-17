@@ -69,8 +69,8 @@ class _PageMediaMigrationState extends State<PageMediaMigration> {
   }
 
   Future<void> migrateMedia() async {
-    // process media for image/audio
-    List<ModelItem> items = await ModelItem.getImageAudio();
+    // process media for image/audio/video/document
+    List<ModelItem> items = await ModelItem.getMediaItems();
     for (ModelItem item in items) {
       Map<String, dynamic> dataMap = item.data!;
       String oldPath = dataMap["path"];

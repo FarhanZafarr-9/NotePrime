@@ -441,6 +441,7 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
 
     if (isGroupLocked) {
       try {
+        AuthGuard.isAuthenticating = true;
         bool authenticated = await _auth.authenticate(
           localizedReason: 'Authenticate to open this group',
           options: const AuthenticationOptions(
@@ -462,6 +463,9 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
               message: "Authentication failed", seconds: 1);
         }
         return;
+      } finally {
+        AuthGuard.isAuthenticating = false;
+        AuthGuard.lastActiveAt = DateTime.now();
       }
     }
 

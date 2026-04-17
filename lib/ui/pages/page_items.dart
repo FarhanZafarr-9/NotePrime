@@ -289,35 +289,37 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
     canScrollToBottom = itemId != null;
     _displayItemList.clear();
     await _addItemsToDisplayList(newItems, true);
-    setState(() {
-      if (itemId != null) {
-        ModelItem? itemInItems;
-        for (ModelItem item in newItems) {
-          if (item.id == itemId) {
-            itemInItems = item;
-            break;
+    if (mounted) {
+      setState(() {
+        if (itemId != null) {
+          ModelItem? itemInItems;
+          for (ModelItem item in newItems) {
+            if (item.id == itemId) {
+              itemInItems = item;
+              break;
+            }
           }
-        }
-        if (itemInItems != null) {
-          int indexOfItem = _displayItemList.indexOf(itemInItems);
-          FocusManager.instance.primaryFocus?.unfocus();
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            Future.delayed(const Duration(milliseconds: 80), () {
-              if (mounted) {
-                _itemScrollController.jumpTo(index: indexOfItem);
-                triggerItemBlink();
-              }
+          if (itemInItems != null) {
+            int indexOfItem = _displayItemList.indexOf(itemInItems);
+            FocusManager.instance.primaryFocus?.unfocus();
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              Future.delayed(const Duration(milliseconds: 80), () {
+                if (mounted) {
+                  _itemScrollController.jumpTo(index: indexOfItem);
+                  triggerItemBlink();
+                }
+              });
             });
+          }
+        } else {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && _displayItemList.isNotEmpty) {
+              _itemScrollController.jumpTo(index: 0);
+            }
           });
         }
-      } else {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted && _displayItemList.isNotEmpty) {
-            _itemScrollController.jumpTo(index: 0);
-          }
-        });
-      }
-    });
+      });
+    }
     if (newItems.isEmpty) {
       WidgetsBinding.instance
           .addPostFrameCallback((_) => _textControllerFocus.requestFocus());
@@ -326,7 +328,7 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
 
   Future<void> loadImageDirectoryPath() async {
     String filePath = await getFilePath("image", "dummy.png");
-    setState(() => imageDirPath = path.dirname(filePath));
+    if (mounted) setState(() => imageDirPath = path.dirname(filePath));
   }
 
   Future<void> _addItemsToDisplayList(
@@ -447,11 +449,13 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
   }
 
   Future<void> _initializePageData() async {
+    showProcessing();
     await fetchItems(showItemId);
     await loadImageDirectoryPath();
     if (widget.sharedContents.isNotEmpty) {
       await loadSharedContents();
     }
+    hideProcessing();
   }
 
   Future<void> loadSharedContents() async {

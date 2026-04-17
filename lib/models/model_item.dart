@@ -9,6 +9,8 @@ import 'package:ntsapp/models/model_preferences.dart';
 import 'package:ntsapp/services/service_events.dart';
 import 'package:uuid/uuid.dart';
 import 'package:path/path.dart' as path;
+import 'package:ntsapp/storage/storage_secure.dart';
+import 'package:path_provider/path_provider.dart';
 import '../storage/storage_sqlite.dart';
 import '../utils/utils_sync.dart';
 
@@ -64,6 +66,8 @@ class ModelItem {
     };
   }
 
+  static String? _cachedMediaBase;
+
   static Future<ModelItem> fromMap(Map<String, dynamic> map) async {
     Uuid uuid = const Uuid();
     Map<String, dynamic>? dataMap;
@@ -73,6 +77,29 @@ class ModelItem {
         dataMap = jsonDecode(map['data']);
       } else {
         dataMap = map['data'];
+      }
+
+      // Dynamic path resolution for restored backups or moved application directories
+      if (dataMap != null && dataMap.containsKey("path")) {
+        try {
+          String storedPath = dataMap["path"];
+          if (!File(storedPath).existsSync()) {
+            _cachedMediaBase ??= await _getMediaBase();
+
+            if (_cachedMediaBase != null) {
+              String fileName = dataMap["name"] ?? path.basename(storedPath);
+              String? mime = dataMap["mime"];
+              if (mime != null) {
+                String mimeDir = mime.split("/").first;
+                String resolvedPath =
+                    path.join(_cachedMediaBase!, mimeDir, fileName);
+                if (File(resolvedPath).existsSync()) {
+                  dataMap["path"] = resolvedPath;
+                }
+              }
+            }
+          }
+        } catch (_) {}
       }
     }
     if (dataMap != null) {
@@ -383,12 +410,17 @@ class ModelItem {
     return await Future.wait(rows.map((map) => fromMap(map)));
   }
 
-  static Future<List<ModelItem>> getImageAudio() async {
+  static Future<List<ModelItem>> getMediaItems() async {
     final dbHelper = StorageSqlite.instance;
     final db = await dbHelper.database;
     List<Map<String, dynamic>> rows = await db.query("item",
-        where: "type = ? OR type = ?",
-        whereArgs: [ItemType.image.value, ItemType.audio.value]);
+        where: "type = ? OR type = ? OR type = ? OR type = ?",
+        whereArgs: [
+          ItemType.image.value,
+          ItemType.audio.value,
+          ItemType.video.value,
+          ItemType.document.value
+        ]);
     return await Future.wait(rows.map((map) => fromMap(map)));
   }
 
@@ -510,5 +542,17 @@ class ModelItem {
       await item.delete();
     }
     EventStream().publish(AppEvent(type: EventType.changedItemId, value: id));
+  }
+
+  static Future<String?> _getMediaBase() async {
+    try {
+      SecureStorage secureStorage = SecureStorage();
+      final directory = await getApplicationDocumentsDirectory();
+      String? mediaDir = await secureStorage.read(key: "media_dir");
+      if (mediaDir != null) {
+        return path.join(directory.path, mediaDir);
+      }
+    } catch (_) {}
+    return null;
   }
 }

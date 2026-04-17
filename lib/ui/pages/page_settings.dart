@@ -7,6 +7,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:ntsapp/utils/backup_restore.dart';
 import 'package:ntsapp/utils/enums.dart';
 import 'package:ntsapp/models/model_setting.dart';
+import 'package:ntsapp/utils/auth_guard.dart';
 import 'package:ntsapp/services/service_events.dart';
 import 'package:ntsapp/services/service_logger.dart';
 import 'package:ntsapp/storage/storage_secure.dart';
@@ -18,7 +19,9 @@ import 'package:provider/provider.dart';
 import 'package:flutter_windowmanager_plus/flutter_windowmanager_plus.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:flutter/foundation.dart';
 
+import '../../models/model_item.dart';
 import '../../utils/common.dart';
 import '../common_widgets.dart';
 
@@ -493,52 +496,107 @@ class SettingsPageState extends State<SettingsPage> {
   }
 
   void _showGracePeriodPicker() {
+    final cs = Theme.of(context).colorScheme;
     final List<int> periods = [0, 1, 5, 10, 30];
+
     showModalBottomSheet(
       context: context,
-      builder: (context) => ListView(
-        shrinkWrap: true,
-        children: periods.map((p) => ListTile(
-          title: Text(p == 0 ? "Immediate" : "$p Minutes"),
-          trailing: biometricGracePeriod == p ? Icon(LucideIcons.check, color: Theme.of(context).colorScheme.primary) : null,
-          onTap: () {
-            _setBiometricGracePeriod(p);
-            Navigator.pop(context);
-          },
-        )).toList(),
+      backgroundColor: cs.surfaceContainerHigh,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                "Biometric Grace Period",
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: cs.onSurface),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                "How long before re-locking the app",
+                style: TextStyle(fontSize: 14, color: cs.onSurfaceVariant),
+              ),
+              const SizedBox(height: 20),
+              ...periods.map((p) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: _bottomSheetTile(
+                      context: context,
+                      icon: LucideIcons.timer,
+                      label: p == 0 ? "Immediate Lock" : "$p Minutes",
+                      color: biometricGracePeriod == p ? cs.primary : null,
+                      onTap: () {
+                        _setBiometricGracePeriod(p);
+                        Navigator.pop(context);
+                      },
+                    ),
+                  )),
+            ],
+          ),
+        ),
       ),
     );
   }
 
   void _showNetworkTypePicker() {
+    final cs = Theme.of(context).colorScheme;
     showModalBottomSheet(
       context: context,
-      builder: (context) => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ListTile(
-            title: const Text("Wi-Fi Only"),
-            trailing: mediaNetworkType == "wifi" ? Icon(LucideIcons.check, color: Theme.of(context).colorScheme.primary) : null,
-            onTap: () {
-              _setMediaNetworkType("wifi");
-              Navigator.pop(context);
-            },
+      backgroundColor: cs.surfaceContainerHigh,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                "Download Network",
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: cs.onSurface),
+              ),
+              const SizedBox(height: 20),
+              _bottomSheetTile(
+                context: context,
+                icon: LucideIcons.wifi,
+                label: "Wi-Fi Only",
+                color: mediaNetworkType == "wifi" ? cs.primary : null,
+                onTap: () {
+                  _setMediaNetworkType("wifi");
+                  Navigator.pop(context);
+                },
+              ),
+              const SizedBox(height: 8),
+              _bottomSheetTile(
+                context: context,
+                icon: LucideIcons.globe,
+                label: "Wi-Fi & Cellular",
+                color: mediaNetworkType == "all" ? cs.primary : null,
+                onTap: () {
+                  _setMediaNetworkType("all");
+                  Navigator.pop(context);
+                },
+              ),
+            ],
           ),
-          ListTile(
-            title: const Text("Wi-Fi & Cellular"),
-            trailing: mediaNetworkType == "all" ? Icon(LucideIcons.check, color: Theme.of(context).colorScheme.primary) : null,
-            onTap: () {
-              _setMediaNetworkType("all");
-              Navigator.pop(context);
-            },
-          ),
-        ],
+        ),
       ),
     );
   }
 
   Future<void> _authenticate() async {
     try {
+      AuthGuard.isAuthenticating = true;
       bool isAuthenticated = await _auth.authenticate(
         localizedReason: 'Please authenticate',
         options: const AuthenticationOptions(
@@ -552,6 +610,9 @@ class SettingsPageState extends State<SettingsPage> {
       }
     } catch (e, s) {
       logger.error("_authenticate", error: e, stackTrace: s);
+    } finally {
+      AuthGuard.isAuthenticating = false;
+      AuthGuard.lastActiveAt = DateTime.now();
     }
   }
 
@@ -616,6 +677,56 @@ class SettingsPageState extends State<SettingsPage> {
       }
       if (status.isNotEmpty) {
         if (mounted) showAlertMessage(context, "Could not share file", status);
+      }
+    }
+  }
+
+  Future<void> _repairAllThumbnails() async {
+    showProcessing();
+    try {
+      List<ModelItem> items = await ModelItem.getMediaItems();
+      int repairedCount = 0;
+      for (var item in items) {
+        if (item.thumbnail == null &&
+            item.data != null &&
+            item.data!.containsKey("path")) {
+          final file = File(item.data!["path"]);
+          if (file.existsSync()) {
+            if (item.type == ItemType.image) {
+              final bytes = await file.readAsBytes();
+              final thumbnail = await compute(getImageThumbnail, bytes);
+              if (thumbnail != null) {
+                item.thumbnail = thumbnail;
+                await item.update(["thumbnail"]);
+                repairedCount++;
+              }
+            } else if (item.type == ItemType.video) {
+              try {
+                VideoInfoExtractor extractor =
+                    VideoInfoExtractor(item.data!["path"]);
+                final thumbnail = await extractor.getThumbnail();
+                if (thumbnail != null) {
+                  item.thumbnail = thumbnail;
+                  await item.update(["thumbnail"]);
+                  repairedCount++;
+                }
+                extractor.dispose();
+              } catch (_) {}
+            }
+          }
+        }
+      }
+      hideProcessing();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Repaired $repairedCount thumbnails")));
+      }
+    } catch (e) {
+      hideProcessing();
+      logger.error("Repair all thumbnails failed", error: e);
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text("Repair failed")));
       }
     }
   }
@@ -1114,6 +1225,13 @@ _buildSectionHeader("Interface"),
               onTap: _showNetworkTypePicker,
             ),
             _SettingsTile(
+              leading: _buildLeadingIcon(LucideIcons.imagePlus, cs.primary),
+              title: const Text("Repair Thumbnails"),
+              subtitle: const Text("Regenerate missing media previews"),
+              trailing: _buildTrailingChevron(),
+              onTap: _repairAllThumbnails,
+            ),
+            _SettingsTile(
               leading: _buildLeadingIcon(LucideIcons.trash2, Colors.orange),
               title: const Text("Clear Cache"),
               subtitle: Text("Size: $_cacheSize"),
@@ -1379,6 +1497,62 @@ _buildSectionHeader("Interface"),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _bottomSheetTile({
+    required BuildContext context,
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    String? subtitle,
+    Color? color,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    final tileColor = color ?? cs.onSurfaceVariant;
+    return Material(
+      color: cs.onSurface.withValues(alpha: 0.06),
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: tileColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, size: 18, color: tileColor),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(label,
+                        style: TextStyle(
+                            fontSize: 15,
+                            color: color ?? cs.onSurface)),
+                    if (subtitle != null)
+                      Text(subtitle,
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: cs.onSurfaceVariant.withValues(alpha: 0.6))),
+                  ],
+                ),
+              ),
+              if (color != null)
+                Icon(LucideIcons.check, size: 18, color: color),
+            ],
+          ),
+        ),
       ),
     );
   }
