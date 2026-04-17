@@ -153,27 +153,42 @@ class _PageStarredItemsState extends State<PageStarredItems> {
     });
   }
 
+  Widget _buildIconBadge(IconData icon) {
+    final color = Theme.of(context).colorScheme.onSurfaceVariant;
+    return Container(
+      width: 34,
+      height: 34,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Icon(icon, size: 18, color: color),
+    );
+  }
+
   Widget _buildSelectionOptions() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
         IconButton(
+          tooltip: "Unstar selected",
           onPressed: () {
             markSelectedUnStarred();
           },
-          icon: Icon(LucideIcons.starOff),
+          icon: _buildIconBadge(LucideIcons.starOff),
         ),
         const SizedBox(
-          width: 5,
+          width: 4,
         ),
         IconButton(
+          tooltip: "Move selection to trash",
           onPressed: () {
             archiveSelectedItems();
           },
-          icon: const Icon(LucideIcons.trash),
+          icon: _buildIconBadge(LucideIcons.trash),
         ),
         const SizedBox(
-          width: 5,
+          width: 8,
         ),
       ],
     );

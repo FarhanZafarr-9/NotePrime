@@ -141,7 +141,8 @@ class PageAddSelectCategoryState extends State<PageAddSelectCategory> {
         onPressed: () {
           addCategory();
         },
-        shape: const CircleBorder(),
+        shape: const ContinuousRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(28))),
         child: const Icon(LucideIcons.plus),
       ),
     );

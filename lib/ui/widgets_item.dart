@@ -735,7 +735,13 @@ class ItemWidgetLocation extends StatelessWidget {
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
                             color: cs.onSurface)),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 1),
+                    Text(
+                        "${item.data?['lat']?.toStringAsFixed(4)}, ${item.data?['lng']?.toStringAsFixed(4)}",
+                        style: TextStyle(
+                            fontSize: 11,
+                            color: cs.onSurfaceVariant.withValues(alpha: 0.6))),
+                    const SizedBox(height: 1),
                     Text("Tap to open in maps",
                         style: TextStyle(
                             fontSize: 10, color: cs.onSurfaceVariant)),
@@ -1436,7 +1442,7 @@ class _PreviewCardState extends State<_PreviewCard> {
                                     .withValues(alpha: 0.65)),
                           ),
                         ],
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 8),
                         Text(
                           Uri.tryParse(widget.urlInfo["url"] ?? "")?.host ??
                               widget.urlInfo["url"] ??

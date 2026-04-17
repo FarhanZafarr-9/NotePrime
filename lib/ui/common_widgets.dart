@@ -51,12 +51,14 @@ class PrivacyShield extends StatefulWidget {
   final Widget child;
   final BorderRadius borderRadius;
   final bool isEnabled;
+  final VoidCallback? onLongPress;
 
   const PrivacyShield({
     super.key,
     required this.child,
     required this.borderRadius,
     this.isEnabled = true,
+    this.onLongPress,
   });
 
   @override
@@ -88,49 +90,63 @@ class _PrivacyShieldState extends State<PrivacyShield> {
 
     return GestureDetector(
       onTap: _reveal,
+      onLongPress: widget.onLongPress != null
+          ? (_isRevealed ? widget.onLongPress : () {})
+          : null,
       behavior: HitTestBehavior.opaque,
-      child: Stack(
-        children: [
-          // Content with stable ImageFiltered blur
-          ClipRRect(
-            borderRadius: widget.borderRadius,
-            child: ImageFiltered(
-              imageFilter: ui.ImageFilter.blur(
-                sigmaX: _isRevealed ? 0.0 : 16.0,
-                sigmaY: _isRevealed ? 0.0 : 16.0,
-              ),
-              child: AbsorbPointer(
-                absorbing: !_isRevealed,
-                child: widget.child,
-              ),
-            ),
-          ),
-          // Clean Gradient Overlay matching the shape
-          if (!_isRevealed)
-            Positioned.fill(
-              child: ClipRRect(
+      child: TweenAnimationBuilder<double>(
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOut,
+        tween: Tween<double>(begin: _isRevealed ? 0 : 1, end: _isRevealed ? 0 : 1),
+        builder: (context, value, child) {
+          final sigma = value * 16.0;
+          return Stack(
+            children: [
+              // Content with stable ImageFiltered blur
+              ClipRRect(
                 borderRadius: widget.borderRadius,
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Theme.of(context)
-                            .colorScheme
-                            .surface
-                            .withValues(alpha: 0.4),
-                        Theme.of(context)
-                            .colorScheme
-                            .surface
-                            .withValues(alpha: 0.1),
-                      ],
-                    ),
+                child: ImageFiltered(
+                  imageFilter: ui.ImageFilter.blur(
+                    sigmaX: sigma,
+                    sigmaY: sigma,
+                  ),
+                  child: AbsorbPointer(
+                    absorbing: !_isRevealed,
+                    child: widget.child,
                   ),
                 ),
               ),
-            ),
-        ],
+              // Clean Gradient Overlay matching the shape
+              if (value > 0)
+                Positioned.fill(
+                  child: Opacity(
+                    opacity: value,
+                    child: ClipRRect(
+                      borderRadius: widget.borderRadius,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              Theme.of(context)
+                                  .colorScheme
+                                  .surface
+                                  .withValues(alpha: 0.4),
+                              Theme.of(context)
+                                  .colorScheme
+                                  .surface
+                                  .withValues(alpha: 0.1),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -160,7 +176,8 @@ class FloatingActionButtonWithBadge extends StatelessWidget {
       children: [
         FloatingActionButton(
           heroTag: heroTag,
-          shape: const CircleBorder(),
+          shape: const ContinuousRectangleBorder(
+              borderRadius: BorderRadius.all(Radius.circular(28))),
           onPressed: onPressed,
           child: icon,
         ),

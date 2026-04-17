@@ -6,7 +6,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_contacts/contact.dart';
+import 'package:flutter_contacts/flutter_contacts.dart' as fc;
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -60,6 +60,21 @@ class PageItems extends StatefulWidget {
 
 class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
   final logger = AppLogger(prefixes: ["page_items"]);
+
+  // ── Monochromatic icon badge ──────────────────────────────────────────────
+  Widget _buildIconBadge(IconData icon) {
+    final color = Theme.of(context).colorScheme.onSurfaceVariant;
+    return Container(
+      width: 34,
+      height: 34,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Icon(icon, size: 18, color: color),
+    );
+  }
+
   String? showItemId;
   final List<ModelItem> _displayItemList = [];
   final List<ModelItem> _selectedItems = [];
@@ -746,7 +761,11 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
           break;
       }
     }
-    Share.shareXFiles(medias, text: texts.join("\n"));
+    if (medias.isNotEmpty) {
+      Share.shareXFiles(medias, text: texts.join("\n"));
+    } else if (texts.isNotEmpty) {
+      Share.share(texts.join("\n"));
+    }
     clearSelection();
   }
 
@@ -788,6 +807,25 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
       _selectedItems.clear();
       _hasNotesSelected = false;
     });
+  }
+
+  Future<void> _onPaste() async {
+    ClipboardData? data = await Clipboard.getData('text/plain');
+    if (data != null && data.text != null) {
+      String text = data.text!;
+      int start = _textController.selection.start;
+      int end = _textController.selection.end;
+      String currentText = _textController.text;
+
+      if (start >= 0 && end >= 0) {
+        _textController.text = currentText.replaceRange(start, end, text);
+        _textController.selection = TextSelection.fromPosition(
+            TextPosition(offset: start + text.length));
+      } else {
+        _textController.text = currentText + text;
+      }
+      _onInputTextChanged(_textController.text);
+    }
   }
 
   void _onInputTextChanged(String text) {
@@ -856,8 +894,163 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
     });
   }
 
+  Widget _bottomSheetTile({
+    required BuildContext context,
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    String? subtitle,
+    Color? color,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    final tileColor = color ?? cs.onSurfaceVariant;
+    return Material(
+      color: cs.onSurface.withValues(alpha: 0.06),
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: tileColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, size: 18, color: tileColor),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(label,
+                        style: TextStyle(fontSize: 15, color: cs.onSurface)),
+                    if (subtitle != null)
+                      Text(subtitle,
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: cs.onSurfaceVariant.withValues(alpha: 0.6))),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void addToContacts(ModelItem item) {
-    if (_hasNotesSelected) onItemTapped(item);
+    if (_hasNotesSelected) {
+      onItemTapped(item);
+      return;
+    }
+
+    final cs = Theme.of(context).colorScheme;
+    final Map<String, dynamic> contactData = item.data ?? {};
+    final String name = contactData["name"] ?? "Contact";
+    final List phones = contactData["phones"] ?? [];
+    final List emails = contactData["emails"] ?? [];
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: cs.surfaceContainerHigh,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(name,
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 20),
+              if (phones.isNotEmpty) ...[
+                _bottomSheetTile(
+                  context: context,
+                  icon: LucideIcons.phone,
+                  label: "Call",
+                  subtitle: phones.first.toString(),
+                  color: cs.primary,
+                  onTap: () {
+                    Navigator.pop(context);
+                    launchUrl(Uri.parse("tel:${phones.first}"));
+                  },
+                ),
+                const SizedBox(height: 8),
+                _bottomSheetTile(
+                  context: context,
+                  icon: LucideIcons.messageSquare,
+                  label: "Send SMS",
+                  color: cs.secondary,
+                  onTap: () {
+                    Navigator.pop(context);
+                    launchUrl(Uri.parse("sms:${phones.first}"));
+                  },
+                ),
+                const SizedBox(height: 8),
+              ],
+              if (emails.isNotEmpty) ...[
+                _bottomSheetTile(
+                  context: context,
+                  icon: LucideIcons.mail,
+                  label: "Email",
+                  subtitle: emails.first.toString(),
+                  color: cs.tertiary,
+                  onTap: () {
+                    Navigator.pop(context);
+                    launchUrl(Uri.parse("mailto:${emails.first}"));
+                  },
+                ),
+                const SizedBox(height: 8),
+              ],
+              _bottomSheetTile(
+                context: context,
+                icon: LucideIcons.userPlus,
+                label: "Add to System Contacts",
+                onTap: () async {
+                  Navigator.pop(context);
+                  try {
+                    if (!await fc.FlutterContacts.requestPermission()) {
+                      if (!context.mounted) return;
+                      displaySnackBar(context,
+                          message: "Contacts permission denied", seconds: 2);
+                      return;
+                    }
+                    final newContact = fc.Contact();
+                    newContact.name.first = contactData["first"] ?? "";
+                    newContact.name.last = contactData["last"] ?? "";
+                    newContact.phones = phones
+                        .map((p) => fc.Phone(p.toString()))
+                        .toList();
+                    newContact.emails = emails
+                        .map((e) => fc.Email(e.toString()))
+                        .toList();
+                    await newContact.insert();
+                    if (!context.mounted) return;
+                    displaySnackBar(context,
+                        message: "Added to contacts", seconds: 1);
+                  } catch (e) {
+                    if (!context.mounted) return;
+                    displaySnackBar(context,
+                        message: "Failed to add contact", seconds: 2);
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> generateAddSeedItems() async {
@@ -1203,7 +1396,7 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
               settings: const RouteSettings(name: "ContactPicker")))
           .then((value) {
         if (value != null) {
-          Contact contact = value as Contact;
+          fc.Contact contact = value as fc.Contact;
           List<String> phones = contact.phones.map((p) => p.number).toList();
           List<String> emails = contact.emails.map((e) => e.address).toList();
           List<String> addresses =
@@ -1316,8 +1509,11 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
 
   List<Widget> _buildAppbarDefaultOptions() {
     return [
-      PopupMenuButton<int>(
-        padding: EdgeInsets.zero,
+      Padding(
+        padding: const EdgeInsets.only(right: 8),
+        child: PopupMenuButton<int>(
+          icon: _buildIconBadge(LucideIcons.moreVertical),
+          padding: EdgeInsets.zero,
         onSelected: (value) {
           if (value == 0) navigateToPageGroupEdit();
           if (value == 1) _openFilterDialog();
@@ -1373,6 +1569,7 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
           ),
         ],
       ),
+    ),
     ];
   }
 
@@ -1714,6 +1911,8 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                                         ),
                                         child: PrivacyShield(
                                           isEnabled: privacyShield,
+                                          onLongPress: () =>
+                                              onItemLongPressed(item),
                                           borderRadius: BorderRadius.circular(
                                               bubbleRadius),
                                           child: Material(
@@ -1788,30 +1987,36 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                                                             }
                                                           }
                                                         },
-                                                        child: NoteUrlPreview(
-                                                          urlInfo: urlInfo,
-                                                          urlInfoList:
-                                                              item.data?[
-                                                                  "url_info_list"],
-                                                          urlMetadataState:
-                                                              item.data?[
-                                                                      "url_metadata_state"] ??
-                                                                  (urlInfo ==
-                                                                              null &&
-                                                                          item.data?[
-                                                                                  "url_info_list"] ==
-                                                                              null &&
-                                                                          _linkRegExp.hasMatch(
-                                                                              item.text)
-                                                                      ? "none"
-                                                                      : null),
-                                                          imageDirectory:
-                                                              imageDirPath,
-                                                          itemId: item.id!,
-                                                          onRetry: () =>
-                                                              checkFetchUrlMetadata(
-                                                                  item,
-                                                                  force: true),
+                                                        child: Column(
+                                                          mainAxisSize: MainAxisSize.min,
+                                                          children: [
+                                                            const SizedBox(height: 8),
+                                                            NoteUrlPreview(
+                                                              urlInfo: urlInfo,
+                                                              urlInfoList:
+                                                                  item.data?[
+                                                                      "url_info_list"],
+                                                              urlMetadataState:
+                                                                  item.data?[
+                                                                          "url_metadata_state"] ??
+                                                                      (urlInfo ==
+                                                                                  null &&
+                                                                              item.data?[
+                                                                                      "url_info_list"] ==
+                                                                                  null &&
+                                                                              _linkRegExp.hasMatch(
+                                                                                  item.text)
+                                                                          ? "none"
+                                                                          : null),
+                                                              imageDirectory:
+                                                                  imageDirPath,
+                                                              itemId: item.id!,
+                                                              onRetry: () =>
+                                                                  checkFetchUrlMetadata(
+                                                                      item,
+                                                                      force: true),
+                                                            ),
+                                                          ],
                                                         ),
                                                       ),
                                                   ],
@@ -1863,7 +2068,8 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                             fetchItems(null);
                           }
                         },
-                        shape: const CircleBorder(),
+                        shape: const ContinuousRectangleBorder(
+                            borderRadius: BorderRadius.all(Radius.circular(28))),
                         backgroundColor: cs.onSurface,
                         foregroundColor: cs.surface,
                         child: const Icon(LucideIcons.chevronsDown),
@@ -1990,9 +2196,12 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
     return SizedBox(
       width: width,
       height: width,
-      child: GestureDetector(
+      child: PrivacyShield(
+        isEnabled: privacyShield,
         onLongPress: () => onItemLongPressed(mediaItem),
-        onTap: () {
+        borderRadius: BorderRadius.circular(10),
+        child: GestureDetector(
+          onTap: () {
           if (_hasNotesSelected) {
             onItemTapped(mediaItem);
           } else {
@@ -2076,6 +2285,7 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
           ),
         ),
       ),
+    ),
     );
   }
 
@@ -2371,6 +2581,12 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                           style: TextStyle(color: cs.onSurface),
                           decoration: InputDecoration(
                             filled: true,
+                            prefixIcon: IconButton(
+                              onPressed: _onPaste,
+                              icon: const Icon(LucideIcons.clipboard, size: 20),
+                              color: cs.onSurfaceVariant.withValues(alpha: 0.6),
+                              tooltip: "Paste from clipboard",
+                            ),
                             hintText: _isCreatingTask
                                 ? "Create a task"
                                 : "Add a note...",
@@ -2448,7 +2664,7 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                                                   ? Icons.check
                                                   : Icons.send
                                               : Icons.mic,
-                                      size: 20,
+                                      size: 26,
                                       color: cs.onSurfaceVariant
                                           .withValues(alpha: 0.6),
                                     ),
@@ -2458,6 +2674,25 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                             ),
                           ),
                           onChanged: _onInputTextChanged,
+                          contentInsertionConfiguration: ContentInsertionConfiguration(
+                            allowedMimeTypes: const <String>[
+                              'image/png',
+                              'image/jpeg',
+                              'image/gif'
+                            ],
+                            onContentInserted:
+                                (KeyboardInsertedContent content) async {
+                              if (content.data != null) {
+                                final tempDir = await getTemporaryDirectory();
+                                final fileName =
+                                    'pasted_image_${DateTime.now().millisecondsSinceEpoch}.${content.mimeType.split('/').last}';
+                                final file =
+                                    File(path.join(tempDir.path, fileName));
+                                await file.writeAsBytes(content.data!);
+                                processFiles([file.path]);
+                              }
+                            },
+                          ),
                           scrollController: ScrollController(),
                         ),
                       ],

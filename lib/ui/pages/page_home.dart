@@ -711,7 +711,7 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'This is a modern fork with Material You support',
+                            'This is an Android-specific fork with Material You support. Support for other devices will be considered in the future.',
                             style: TextStyle(
                               fontSize: 13,
                               color: cs.onSurface.withValues(alpha: 0.85),
@@ -881,11 +881,9 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
 
   List<Widget> _buildDefaultActions() {
     final cs = Theme.of(context).colorScheme;
-    bool supabaseInitialized =
-        ModelSetting.get(AppString.supabaseInitialized.string, "no") == "yes";
-    bool showSync =
-        ModelSetting.get(AppString.hideSyncButton.string, "no") == "no";
     return [
+      // Sync button hidden by request
+      /*
       if (supabaseInitialized &&
           (!requiresAuthentication || isAuthenticated) &&
           !_canSync &&
@@ -907,6 +905,7 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
             child: const Text("Sync"),
           ),
         ),
+      */
       if (!requiresAuthentication || isAuthenticated)
         IconButton(
           tooltip: "Search notes",
@@ -1059,52 +1058,26 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
           },
           itemBuilder: (context) => [
             PopupMenuItem<int>(
-              value: 3,
+              value: 2,
               padding: EdgeInsets.zero,
               height: 0,
               child: _menuItem(
-                context: context,
-                value: 3,
-                icon: LucideIcons.refreshCcw,
-                label: "Sync",
-                extraTopRadius: true,
-              ),
+                  context: context,
+                  value: 2,
+                  icon: LucideIcons.archiveRestore,
+                  label: "Trash",
+                  extraTopRadius: true),
             ),
-            PopupMenuItem(
-              enabled: false,
-              height: 0,
+            PopupMenuItem<int>(
+              value: 1,
               padding: EdgeInsets.zero,
-              child: Divider(
-                height: 6,
-                thickness: 0.75,
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.1),
-              ),
+              height: 0,
+              child: _menuItem(
+                  context: context,
+                  value: 1,
+                  icon: LucideIcons.star,
+                  label: "Starred notes"),
             ),
-            if (!requiresAuthentication || isAuthenticated)
-              PopupMenuItem<int>(
-                value: 2,
-                padding: EdgeInsets.zero,
-                height: 0,
-                child: _menuItem(
-                    context: context,
-                    value: 2,
-                    icon: LucideIcons.archiveRestore,
-                    label: "Trash"),
-              ),
-            if (!requiresAuthentication || isAuthenticated)
-              PopupMenuItem<int>(
-                value: 1,
-                padding: EdgeInsets.zero,
-                height: 0,
-                child: _menuItem(
-                    context: context,
-                    value: 1,
-                    icon: LucideIcons.star,
-                    label: "Starred notes"),
-              ),
             PopupMenuItem(
               enabled: false,
               height: 0,
@@ -1126,7 +1099,8 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
                   context: context,
                   value: 0,
                   icon: LucideIcons.settings,
-                  label: "Settings"),
+                  label: "Settings",
+                  extraBottomRadius: SyncUtils.getSignedInUserId() == null),
             ),
             if (SyncUtils.getSignedInUserId() != null)
               PopupMenuItem<int>(
@@ -1141,56 +1115,6 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
                       : LucideIcons.alertTriangle,
                   label: "Account",
                   isDanger: !hasValidPlan,
-                ),
-              ),
-            if (isDebugEnabled)
-              PopupMenuItem(
-                enabled: false,
-                height: 0,
-                padding: EdgeInsets.zero,
-                child: Divider(
-                  height: 6,
-                  thickness: 0.75,
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.1),
-                ),
-              ),
-            if (isDebugEnabled)
-              PopupMenuItem<int>(
-                value: 11,
-                padding: EdgeInsets.zero,
-                height: 0,
-                child: _menuItem(
-                    context: context,
-                    value: 11,
-                    icon: LucideIcons.file,
-                    label: "Page"),
-              ),
-            if (isDebugEnabled)
-              PopupMenuItem<int>(
-                value: 12,
-                padding: EdgeInsets.zero,
-                height: 0,
-                child: _menuItem(
-                  context: context,
-                  value: 12,
-                  icon: LucideIcons.database,
-                  label: "Sqlite",
-                  extraBottomRadius: !loggingEnabled,
-                ),
-              ),
-            if (loggingEnabled)
-              PopupMenuItem<int>(
-                value: 14,
-                padding: EdgeInsets.zero,
-                height: 0,
-                child: _menuItem(
-                  context: context,
-                  value: 14,
-                  icon: LucideIcons.list,
-                  label: "Logs",
                   extraBottomRadius: true,
                 ),
               ),
@@ -1484,7 +1408,7 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
                   });
                 },
               )
-            : _isLoading
+            : (_isLoading && !requiresAuthentication)
                 ? const ShimmerList()
                 : _isFetchingFromServer
                     ? const Center(child: CircularProgressIndicator())
@@ -1576,8 +1500,8 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
                     createNoteGroup();
                   }
                 },
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                shape: const ContinuousRectangleBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(28)),
                 ),
                 child:
                     Icon(_isReordering ? LucideIcons.check : LucideIcons.plus),

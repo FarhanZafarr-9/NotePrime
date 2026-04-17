@@ -44,6 +44,21 @@ class PageCategoryGroups extends StatefulWidget {
 class _PageCategoryGroupsState extends State<PageCategoryGroups> {
   final AppLogger logger = AppLogger(prefixes: ["CategoryGroups"]);
   final LocalAuthentication _auth = LocalAuthentication();
+
+  // ── Monochromatic icon badge ──────────────────────────────────────────────
+  Widget _buildIconBadge(IconData icon) {
+    final color = Theme.of(context).colorScheme.onSurfaceVariant;
+    return Container(
+      width: 34,
+      height: 34,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Icon(icon, size: 18, color: color),
+    );
+  }
+
   List<ModelGroup> categoryGroupsDisplayList = [];
   late ModelCategory category;
   ModelGroup? selectedGroup;
@@ -462,10 +477,12 @@ class _PageCategoryGroupsState extends State<PageCategoryGroups> {
           ),
           actions: [
             Padding(
-              padding: const EdgeInsets.all(8.0),
+              padding: const EdgeInsets.only(right: 8),
               child: IconButton(
-                  onPressed: navigateToCategoryAddEdit,
-                  icon: Icon(LucideIcons.edit2)),
+                tooltip: "Edit Category",
+                onPressed: navigateToCategoryAddEdit,
+                icon: _buildIconBadge(LucideIcons.edit2),
+              ),
             )
           ],
         ),
@@ -577,9 +594,8 @@ class _PageCategoryGroupsState extends State<PageCategoryGroups> {
               navigateToGroupAddEdit(null, category);
             }
           },
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
+          shape: const ContinuousRectangleBorder(
+              borderRadius: BorderRadius.all(Radius.circular(28))),
           child: Icon(_isReordering ? LucideIcons.check : LucideIcons.plus),
         ),
       ),

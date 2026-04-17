@@ -242,7 +242,8 @@ class _PageCategoryAddEditState extends State<PageCategoryAddEdit> {
       floatingActionButton: FloatingActionButton(
         heroTag: "save_new_category",
         onPressed: () => saveCategory(categoryController.text),
-        shape: const CircleBorder(),
+        shape: const ContinuousRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(28))),
         backgroundColor: cs.onSurface.withValues(alpha: 0.1),
         foregroundColor: cs.onSurface,
         elevation: 0,

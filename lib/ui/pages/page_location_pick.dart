@@ -166,7 +166,9 @@ class _LocationPickerState extends State<LocationPicker> {
         ),
         children: [
           TileLayer(
-            urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+            urlTemplate: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+            subdomains: const ['a', 'b', 'c', 'd'],
+            userAgentPackageName: 'com.ntsapp.notes',
           ),
           MarkerLayer(markers: [
             Marker(
@@ -187,6 +189,8 @@ class _LocationPickerState extends State<LocationPicker> {
               heroTag: "get_current_location",
               onPressed: _getCurrentLocation,
               tooltip: "Use current location",
+              shape: const ContinuousRectangleBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(28))),
               child: const Icon(LucideIcons.locate),
             ),
     );

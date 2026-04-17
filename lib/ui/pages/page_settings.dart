@@ -10,7 +10,6 @@ import 'package:ntsapp/models/model_setting.dart';
 import 'package:ntsapp/services/service_events.dart';
 import 'package:ntsapp/services/service_logger.dart';
 import 'package:ntsapp/storage/storage_secure.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
@@ -667,12 +666,14 @@ class SettingsPageState extends State<SettingsPage> {
               trailing: _buildTrailingChevron(),
               onTap: _showChangelog,
             ),
+            /* 
             _SettingsTile(
               leading: _buildLeadingIcon(LucideIcons.star, cs.tertiary),
               title: const Text('Original App (Play Store)'),
               trailing: _buildTrailingChevron(),
               onTap: _redirectToOriginalPlayStore,
             ),
+            */
             _SettingsTile(
               leading: _buildLeadingIcon(LucideIcons.list, cs.primary),
               title: const Text("Developer Logging"),
@@ -684,18 +685,13 @@ class SettingsPageState extends State<SettingsPage> {
             _SettingsTile(
               leading: _buildLeadingIcon(LucideIcons.info, Colors.grey),
               title: const Text('App Version'),
-              trailing: FutureBuilder<PackageInfo>(
-                future: PackageInfo.fromPlatform(),
-                builder: (context, snapshot) {
-                  final version = snapshot.data?.version ?? '...';
-                  return Text(
-                    version,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: cs.onSurfaceVariant,
-                    ),
-                  );
-                },
+              trailing: const Text(
+                'MaterialYou',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF6750A4), // Themed primary color
+                ),
               ),
             ),
           ]),
@@ -715,12 +711,6 @@ class SettingsPageState extends State<SettingsPage> {
 
   void _openOriginalRepo() {
     const url = "https://github.com/jeerovan/ntsapp";
-    openURL(url);
-  }
-
-  void _redirectToOriginalPlayStore() {
-    const url =
-        'https://play.google.com/store/apps/details?id=com.makenotetoself';
     openURL(url);
   }
 
@@ -761,7 +751,7 @@ class SettingsPageState extends State<SettingsPage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'This fork brings modern improvements to the original app:',
+                'This is an Android-specific fork. Support for other platforms will be considered in the future. It brings modern improvements to the original app:',
                 style: TextStyle(
                   fontSize: 14,
                   color: cs.onSurfaceVariant,

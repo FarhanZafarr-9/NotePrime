@@ -535,44 +535,50 @@ class PrivacyShield extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
-      body: SizedBox(
-        width: double.infinity,
-        height: double.infinity,
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(24),
+      body: GestureDetector(
+        onTap: () {
+          EventStream().publish(AppEvent(type: EventType.authorise));
+        },
+        behavior: HitTestBehavior.opaque,
+        child: SizedBox(
+          width: double.infinity,
+          height: double.infinity,
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Icon(
+                    LucideIcons.shieldCheck,
+                    size: 48,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
                 ),
-                child: Icon(
-                  LucideIcons.shieldCheck,
-                  size: 48,
-                  color: Theme.of(context).colorScheme.primary,
+                const SizedBox(height: 24),
+                Text(
+                  "Note Safe Locked",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                "Note Safe Locked",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.onSurface,
+                const SizedBox(height: 24),
+                FilledButton.icon(
+                  onPressed: () {
+                    EventStream().publish(AppEvent(type: EventType.authorise));
+                  },
+                  icon: const Icon(LucideIcons.unlock, size: 18),
+                  label: const Text("Unlock"),
                 ),
-              ),
-              const SizedBox(height: 24),
-              FilledButton.icon(
-                onPressed: () {
-                  EventStream().publish(AppEvent(type: EventType.authorise));
-                },
-                icon: const Icon(LucideIcons.unlock, size: 18),
-                label: const Text("Unlock"),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

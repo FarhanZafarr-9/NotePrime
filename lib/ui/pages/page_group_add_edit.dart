@@ -362,28 +362,65 @@ class PageGroupAddEditState extends State<PageGroupAddEdit> {
   }) {
     final cs = Theme.of(context).colorScheme;
     return Material(
-      color: cs.onSurface.withValues(alpha: 0.06),
-      borderRadius: BorderRadius.circular(12),
+      color: Colors.transparent,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
         child: Row(
           children: [
             Container(
-              width: 34,
-              height: 34,
+              width: 32,
+              height: 32,
               decoration: BoxDecoration(
                 color: cs.onSurfaceVariant.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(icon, size: 18, color: cs.onSurfaceVariant),
+              child: Icon(icon, size: 16, color: cs.onSurfaceVariant),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Text(label,
                   style: TextStyle(fontSize: 14, color: cs.onSurface)),
             ),
-            Switch(value: value, onChanged: onChanged),
+            Transform.scale(
+                scale: 0.8, child: Switch(value: value, onChanged: onChanged)),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _collapsibleSection({
+    required BuildContext context,
+    required String label,
+    required IconData icon,
+    required List<Widget> children,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: cs.onSurface.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          shape: const RoundedRectangleBorder(side: BorderSide.none),
+          collapsedShape:
+              const RoundedRectangleBorder(side: BorderSide.none),
+          visualDensity: VisualDensity.compact,
+          initiallyExpanded: false,
+          leading: Icon(icon, size: 18, color: cs.primary),
+          title: Text(
+            label,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: cs.onSurface,
+            ),
+          ),
+          childrenPadding: const EdgeInsets.only(bottom: 8),
+          children: children,
         ),
       ),
     );
@@ -428,7 +465,7 @@ class PageGroupAddEditState extends State<PageGroupAddEdit> {
               TextField(
                 controller: titleController,
                 textCapitalization: TextCapitalization.sentences,
-                autofocus: widget.group == null ? false : true,
+                autofocus: false,
                 style: TextStyle(
                     color: Theme.of(context).colorScheme.onSurface, fontSize: 16),
                 textInputAction: TextInputAction.done,
@@ -527,76 +564,98 @@ class PageGroupAddEditState extends State<PageGroupAddEdit> {
                     : null,
               ),
               const SizedBox(height: 24),
-              _sectionLabel("Display"),
-              const SizedBox(height: 8),
-              _settingsToggleTile(
+              _sectionLabel("Group Settings"),
+              const SizedBox(height: 12),
+              _collapsibleSection(
                 context: context,
-                icon: LucideIcons.clock9,
-                label: 'Date / Time',
-                value: showDateTime,
-                onChanged: ModelSetting.get("use_group_settings", "yes") == "yes"
-                    ? setShowDateTime
-                    : (v) {},
+                label: "Appearance",
+                icon: LucideIcons.palette,
+                children: [
+                  _settingsToggleTile(
+                    context: context,
+                    icon: LucideIcons.clock9,
+                    label: 'Date / Time',
+                    value: showDateTime,
+                    onChanged:
+                        ModelSetting.get("use_group_settings", "yes") == "yes"
+                            ? setShowDateTime
+                            : (v) {},
+                  ),
+                  _settingsToggleTile(
+                    context: context,
+                    icon: LucideIcons.rectangleHorizontal,
+                    label: 'Note border',
+                    value: showNoteBorder,
+                    onChanged:
+                        ModelSetting.get("use_group_settings", "yes") == "yes"
+                            ? setShowNoteBorder
+                            : (v) {},
+                  ),
+                  _settingsToggleTile(
+                    context: context,
+                    icon: LucideIcons.link,
+                    label: 'Link previews',
+                    value: linkPreview,
+                    onChanged:
+                        ModelSetting.get("use_group_settings", "yes") == "yes"
+                            ? setLinkPreview
+                            : (v) {},
+                  ),
+                ],
               ),
-              const SizedBox(height: 3),
-              _settingsToggleTile(
+              _collapsibleSection(
                 context: context,
-                icon: LucideIcons.rectangleHorizontal,
-                label: 'Note border',
-                value: showNoteBorder,
-                onChanged: ModelSetting.get("use_group_settings", "yes") == "yes"
-                    ? setShowNoteBorder
-                    : (v) {},
+                label: "Layout & Preferences",
+                icon: LucideIcons.layers,
+                children: [
+                  _settingsToggleTile(
+                    context: context,
+                    icon: LucideIcons.arrowUpDown,
+                    label: 'Oldest first',
+                    value: sortOldestFirst,
+                    onChanged:
+                        ModelSetting.get("use_group_settings", "yes") == "yes"
+                            ? setSortOrder
+                            : (v) {},
+                  ),
+                  _settingsToggleTile(
+                    context: context,
+                    icon: LucideIcons.layoutGrid,
+                    label: 'Media gallery',
+                    value: mediaGallery,
+                    onChanged:
+                        ModelSetting.get("use_group_settings", "yes") == "yes"
+                            ? setMediaGallery
+                            : (v) {},
+                  ),
+                ],
               ),
-              const SizedBox(height: 3),
-              _settingsToggleTile(
+              _collapsibleSection(
                 context: context,
-                icon: LucideIcons.link,
-                label: 'Link previews',
-                value: linkPreview,
-                onChanged: ModelSetting.get("use_group_settings", "yes") == "yes"
-                    ? setLinkPreview
-                    : (v) {},
-              ),
-              const SizedBox(height: 3),
-              _settingsToggleTile(
-                context: context,
-                icon: LucideIcons.arrowUpDown,
-                label: 'Oldest first',
-                value: sortOldestFirst,
-                onChanged: ModelSetting.get("use_group_settings", "yes") == "yes"
-                    ? setSortOrder
-                    : (v) {},
-              ),
-              const SizedBox(height: 3),
-              _settingsToggleTile(
-                context: context,
-                icon: LucideIcons.layoutGrid,
-                label: 'Media gallery',
-                value: mediaGallery,
-                onChanged: ModelSetting.get("use_group_settings", "yes") == "yes"
-                    ? setMediaGallery
-                    : (v) {},
-              ),
-              const SizedBox(height: 3),
-              _settingsToggleTile(
-                context: context,
-                icon: LucideIcons.lock,
-                label: 'Group lock',
-                value: groupLock,
-                onChanged: ModelSetting.get("use_group_settings", "yes") == "yes"
-                    ? setGroupLock
-                    : (v) {},
-              ),
-              const SizedBox(height: 3),
-              _settingsToggleTile(
-                context: context,
-                icon: LucideIcons.eyeOff,
-                label: 'Privacy shield',
-                value: privacyShield,
-                onChanged: ModelSetting.get("use_group_settings", "yes") == "yes"
-                    ? setPrivacyShield
-                    : (v) {},
+                label: "Security & Privacy",
+                icon: LucideIcons.shieldCheck,
+                children: [
+                  _settingsToggleTile(
+                    context: context,
+                    icon: LucideIcons.lock,
+                    label: 'Group lock',
+                    value: groupLock,
+                    onChanged:
+                        ModelSetting.get("use_group_settings", "yes") == "yes"
+                            ? setGroupLock
+                            : (v) {},
+                  ),
+                  _settingsToggleTile(
+                    context: context,
+                    icon: LucideIcons.eyeOff,
+                    label: 'Privacy shield',
+                    value: privacyShield,
+                    onChanged:
+                        ModelSetting.get("use_group_settings", "yes") == "yes"
+                            ? setPrivacyShield
+                            : (v) {},
+                  ),
+                ],
               ),
               if (ModelSetting.get("use_group_settings", "yes") != "yes") ...[
                 const SizedBox(height: 8),
@@ -635,7 +694,8 @@ class PageGroupAddEditState extends State<PageGroupAddEdit> {
       floatingActionButton: FloatingActionButton(
         heroTag: "save_new_group",
         onPressed: () async => saveGroup(titleController.text),
-        shape: const CircleBorder(),
+        shape: const ContinuousRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(28))),
         backgroundColor:
             Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
         foregroundColor: Theme.of(context).colorScheme.onSurface,

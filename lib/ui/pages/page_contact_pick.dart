@@ -40,7 +40,7 @@ class _PageContactsState extends State<PageContacts> {
 
   Widget _body() {
     if (_permissionDenied) {
-      Center(
+      return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

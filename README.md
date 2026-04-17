@@ -4,7 +4,7 @@
 
 # Note Safe — Material You Fork
 
-> A modern fork of [Note Safe by jeerovan](https://github.com/jeerovan/ntsapp) with Material You theming, a refined UI, and ongoing improvements.
+> A modern, Android-specific fork of [Note Safe by jeerovan](https://github.com/jeerovan/ntsapp) with Material You theming, a refined UI, and ongoing improvements. Support for other platforms will be considered in the future.
 
 Notes app with a chat-like interface and end-to-end encrypted cloud backup/sync.
 
@@ -15,9 +15,8 @@ Notes app with a chat-like interface and end-to-end encrypted cloud backup/sync.
 > [!WARNING]  
 > **Important Migration Notice:** If you are installing this fork seamlessly over the original Note Safe application, **you must safely back up your data first!** Because cryptographic security signatures and local database architectures may incrementally differ, please ensure you export all your notes as a secure `.zip` backup from within the original app *before* overwriting it with this version. You can then instantly restore your data inside the fork!
 
-* Android — [GitHub Releases](https://github.com/FarhanZafarr-9/ntsapp/releases/)
-* Original Play Store — [Note Safe on Play Store](https://play.google.com/store/apps/details?id=com.makenotetoself) *(original app by jeerovan)*
-* Fork support for Windows / Linux / macOS / iOS — Coming soon
+*   **Android (Fully Supported)** — [GitHub Releases](https://github.com/FarhanZafarr-9/ntsapp/releases/)
+*   **Other Platforms (Planned)** — Support for Windows, Linux, macOS, and iOS will be evaluated in the future.
 
 [<img src="https://raw.githubusercontent.com/mateusz-bak/openreads/master/doc/github/get-it-on-github.png"
     alt="Get it on Github"

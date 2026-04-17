@@ -24,6 +24,20 @@ class _PageArchivedState extends State<PageArchived>
   final ValueNotifier<bool> _isAnyItemSelected = ValueNotifier(false);
   final ValueNotifier<int> _selectionCount = ValueNotifier(0);
 
+  // ── Monochromatic icon badge ──────────────────────────────────────────────
+  Widget _buildIconBadge(IconData icon) {
+    final color = Theme.of(context).colorScheme.onSurfaceVariant;
+    return Container(
+      width: 34,
+      height: 34,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Icon(icon, size: 18, color: color),
+    );
+  }
+
   VoidCallback? _onDelete;
   VoidCallback? _onRestore;
   VoidCallback? _onSelectAll;
@@ -122,15 +136,17 @@ class _PageArchivedState extends State<PageArchived>
                     child: Text("All", style: TextStyle(color: cs.primary)),
                   ),
                   IconButton(
-                    icon: const Icon(LucideIcons.archiveRestore),
+                    icon: _buildIconBadge(LucideIcons.archiveRestore),
                     tooltip: "Restore",
                     onPressed: _restoreSelectedItems,
                   ),
+                  const SizedBox(width: 4),
                   IconButton(
-                    icon: const Icon(LucideIcons.trash2),
+                    icon: _buildIconBadge(LucideIcons.trash2),
                     tooltip: "Delete permanently",
                     onPressed: () => _showDeleteConfirmation(context),
                   ),
+                  const SizedBox(width: 8),
                 ],
               );
             },
