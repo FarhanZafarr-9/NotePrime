@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:ntsapp/utils/enums.dart';
 import 'package:ntsapp/models/model_category_group.dart';
@@ -32,6 +33,7 @@ class _PageCategoryAddEditState extends State<PageCategoryAddEdit> {
   Uint8List? thumbnail;
   String? title;
   String? colorCode;
+  String? icon;
 
   bool processing = false;
   bool itemChanged = false;
@@ -48,11 +50,11 @@ class _PageCategoryAddEditState extends State<PageCategoryAddEdit> {
   Future<void> init() async {
     if (category != null) {
       setState(() {
-        category = category;
         thumbnail = category!.thumbnail;
         title = category!.title;
         categoryController.text = category!.title;
         colorCode = category!.color;
+        icon = category!.icon;
       });
     } else {
       int positionCount = await ModelCategoryGroup.getCategoriesGroupsCount();
@@ -63,20 +65,58 @@ class _PageCategoryAddEditState extends State<PageCategoryAddEdit> {
     }
   }
 
+  Future<void> pickImage() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 400,
+      maxHeight: 400,
+    );
+
+    if (image != null) {
+      final bytes = await image.readAsBytes();
+      setState(() {
+        thumbnail = bytes;
+        icon = null; // Clear emoji if picture is picked
+        itemChanged = true;
+      });
+    }
+  }
+
+  Future<void> pickEmoji() async {
+    String? pickedEmoji = await showDialog<String>(
+      context: context,
+      builder: (context) => const WidgetEmojiPicker(),
+    );
+
+    if (pickedEmoji != null) {
+      setState(() {
+        icon = pickedEmoji;
+        thumbnail = null; // Clear picture if emoji is picked
+        itemChanged = true;
+      });
+    }
+  }
+
   void saveCategory(String text) async {
     title = text.trim();
     if (title!.isEmpty) return;
     if (itemChanged) {
       if (category == null) {
-        ModelCategory newCategory = await ModelCategory.fromMap(
-            {"title": title, "color": colorCode, "thumbnail": thumbnail});
+        ModelCategory newCategory = await ModelCategory.fromMap({
+          "title": title,
+          "color": colorCode,
+          "thumbnail": thumbnail,
+          "icon": icon,
+        });
         await newCategory.insert();
-        await signalToUpdateHome(); // update home list widget
+        await signalToUpdateHome();
       } else {
         category!.thumbnail = thumbnail;
         category!.title = title!;
         category!.color = colorCode ?? category!.color;
-        await category!.update(["thumbnail", "title", "color"]);
+        category!.icon = icon;
+        await category!.update(["thumbnail", "title", "color", "icon"]);
         EventStream().publish(
             AppEvent(type: EventType.changedCategoryId, value: category!.id));
       }
@@ -87,14 +127,6 @@ class _PageCategoryAddEditState extends State<PageCategoryAddEdit> {
       if (mounted) Navigator.of(context).pop();
     }
   }
-
-  @override
-  void dispose() {
-    super.dispose();
-  }
-
-
-  // ── UI helpers ────────────────────────────────────────────────────────────
 
   Widget _sectionLabel(String text) {
     return Text(
@@ -116,10 +148,13 @@ class _PageCategoryAddEditState extends State<PageCategoryAddEdit> {
     Widget? trailing,
     Color? labelColor,
     Color? tileColor,
+    bool useTransparent = false,
   }) {
     final cs = Theme.of(context).colorScheme;
     return Material(
-      color: tileColor ?? cs.onSurface.withValues(alpha: 0.06),
+      color: useTransparent
+          ? Colors.transparent
+          : tileColor ?? cs.onSurface.withValues(alpha: 0.06),
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
@@ -140,6 +175,58 @@ class _PageCategoryAddEditState extends State<PageCategoryAddEdit> {
               if (trailing != null) trailing,
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLeadingIcon(IconData icon, {Color? color}) {
+    final cs = Theme.of(context).colorScheme;
+    final themeColor = color ?? cs.onSurfaceVariant;
+    return Container(
+      width: 32,
+      height: 32,
+      decoration: BoxDecoration(
+        color: themeColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Icon(icon, size: 16, color: themeColor),
+    );
+  }
+
+  Widget _collapsibleSection({
+    required BuildContext context,
+    required String label,
+    required IconData icon,
+    required List<Widget> children,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: cs.onSurface.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16), side: BorderSide.none),
+          collapsedShape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16), side: BorderSide.none),
+          visualDensity: VisualDensity.compact,
+          initiallyExpanded: false,
+          leading: Icon(icon, size: 18, color: cs.primary),
+          title: Text(
+            label,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: cs.onSurface,
+            ),
+          ),
+          childrenPadding: const EdgeInsets.only(bottom: 8),
+          children: children,
         ),
       ),
     );
@@ -167,76 +254,143 @@ class _PageCategoryAddEditState extends State<PageCategoryAddEdit> {
               )
             : null,
       ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _sectionLabel("Title"),
-            const SizedBox(height: 8),
-            TextField(
-              controller: categoryController,
-              textCapitalization: TextCapitalization.sentences,
-              autofocus: category == null ? false : true,
-              style: TextStyle(color: cs.onSurface, fontSize: 16),
-              textInputAction: TextInputAction.done,
-              onSubmitted: saveCategory,
-              decoration: InputDecoration(
-                hintText: 'Category title',
-                hintStyle: TextStyle(
-                    color: cs.onSurfaceVariant.withValues(alpha: 0.5),
-                    fontWeight: FontWeight.w400),
-                filled: true,
-                fillColor: cs.onSurface.withValues(alpha: 0.06),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: WidgetCategoryGroupAvatar(
+                  type: "category",
+                  size: 80,
+                  color: colorCode ?? "#06b6d4",
+                  title: title ?? "",
+                  thumbnail: thumbnail,
+                  icon: icon,
                 ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(
-                      color: cs.onSurface.withValues(alpha: 0.15), width: 0.75),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               ),
-              onChanged: (value) {
-                title = value.trim();
-                itemChanged = true;
-              },
-            ),
-            const SizedBox(height: 24),
-            _sectionLabel("Color"),
-            const SizedBox(height: 8),
-            _tappableTile(
-              context: context,
-              onTap: () async {
-                Color? pickedColor = await showDialog<Color>(
-                  context: context,
-                  builder: (context) => ColorPickerDialog(
-                    color: colorCode,
+              const SizedBox(height: 32),
+              _sectionLabel("Title"),
+              const SizedBox(height: 8),
+              TextField(
+                controller: categoryController,
+                textCapitalization: TextCapitalization.sentences,
+                autofocus: false,
+                style: TextStyle(color: cs.onSurface, fontSize: 16),
+                textInputAction: TextInputAction.done,
+                onSubmitted: saveCategory,
+                decoration: InputDecoration(
+                  hintText: 'Category title',
+                  hintStyle: TextStyle(
+                      color: cs.onSurfaceVariant.withValues(alpha: 0.5),
+                      fontWeight: FontWeight.w400),
+                  filled: true,
+                  fillColor: cs.onSurface.withValues(alpha: 0.06),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
                   ),
-                );
-
-                if (pickedColor != null) {
-                  setState(() {
-                    itemChanged = true;
-                    colorCode = colorToHex(pickedColor);
-                  });
-                }
-              },
-              leading: Icon(
-                Icons.workspaces,
-                size: 18,
-                color: colorFromHex(colorCode ?? "#5dade2"),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                        color: cs.onSurface.withValues(alpha: 0.15), width: 0.75),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                ),
+                onChanged: (value) {
+                  title = value.trim();
+                  itemChanged = true;
+                },
               ),
-              label: "Change color",
-            ),
-          ],
+              const SizedBox(height: 24),
+              _collapsibleSection(
+                context: context,
+                label: "Identity",
+                icon: LucideIcons.fingerprint,
+                children: [
+                  _tappableTile(
+                    context: context,
+                    useTransparent: true,
+                    onTap: () async {
+                      Color? pickedColor = await showDialog<Color>(
+                        context: context,
+                        builder: (context) => ColorPickerDialog(
+                          color: colorCode,
+                        ),
+                      );
+                      if (pickedColor != null) {
+                        setState(() {
+                          itemChanged = true;
+                          colorCode = colorToHex(pickedColor);
+                        });
+                      }
+                    },
+                    leading: _buildLeadingIcon(
+                      LucideIcons.palette,
+                      color: colorFromHex(colorCode ?? "#5dade2"),
+                    ),
+                    label: "Change theme color",
+                    trailing: (thumbnail == null && icon == null)
+                        ? Icon(LucideIcons.checkCircle2,
+                            size: 18, color: cs.primary)
+                        : null,
+                  ),
+                  _tappableTile(
+                    context: context,
+                    useTransparent: true,
+                    onTap: pickEmoji,
+                    leading: _buildLeadingIcon(LucideIcons.smile),
+                    label: "Pick an emoji",
+                    trailing: icon != null
+                        ? Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(icon!,
+                                  style: const TextStyle(fontSize: 16)),
+                              const SizedBox(width: 8),
+                              Icon(LucideIcons.checkCircle2,
+                                  size: 18, color: cs.primary),
+                            ],
+                          )
+                        : null,
+                  ),
+                  _tappableTile(
+                    context: context,
+                    useTransparent: true,
+                    onTap: pickImage,
+                    leading: _buildLeadingIcon(LucideIcons.image),
+                    label: "Upload a picture",
+                    trailing: thumbnail != null
+                        ? Icon(LucideIcons.checkCircle2,
+                            size: 18, color: cs.primary)
+                        : null,
+                  ),
+                  if (thumbnail != null || icon != null)
+                    _tappableTile(
+                      context: context,
+                      useTransparent: true,
+                      onTap: () {
+                        setState(() {
+                          thumbnail = null;
+                          icon = null;
+                          itemChanged = true;
+                        });
+                      },
+                      leading: _buildLeadingIcon(LucideIcons.trash2,
+                          color: cs.error),
+                      label: "Reset to default icon",
+                      labelColor: cs.error,
+                    ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
       floatingActionButton: FloatingActionButton(
@@ -244,9 +398,9 @@ class _PageCategoryAddEditState extends State<PageCategoryAddEdit> {
         onPressed: () => saveCategory(categoryController.text),
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16)),
-        backgroundColor: cs.onSurface.withValues(alpha: 0.1),
-        foregroundColor: cs.onSurface,
-        elevation: 0,
+        backgroundColor: cs.primary,
+        foregroundColor: cs.onPrimary,
+        elevation: 4,
         child: const Icon(LucideIcons.check),
       ),
     );

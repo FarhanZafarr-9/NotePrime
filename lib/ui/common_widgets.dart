@@ -259,33 +259,61 @@ class WidgetCategoryGroupAvatar extends StatelessWidget {
   final double size;
   final String color;
   final String title;
+  final String? icon;
 
-  const WidgetCategoryGroupAvatar(
-      {super.key,
-      required this.type,
-      required this.size,
-      this.thumbnail,
-      required this.color,
-      required this.title});
+  const WidgetCategoryGroupAvatar({
+    super.key,
+    required this.type,
+    required this.size,
+    this.thumbnail,
+    required this.color,
+    required this.title,
+    this.icon,
+  });
 
   @override
   Widget build(BuildContext context) {
     final parsedColor = colorFromHex(color);
 
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: parsedColor.withValues(alpha: 0.12),
+    Widget content;
+    if (thumbnail != null) {
+      content = ClipRRect(
         borderRadius: BorderRadius.circular(10),
-      ),
-      child: Center(
+        child: Image.memory(
+          thumbnail!,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+        ),
+      );
+    } else if (icon != null && icon!.isNotEmpty) {
+      content = Center(
+        child: Text(
+          icon!,
+          style: TextStyle(fontSize: size * 0.5),
+        ),
+      );
+    } else {
+      content = Center(
         child: Icon(
           type == "group" ? Icons.circle : Icons.workspaces,
           size: type == "group" ? 14 : 20,
           color: parsedColor,
         ),
+      );
+    }
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: thumbnail != null ? Colors.transparent : parsedColor.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(10),
+        border: thumbnail != null 
+            ? Border.all(color: parsedColor.withValues(alpha: 0.2), width: 1)
+            : null,
       ),
+      child: content,
     );
   }
 }
@@ -311,6 +339,9 @@ class WidgetCategoryGroup extends StatelessWidget {
         color: categoryGroup.color,
         title: categoryGroup.title,
         thumbnail: categoryGroup.thumbnail,
+        icon: categoryGroup.type == "group"
+            ? categoryGroup.group?.icon
+            : categoryGroup.category?.icon,
       ),
       horizontalTitleGap: 20.0,
       title: Row(
@@ -1568,6 +1599,160 @@ class _ImageDownloadButtonState extends State<ImageDownloadButton> {
           size: widget.iconSize / 2,
         ),
         onPressed: widget.onPressed,
+      ),
+    );
+  }
+}
+
+class WidgetEmojiPicker extends StatefulWidget {
+  const WidgetEmojiPicker({super.key});
+
+  @override
+  State<WidgetEmojiPicker> createState() => _WidgetEmojiPickerState();
+}
+
+class _WidgetEmojiPickerState extends State<WidgetEmojiPicker> {
+  final Map<String, List<String>> emojiCategories = {
+    'Recent': ['📁', '📂', '📑', '📔', '📝', '📓', '🎨', '✈️', '🚀', '🌟'],
+    'Smiles': ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🥸', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕'],
+    'Office': ['📁', '📂', '🗂️', '📅', '📆', '🗒️', '🗓️', '📖', '📘', '📗', '📙', '📓', '📒', '📜', '📄', '📰', '📑', '🔖', '🏷️', '💰', '💳', '💎', '⚖️', '⚙️', '🛠️', '⚒️', '⛏️', '🔩', '🔧', '🧱', '⛓️', '🪑', '🛏️', '🛋️', '⌛', '⏳', '⌚', '⏰', '⏱️', '⏲️', '🕯️', '💡', '🔦', '🏮', '🔍', '🔎'],
+    'Nature': ['🌱', '🪴', '🌲', '🌳', '🌴', '🌵', '🌾', '🌿', '☘️', '🍀', '🍁', '🍂', '🍃', '🍄', '🐚', '🌎', '🌍', '🌏', '🌕', '🌖', '🌗', '🌘', '🌑', '🌓', '🌙', '☀️', '🌝', '🌞', '🪐', '🌟', '🌠', '🌌', '☁️', '⛅', '⛈️', '🌤️', '🌥️', '🌦️', '🌧️', '🌨️', '🌩️', '🌪️', '🌫️', '🌬️', '🌀', '🌈', '🌅', '🌄'],
+    'Travel': ['🚗', '🚕', '🚙', '🚌', '🚎', '🏎️', '🚓', '🚑', '🚒', '🚐', '🛻', '🚚', '🚛', '🚜', '🛵', '🏍️', '🚲', '🛴', '✈️', '🛫', '🛬', '🚁', '🚀', '🛸', '🛰️', '⛵', '🛶', '🚤', '🛳️', '⛴️', '🚢', '⚓', '⛽', '🚧', '🛑', '🚥', '🚦', '🗺️', '🗼', '🏰', '🏯', '🏟️', '🎡', '🎢'],
+    'Shapes': ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '☮️', '✝️', '☪️', '🕉️', '☸️', '✡️', '🔯', '☯️', '☦️', '🛐', '♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑', '♒', '♓', '🆔', '⚛️', '☢️', '☣️', '📴', '📳', '➕', '➖', '✖️', '➗', '♾️', '‼️', '⁉️', '❓', '❔', '❕', '❗', '〰️', '💱', '💲', '🔱', '📛', '🔰', '⭕', '✅', '✔️', '❌', '❎', '➰', '➿', '〽️', '✳️', '✴️', '❇️', '©️', '®️', '™️'],
+  };
+
+  String selectedCategory = 'Smiles';
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+      child: Container(
+        width: 400,
+        height: 520,
+        decoration: BoxDecoration(
+          color: isDark ? cs.surfaceContainerHigh : Colors.white,
+          borderRadius: BorderRadius.circular(28),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.15),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            // ── Header ──────────────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 20, 16, 8),
+              child: Row(
+                children: [
+                  Text(
+                    "Select Emoji",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: cs.onSurface,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: Icon(LucideIcons.x, size: 20, color: cs.onSurfaceVariant),
+                    style: IconButton.styleFrom(
+                      backgroundColor: cs.onSurface.withValues(alpha: 0.05),
+                      padding: const EdgeInsets.all(8),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // ── Category Tabs (Fluent inspired) ─────────────────────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  children: emojiCategories.keys.map((cat) {
+                    bool isSelected = selectedCategory == cat;
+                    return GestureDetector(
+                      onTap: () => setState(() => selectedCategory = cat),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        margin: const EdgeInsets.only(right: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: isSelected ? cs.primary : Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isSelected ? Colors.transparent : cs.onSurface.withValues(alpha: 0.1),
+                            width: 1,
+                          ),
+                        ),
+                        child: Text(
+                          cat,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                            color: isSelected ? cs.onPrimary : cs.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
+            // ── Emoji Grid ──────────────────────────────────────────────────
+            Expanded(
+              child: Container(
+                margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                decoration: BoxDecoration(
+                  color: cs.onSurface.withValues(alpha: 0.03),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: cs.onSurface.withValues(alpha: 0.05)),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: GridView.builder(
+                  padding: const EdgeInsets.all(12),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 6,
+                    mainAxisSpacing: 10,
+                    crossAxisSpacing: 10,
+                  ),
+                  itemCount: emojiCategories[selectedCategory]!.length,
+                  itemBuilder: (context, index) {
+                    final e = emojiCategories[selectedCategory]![index];
+                    return Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () => Navigator.pop(context, e),
+                        borderRadius: BorderRadius.circular(12),
+                        hoverColor: cs.primary.withValues(alpha: 0.1),
+                        child: Center(
+                          child: Text(
+                            e,
+                            style: const TextStyle(fontSize: 28),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

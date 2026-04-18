@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:ntsapp/utils/enums.dart';
 import 'package:ntsapp/models/model_category.dart';
@@ -37,8 +38,9 @@ class PageGroupAddEditState extends State<PageGroupAddEdit> {
   bool processing = false;
   bool itemChanged = false;
 
-  bool showDateTime = true;
-  bool showNoteBorder = true;
+  bool showDate = true;
+  bool showTime = true;
+  bool showNoteBorder = false;
   bool linkPreview = true;
   bool sortOldestFirst = false;
   bool mediaGallery = false;
@@ -48,6 +50,7 @@ class PageGroupAddEditState extends State<PageGroupAddEdit> {
   String title = "";
   Uint8List? thumbnail;
   String? colorCode;
+  String? icon;
   ModelCategory? category;
   String dateTitle = getNoteGroupDateTitle();
   Map<String, dynamic>? groupData;
@@ -74,10 +77,19 @@ class PageGroupAddEditState extends State<PageGroupAddEdit> {
       previousCategory = category;
       colorCode = widget.group!.color;
       groupData = widget.group!.data;
+      icon = widget.group!.icon;
       if (groupData != null) {
+        if (groupData!.containsKey("show_date")) {
+          showDate = groupData!["show_date"] == 1;
+        }
+        if (groupData!.containsKey("show_time")) {
+          showTime = groupData!["show_time"] == 1;
+        }
+        // Compatibility for old "date_time" key
         if (groupData!.containsKey("date_time")) {
-          int dateTimeInt = groupData!["date_time"];
-          showDateTime = dateTimeInt == 1;
+          bool val = groupData!["date_time"] == 1;
+          showDate = val;
+          showTime = val;
         }
         if (groupData!.containsKey("note_border")) {
           int noteBorderInt = groupData!["note_border"];
@@ -129,6 +141,39 @@ class PageGroupAddEditState extends State<PageGroupAddEdit> {
     }
   }
 
+  Future<void> pickImage() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 400,
+      maxHeight: 400,
+    );
+
+    if (image != null) {
+      final bytes = await image.readAsBytes();
+      setState(() {
+        thumbnail = bytes;
+        icon = null; // Clear emoji if picture is picked
+        itemChanged = true;
+      });
+    }
+  }
+
+  Future<void> pickEmoji() async {
+    String? pickedEmoji = await showDialog<String>(
+      context: context,
+      builder: (context) => const WidgetEmojiPicker(),
+    );
+
+    if (pickedEmoji != null) {
+      setState(() {
+        icon = pickedEmoji;
+        thumbnail = null; // Clear picture if emoji is picked
+        itemChanged = true;
+      });
+    }
+  }
+
   Future<void> saveGroup(String text) async {
     title = text.trim();
     if (title.isEmpty) return;
@@ -143,6 +188,7 @@ class PageGroupAddEditState extends State<PageGroupAddEdit> {
           "title": title,
           "data": groupData,
           "color": colorCode,
+          "icon": icon,
         });
         await newGroup.insert();
 
@@ -159,8 +205,9 @@ class PageGroupAddEditState extends State<PageGroupAddEdit> {
         widget.group!.categoryId = categoryId;
         widget.group!.color = colorCode ?? widget.group!.color;
         widget.group!.data = groupData;
+        widget.group!.icon = icon;
         await widget.group!
-            .update(["thumbnail", "title", "category_id", "color", "data"]);
+            .update(["thumbnail", "title", "category_id", "color", "data", "icon"]);
 
         EventStream().publish(
             AppEvent(type: EventType.changedGroupId, value: widget.group!.id));
@@ -221,16 +268,29 @@ class PageGroupAddEditState extends State<PageGroupAddEdit> {
     }
   }
 
-  Future<void> setShowDateTime(bool show) async {
+  Future<void> setShowDate(bool show) async {
     itemChanged = true;
     setState(() {
-      showDateTime = show;
+      showDate = show;
     });
-    int showTimeStamp = showDateTime ? 1 : 0;
+    int val = showDate ? 1 : 0;
     if (groupData != null) {
-      groupData!["date_time"] = showTimeStamp;
+      groupData!["show_date"] = val;
     } else {
-      groupData = {"date_time": showTimeStamp};
+      groupData = {"show_date": val};
+    }
+  }
+
+  Future<void> setShowTime(bool show) async {
+    itemChanged = true;
+    setState(() {
+      showTime = show;
+    });
+    int val = showTime ? 1 : 0;
+    if (groupData != null) {
+      groupData!["show_time"] = val;
+    } else {
+      groupData = {"show_time": val};
     }
   }
 
@@ -324,10 +384,13 @@ class PageGroupAddEditState extends State<PageGroupAddEdit> {
     Widget? trailing,
     Color? labelColor,
     Color? tileColor,
+    bool useTransparent = false,
   }) {
     final cs = Theme.of(context).colorScheme;
     return Material(
-      color: tileColor ?? cs.onSurface.withValues(alpha: 0.06),
+      color: useTransparent
+          ? Colors.transparent
+          : tileColor ?? cs.onSurface.withValues(alpha: 0.06),
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
@@ -389,6 +452,20 @@ class PageGroupAddEditState extends State<PageGroupAddEdit> {
     );
   }
 
+  Widget _buildLeadingIcon(IconData icon, {Color? color}) {
+    final cs = Theme.of(context).colorScheme;
+    final themeColor = color ?? cs.onSurfaceVariant;
+    return Container(
+      width: 32,
+      height: 32,
+      decoration: BoxDecoration(
+        color: themeColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Icon(icon, size: 16, color: themeColor),
+    );
+  }
+
   Widget _collapsibleSection({
     required BuildContext context,
     required String label,
@@ -405,9 +482,10 @@ class PageGroupAddEditState extends State<PageGroupAddEdit> {
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
-          shape: const RoundedRectangleBorder(side: BorderSide.none),
-          collapsedShape:
-              const RoundedRectangleBorder(side: BorderSide.none),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16), side: BorderSide.none),
+          collapsedShape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16), side: BorderSide.none),
           visualDensity: VisualDensity.compact,
           initiallyExpanded: false,
           leading: Icon(icon, size: 18, color: cs.primary),
@@ -436,6 +514,7 @@ class PageGroupAddEditState extends State<PageGroupAddEdit> {
       setColorCode();
     }
     String pageTitle = widget.group == null ? "Add group" : "Edit group";
+    final cs = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -460,6 +539,17 @@ class PageGroupAddEditState extends State<PageGroupAddEdit> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Center(
+                child: WidgetCategoryGroupAvatar(
+                  type: "group",
+                  size: 80,
+                  color: colorCode ?? "#06b6d4",
+                  title: title,
+                  thumbnail: thumbnail,
+                  icon: icon,
+                ),
+              ),
+              const SizedBox(height: 32),
               _sectionLabel("Title"),
               const SizedBox(height: 8),
               TextField(
@@ -509,31 +599,83 @@ class PageGroupAddEditState extends State<PageGroupAddEdit> {
                 },
               ),
               const SizedBox(height: 24),
-              _sectionLabel("Color"),
-              const SizedBox(height: 8),
-              _tappableTile(
+              _collapsibleSection(
                 context: context,
-                onTap: () async {
-                  Color? pickedColor = await showDialog<Color>(
+                label: "Identity",
+                icon: LucideIcons.fingerprint,
+                children: [
+                  _tappableTile(
                     context: context,
-                    builder: (context) => ColorPickerDialog(color: colorCode),
-                  );
-                  if (pickedColor != null) {
-                    setState(() {
-                      itemChanged = true;
-                      colorCode = colorToHex(pickedColor);
-                    });
-                  }
-                },
-                leading: Container(
-                  width: 22,
-                  height: 22,
-                  decoration: BoxDecoration(
-                    color: colorFromHex(colorCode ?? "#00BCD4"),
-                    shape: BoxShape.circle,
+                    useTransparent: true,
+                    onTap: () async {
+                      Color? pickedColor = await showDialog<Color>(
+                        context: context,
+                        builder: (context) =>
+                            ColorPickerDialog(color: colorCode),
+                      );
+                      if (pickedColor != null) {
+                        setState(() {
+                          itemChanged = true;
+                          colorCode = colorToHex(pickedColor);
+                        });
+                      }
+                    },
+                    leading: _buildLeadingIcon(
+                      LucideIcons.palette,
+                      color: colorFromHex(colorCode ?? "#00BCD4"),
+                    ),
+                    label: "Change theme color",
+                    trailing: (thumbnail == null && icon == null)
+                        ? Icon(LucideIcons.checkCircle2,
+                            size: 18, color: cs.primary)
+                        : null,
                   ),
-                ),
-                label: "Change color",
+                  _tappableTile(
+                    context: context,
+                    useTransparent: true,
+                    onTap: pickEmoji,
+                    leading: _buildLeadingIcon(LucideIcons.smile),
+                    label: "Pick an emoji",
+                    trailing: icon != null
+                        ? Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(icon!,
+                                  style: const TextStyle(fontSize: 16)),
+                              const SizedBox(width: 8),
+                              Icon(LucideIcons.checkCircle2,
+                                  size: 18, color: cs.primary),
+                            ],
+                          )
+                        : null,
+                  ),
+                  _tappableTile(
+                    context: context,
+                    useTransparent: true,
+                    onTap: pickImage,
+                    leading: _buildLeadingIcon(LucideIcons.image),
+                    label: "Upload a picture",
+                    trailing: thumbnail != null
+                        ? Icon(LucideIcons.checkCircle2,
+                            size: 18, color: cs.primary)
+                        : null,
+                  ),
+                  if (thumbnail != null || icon != null)
+                    _tappableTile(
+                      context: context,
+                      useTransparent: true,
+                      onTap: () {
+                        setState(() {
+                          thumbnail = null;
+                          icon = null;
+                          itemChanged = true;
+                        });
+                      },
+                      leading: _buildLeadingIcon(LucideIcons.trash2, color: cs.error),
+                      label: "Reset to default icon",
+                      labelColor: cs.error,
+                    ),
+                ],
               ),
               const SizedBox(height: 24),
               _sectionLabel("Category"),
@@ -573,12 +715,22 @@ class PageGroupAddEditState extends State<PageGroupAddEdit> {
                 children: [
                   _settingsToggleTile(
                     context: context,
-                    icon: LucideIcons.clock9,
-                    label: 'Date / Time',
-                    value: showDateTime,
+                    icon: LucideIcons.calendar,
+                    label: 'Show Dates',
+                    value: showDate,
                     onChanged:
                         ModelSetting.get("use_group_settings", "yes") == "yes"
-                            ? setShowDateTime
+                            ? setShowDate
+                            : (v) {},
+                  ),
+                  _settingsToggleTile(
+                    context: context,
+                    icon: LucideIcons.clock,
+                    label: 'Show Time Pills',
+                    value: showTime,
+                    onChanged:
+                        ModelSetting.get("use_group_settings", "yes") == "yes"
+                            ? setShowTime
                             : (v) {},
                   ),
                   _settingsToggleTile(
@@ -696,10 +848,9 @@ class PageGroupAddEditState extends State<PageGroupAddEdit> {
         onPressed: () async => saveGroup(titleController.text),
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16)),
-        backgroundColor:
-            Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
-        foregroundColor: Theme.of(context).colorScheme.onSurface,
-        elevation: 0,
+        backgroundColor: cs.primary,
+        foregroundColor: cs.onPrimary,
+        elevation: 4,
         child: Icon(widget.group == null ? Icons.arrow_forward : Icons.check),
       ),
     );

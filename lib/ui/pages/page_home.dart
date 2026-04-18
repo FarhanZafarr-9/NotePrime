@@ -117,7 +117,8 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
 
     switch (event.type) {
       case EventType.authorise:
-        if (requiresAuthentication) {
+        // Only trigger authentication if required and not already in progress
+        if (requiresAuthentication && !AuthGuard.isAuthenticating) {
           checkAuthAndLoad();
         }
         break;
@@ -272,7 +273,12 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
   }
 
   Future<void> checkAuthAndLoad() async {
-    if (isAuthenticating) return;
+    // Prevent multiple simultaneous auth checks
+    if (isAuthenticating) {
+      logger.debug("checkAuthAndLoad already in progress, skipping");
+      return;
+    }
+
     isAuthenticating = true;
     appName = await secureStorage.read(key: AppString.appName.string);
     await checkUpdateStateVariables();
@@ -326,6 +332,12 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
   }
 
   Future<void> _authenticateOnStart() async {
+    // Prevent duplicate authentication
+    if (AuthGuard.isAuthenticating) {
+      logger.debug("Authentication already in progress, skipping");
+      return;
+    }
+
     try {
       AuthGuard.isAuthenticating = true;
       if (Platform.isIOS) await Future.delayed(Duration(milliseconds: 100));
@@ -344,7 +356,9 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
     } catch (e, s) {
       logger.error("_authenticateOnStart", error: e, stackTrace: s);
     } finally {
-      AuthGuard.isAuthenticating = false;
+      Future.delayed(const Duration(milliseconds: 600), () {
+        AuthGuard.isAuthenticating = false;
+      });
       AuthGuard.lastActiveAt = DateTime.now();
     }
   }
@@ -440,6 +454,12 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
     }
 
     if (isGroupLocked) {
+      // Prevent duplicate authentication for locked groups
+      if (AuthGuard.isAuthenticating) {
+        logger.debug("Already authenticating for group lock, skipping");
+        return;
+      }
+
       try {
         AuthGuard.isAuthenticating = true;
         bool authenticated = await _auth.authenticate(
@@ -464,7 +484,9 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
         }
         return;
       } finally {
-        AuthGuard.isAuthenticating = false;
+        Future.delayed(const Duration(milliseconds: 600), () {
+          AuthGuard.isAuthenticating = false;
+        });
         AuthGuard.lastActiveAt = DateTime.now();
       }
     }
@@ -1152,13 +1174,8 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
 
   // ── Bottom sheet for long-press options ───────────────────────────────────
   void _showOptions(BuildContext context, ModelCategoryGroup categoryGroup) {
-    final cs = Theme.of(context).colorScheme;
     showModalBottomSheet(
       context: context,
-      backgroundColor: cs.surfaceContainerHigh,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
       builder: (BuildContext context) {
         return SafeArea(
           child: Padding(
@@ -1233,10 +1250,10 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
     final cs = Theme.of(context).colorScheme;
     final color = isDanger ? cs.error : cs.onSurfaceVariant;
     return Material(
-      color: cs.onSurface.withValues(alpha: 0.06),
-      borderRadius: BorderRadius.circular(12),
+      color: cs.onSurface.withValues(alpha: 0.04),
+      borderRadius: BorderRadius.circular(16),
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),

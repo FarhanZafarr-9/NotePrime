@@ -47,7 +47,7 @@ class StorageSqlite {
       logger.info("DbPath:$dbPath");
       return await openDatabase(
         dbPath,
-        version: 15,
+        version: 17,
         onConfigure: _onConfigure,
         onCreate: _onCreate,
         onUpgrade: _onUpgrade,
@@ -116,37 +116,36 @@ class StorageSqlite {
   }
 
   Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    if (oldVersion <= 7) {
+    if (oldVersion < 8) {
       await dbMigration_8(db);
-    } else if (oldVersion == 8) {
+    }
+    if (oldVersion < 9) {
       await dbMigration_9(db);
+    }
+    if (oldVersion < 10) {
       await dbMigration_10(db);
+    }
+    if (oldVersion < 11) {
       await dbMigration_11(db);
+    }
+    if (oldVersion < 12) {
       await dbMigration_12(db);
+    }
+    if (oldVersion < 13) {
       await dbMigration_13(db);
+    }
+    if (oldVersion < 14) {
+      // Skipping 14 as it seemed to be a placeholder or combined
+    }
+    if (oldVersion < 15) {
       await dbMigration_15(db);
-    } else if (oldVersion == 9) {
-      await dbMigration_10(db);
-      await dbMigration_11(db);
-      await dbMigration_12(db);
-      await dbMigration_13(db);
-      await dbMigration_15(db);
-    } else if (oldVersion == 10) {
-      await dbMigration_11(db);
-      await dbMigration_12(db);
-      await dbMigration_13(db);
-      await dbMigration_15(db);
-    } else if (oldVersion == 11) {
-      await dbMigration_12(db);
-      await dbMigration_13(db);
-      await dbMigration_15(db);
-    } else if (oldVersion == 12) {
-      await dbMigration_13(db);
-      await dbMigration_15(db);
-    } else if (oldVersion == 13) {
-      await dbMigration_15(db);
-    } else if (oldVersion == 14) {
-      await dbMigration_15(db);
+    }
+    if (oldVersion < 16) {
+      await dbMigration_16(db);
+    }
+    if (oldVersion < 17) {
+      // Ensuring migration 16 runs if it was skipped or failed previously
+      await dbMigration_16(db);
     }
     logger.info('Database upgraded from version $oldVersion to $newVersion');
   }
@@ -175,7 +174,8 @@ class StorageSqlite {
         at INTEGER,
         state INTEGER,
         updated_at INTEGER,
-        thumbnail TEXT
+        thumbnail TEXT,
+        icon TEXT
       )
     ''');
     await db.execute('''
@@ -192,6 +192,7 @@ class StorageSqlite {
         thumbnail TEXT,
         data TEXT,
         state INTEGER,
+        icon TEXT,
         FOREIGN KEY (category_id) REFERENCES category(id) ON DELETE CASCADE
       )
     ''');
@@ -856,6 +857,17 @@ class StorageSqlite {
       END;
     ''');
     await db.execute("INSERT INTO item_fts(item_fts) VALUES('rebuild')");
+  }
+
+  Future<void> dbMigration_16(Database db) async {
+    bool categoryIconExists = await _checkColumnExists(db, 'category', 'icon');
+    if (!categoryIconExists) {
+      await db.execute("ALTER TABLE category ADD COLUMN icon TEXT");
+    }
+    bool groupIconExists = await _checkColumnExists(db, 'itemgroup', 'icon');
+    if (!groupIconExists) {
+      await db.execute("ALTER TABLE itemgroup ADD COLUMN icon TEXT");
+    }
   }
 
   Future<bool> _checkColumnExists(

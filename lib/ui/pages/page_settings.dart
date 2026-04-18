@@ -17,7 +17,6 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_windowmanager_plus/flutter_windowmanager_plus.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter/foundation.dart';
 
@@ -64,7 +63,8 @@ class SettingsPageState extends State<SettingsPage> {
 
   // Display Overrides
   late bool useGroupSettings;
-  late bool globalShowDateTime;
+  late bool globalShowDate;
+  late bool globalShowTime;
   late bool globalShowNoteBorder;
   late bool globalLinkPreview;
   late bool globalSortOldestFirst;
@@ -88,10 +88,12 @@ class SettingsPageState extends State<SettingsPage> {
 
     // Initialize display overrides
     useGroupSettings = ModelSetting.get("use_group_settings", "yes") == "yes";
-    globalShowDateTime =
-        ModelSetting.get("global_show_date_time", "yes") == "yes";
+    globalShowDate =
+        ModelSetting.get("global_show_date", "yes") == "yes";
+    globalShowTime =
+        ModelSetting.get("global_show_time", "yes") == "yes";
     globalShowNoteBorder =
-        ModelSetting.get("global_show_note_border", "yes") == "yes";
+        ModelSetting.get("global_show_note_border", "no") == "yes";
     globalLinkPreview =
         ModelSetting.get("global_link_preview", "yes") == "yes";
     globalSortOldestFirst =
@@ -184,9 +186,14 @@ class SettingsPageState extends State<SettingsPage> {
     await ModelSetting.set("use_group_settings", value ? "yes" : "no");
   }
 
-  Future<void> _setGlobalShowDateTime(bool value) async {
-    setState(() => globalShowDateTime = value);
-    await ModelSetting.set("global_show_date_time", value ? "yes" : "no");
+  Future<void> _setGlobalShowDate(bool value) async {
+    setState(() => globalShowDate = value);
+    await ModelSetting.set("global_show_date", value ? "yes" : "no");
+  }
+
+  Future<void> _setGlobalShowTime(bool value) async {
+    setState(() => globalShowTime = value);
+    await ModelSetting.set("global_show_time", value ? "yes" : "no");
   }
 
   Future<void> _setGlobalShowNoteBorder(bool value) async {
@@ -401,7 +408,7 @@ class SettingsPageState extends State<SettingsPage> {
                 ),
                 onPressed: () {
                   Navigator.pop(context);
-                  const url = 'https://github.com/FarhanZafarr-9/ntsapp';
+                  const url = 'https://github.com/FarhanZafarr-9/NotePrime';
                   openURL(url);
                 },
                 child: const Text('View Fork'),
@@ -481,16 +488,26 @@ class SettingsPageState extends State<SettingsPage> {
     final List<String> fonts = ["Inter", "Roboto Mono", "Lora", "Open Sans"];
     showModalBottomSheet(
       context: context,
-      builder: (context) => ListView(
-        shrinkWrap: true,
-        children: fonts.map((f) => ListTile(
-          title: Text(f, style: GoogleFonts.getFont(f)),
-          trailing: fontFamily == f ? Icon(LucideIcons.check, color: Theme.of(context).colorScheme.primary) : null,
-          onTap: () {
-            _setFontFamily(f);
-            Navigator.pop(context);
-          },
-        )).toList(),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: fonts.map((f) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: _bottomSheetTile(
+                context: context,
+                icon: LucideIcons.type,
+                label: f,
+                color: fontFamily == f ? Theme.of(context).colorScheme.primary : null,
+                onTap: () {
+                  _setFontFamily(f);
+                  Navigator.pop(context);
+                },
+              ),
+            )).toList(),
+          ),
+        ),
       ),
     );
   }
@@ -501,10 +518,6 @@ class SettingsPageState extends State<SettingsPage> {
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: cs.surfaceContainerHigh,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
       builder: (context) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
@@ -548,10 +561,6 @@ class SettingsPageState extends State<SettingsPage> {
     final cs = Theme.of(context).colorScheme;
     showModalBottomSheet(
       context: context,
-      backgroundColor: cs.surfaceContainerHigh,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
       builder: (context) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
@@ -799,6 +808,93 @@ class SettingsPageState extends State<SettingsPage> {
     );
   }
 
+  Widget _buildDevCard() {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      margin: const EdgeInsets.only(top: 12, bottom: 8),
+      child: Material(
+        color: cs.primary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () {
+            const url = 'https://github.com/FarhanZafarr-9/NotePrime';
+            openURL(url);
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: cs.primary.withValues(alpha: 0.2), width: 2),
+                    image: const DecorationImage(
+                      image: AssetImage('assets/avatar.png'),
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            "NotePrime",
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: cs.onSurface,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: cs.primary.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              "v$_appVersion",
+                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: cs.primary),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        "FarhanZafar-9",
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        "farhanzafarr.9@gmail.com",
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: cs.onSurfaceVariant.withValues(alpha: 0.8),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(LucideIcons.github, size: 24, color: cs.primary.withValues(alpha: 0.8)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildSectionHeader(String title) {
     return Padding(
       padding: const EdgeInsets.only(left: 4.0, bottom: 8.0, top: 20.0),
@@ -949,6 +1045,16 @@ Row(
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
         children: <Widget>[
+          _buildDevCard(),
+          _buildSettingsGroup([
+            _SettingsTile(
+              leading: _buildLeadingIcon(LucideIcons.sparkles, Theme.of(context).colorScheme.primary),
+              title: const Text("What's New"),
+              subtitle: const Text("Explore latest NotePrime features"),
+              trailing: _buildTrailingChevron(),
+              onTap: _showChangelog,
+            ),
+          ]),
           // ── Appearance ────────────────────────────────────────────────────
           _buildSectionHeader("Appearance"),
           _buildSettingsGroup([
@@ -1064,15 +1170,29 @@ _buildSectionHeader("Interface"),
             _SettingsTile(
               enabled: !useGroupSettings,
               leading:
-                  _buildLeadingIcon(LucideIcons.clock9, cs.onSurfaceVariant),
-              title: const Text("Show Date & Time"),
-              subtitle: const Text("Display timestamp on messages"),
+                  _buildLeadingIcon(LucideIcons.calendar, cs.onSurfaceVariant),
+              title: const Text("Show Dates"),
+              subtitle: const Text("Display date separators in chat"),
               trailing: Switch(
-                value: globalShowDateTime,
-                onChanged: !useGroupSettings ? _setGlobalShowDateTime : null,
+                value: globalShowDate,
+                onChanged: !useGroupSettings ? _setGlobalShowDate : null,
               ),
               onTap: !useGroupSettings
-                  ? () => _setGlobalShowDateTime(!globalShowDateTime)
+                  ? () => _setGlobalShowDate(!globalShowDate)
+                  : null,
+            ),
+            _SettingsTile(
+              enabled: !useGroupSettings,
+              leading:
+                  _buildLeadingIcon(LucideIcons.clock, cs.onSurfaceVariant),
+              title: const Text("Show Time Pills"),
+              subtitle: const Text("Display timestamp on messages"),
+              trailing: Switch(
+                value: globalShowTime,
+                onChanged: !useGroupSettings ? _setGlobalShowTime : null,
+              ),
+              onTap: !useGroupSettings
+                  ? () => _setGlobalShowTime(!globalShowTime)
                   : null,
             ),
             _SettingsTile(
@@ -1311,12 +1431,6 @@ _buildSectionHeader("Interface"),
               trailing: _buildTrailingChevron(),
               onTap: _openOriginalRepo,
             ),
-            _SettingsTile(
-              leading: _buildLeadingIcon(LucideIcons.bookOpen, cs.primary),
-              title: const Text("What's New in This Fork"),
-              trailing: _buildTrailingChevron(),
-              onTap: _showChangelog,
-            ),
             /* 
             _SettingsTile(
               leading: _buildLeadingIcon(LucideIcons.star, cs.tertiary),
@@ -1364,7 +1478,7 @@ _buildSectionHeader("Interface"),
   // ── Actions ────────────────────────────────────────────────────────────────
 
   void _openForkRepo() {
-    const url = "https://github.com/FarhanZafarr-9/ntsapp";
+    const url = "https://github.com/FarhanZafarr-9/NotePrime";
     openURL(url);
   }
 
@@ -1512,10 +1626,10 @@ _buildSectionHeader("Interface"),
     final cs = Theme.of(context).colorScheme;
     final tileColor = color ?? cs.onSurfaceVariant;
     return Material(
-      color: cs.onSurface.withValues(alpha: 0.06),
-      borderRadius: BorderRadius.circular(12),
+      color: cs.onSurface.withValues(alpha: 0.04),
+      borderRadius: BorderRadius.circular(16),
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),

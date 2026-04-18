@@ -28,6 +28,7 @@ class ModelGroup {
   ModelItem? lastItem;
   Map<String, dynamic>? data;
   int? state;
+  String? icon;
 
   ModelGroup({
     this.id,
@@ -43,6 +44,7 @@ class ModelGroup {
     this.lastItem,
     this.data,
     this.state,
+    this.icon,
   });
 
   Map<String, dynamic> toMap() {
@@ -56,6 +58,7 @@ class ModelGroup {
       'archived_at': archivedAt,
       'color': color,
       'state': state,
+      'icon': icon,
       'data': data == null
           ? null
           : data is String
@@ -132,6 +135,7 @@ class ModelGroup {
       at: getValueFromMap(map, "at", defaultValue: utcNow),
       updatedAt: getValueFromMap(map, "updated_at", defaultValue: utcNow),
       lastItem: lastItem,
+      icon: getValueFromMap(map, 'icon'),
     );
   }
 
@@ -228,6 +232,18 @@ class ModelGroup {
       return await fromMap(map);
     }
     return null;
+  }
+
+  static Future<List<ModelGroup>> allAvailable() async {
+    final dbHelper = StorageSqlite.instance;
+    final db = await dbHelper.database;
+    List<Map<String, dynamic>> rows = await db.query(
+      "itemgroup",
+      where: "archived_at = ?",
+      whereArgs: [0],
+      orderBy: 'updated_at DESC',
+    );
+    return await Future.wait(rows.map((map) => fromMap(map)));
   }
 
   Future<int> insert() async {

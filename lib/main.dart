@@ -231,6 +231,12 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
   final logger = AppLogger(prefixes: ["MainApp"]);
 
   Future<void> _authenticate() async {
+    // Prevent duplicate authentication if already authenticating
+    if (AuthGuard.isAuthenticating) {
+      logger.info("Already authenticating, skipping duplicate request");
+      return;
+    }
+
     try {
       AuthGuard.isAuthenticating = true;
       bool isAuthenticated = await _auth.authenticate(
@@ -247,7 +253,7 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
       }
     } catch (e, s) {
       logger.error("_authenticate", error: e, stackTrace: s);
-      } finally {
+    } finally {
       // Small delay to allow lifecycle events (like 'resumed') to settle after the prompt closes
       Future.delayed(const Duration(milliseconds: 600), () {
         AuthGuard.isAuthenticating = false;
@@ -278,41 +284,77 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
         break;
     }
     // Load dynamic color setting
-    _useDynamicColor = ModelSetting.get("use_dynamic_color", "no") == "yes";
-    // Load custom accent color
-    String? savedAccent = ModelSetting.get("accent_color", null);
-    if (savedAccent != null) {
-      _accentColor = colorFromHex(savedAccent);
+    _useDynamicColor =
+        ModelSetting.get("use_dynamic_color", "no") == "yes" ? true : false;
+    final accentColorSaved = ModelSetting.get("accent_color", null);
+    if (accentColorSaved != null) {
+      try {
+        _accentColor =
+            Color(int.parse(accentColorSaved.replaceFirst('#', '0xFF')));
+      } catch (e) {
+        _accentColor = null;
+      }
     }
-    // Load font family
     _fontFamily = ModelSetting.get("font_family", "Inter");
-    // Apply immersive mode
-    if (ModelSetting.get("immersive_mode", "no") == "yes") {
-      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-    }
-    // Apply screenshot protection
-    _applyScreenshotProtection();
-    // Initialize lock state for cold start
-    if (ModelSetting.get("local_auth", "no") == "yes") {
-      AuthGuard.isLocked.value = true;
-    }
-    //sharing intent
-    if (runningOnMobile) {
-      // Listen to media sharing coming from outside the app while the app is in the memory.
-      _intentSub = ReceiveSharingIntent.instance.getMediaStream().listen(
-          (sharedContents) {
-        setState(() {
-          _sharedContents.clear();
-          for (SharedMediaFile sharedContent in sharedContents) {
-            _sharedContents.add(sharedContent.path);
-          }
-        });
-      }, onError: (err) {
-        logger.error("getIntentDataStream error", error: err);
-      });
 
-      // Get the media sharing coming from outside the app while the app is closed.
-      ReceiveSharingIntent.instance.getInitialMedia().then((sharedContents) {
+    WidgetsBinding.instance.addObserver(this);
+    EventStream().notifier.addListener(_handleAppEvent);
+
+    _listenForSharedContent();
+    _setupQuickActions();
+    _applyScreenshotProtection();
+    _applyImmersiveMode();
+  }
+
+  Future<void> _applyImmersiveMode() async {
+    if (!Platform.isAndroid && !Platform.isIOS) return;
+    try {
+      final isImmersive = ModelSetting.get("immersive_mode", "no") == "yes";
+      if (isImmersive) {
+        SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+      } else {
+        SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+      }
+    } catch (e, s) {
+      logger.error("Immersive mode setting", error: e, stackTrace: s);
+    }
+  }
+
+  Future<void> _applyScreenshotProtection() async {
+    // only protect screen-shots for android
+    if (!Platform.isAndroid) return;
+    try {
+      if (ModelSetting.get("privacy_mode", "no") == "yes") {
+        await FlutterWindowManagerPlus.addFlags(
+            FlutterWindowManagerPlus.FLAG_SECURE);
+      } else {
+        await FlutterWindowManagerPlus.clearFlags(
+            FlutterWindowManagerPlus.FLAG_SECURE);
+      }
+    } catch (e, s) {
+      logger.error("Screen-shot mode setting", error: e, stackTrace: s);
+    }
+  }
+
+  void _listenForSharedContent() async {
+    if (!(Platform.isAndroid || Platform.isIOS)) return;
+
+    // Listen to media sharing coming from outside the app while the app is in the memory.
+    _intentSub =
+        ReceiveSharingIntent.instance.getMediaStream().listen((sharedContents) {
+      setState(() {
+        _sharedContents.clear();
+        for (SharedMediaFile sharedContent in sharedContents) {
+          _sharedContents.add(sharedContent.path);
+        }
+      });
+    }, onError: (err) {
+      logger.error("getMediaStream error", error: err);
+    });
+
+    // Get the media sharing coming from outside the app while the app is closed.
+    ReceiveSharingIntent.instance.getInitialMedia().then((sharedContents) {
+      if (mounted) {
         setState(() {
           _sharedContents.clear();
           for (SharedMediaFile sharedContent in sharedContents) {
@@ -321,80 +363,93 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
           // Tell the library that we are done processing the intent.
           ReceiveSharingIntent.instance.reset();
         });
-      });
-
-      // Quick Actions
-      _quickActions.initialize((String shortcutType) {
-        logger.info("QuickAction triggered: $shortcutType");
-        if (shortcutType == 'action_new_group') {
-          EventStream().publish(AppEvent(type: EventType.navigateToGroup, value: 'new'));
-        } else if (shortcutType.startsWith('group_')) {
-          final groupId = shortcutType.replaceFirst('group_', '');
-          EventStream().publish(AppEvent(type: EventType.navigateToGroup, value: groupId));
-        }
-      });
-    }
-
-    WidgetsBinding.instance.addObserver(this);
-    EventStream().notifier.addListener(_handleAppEvent);
+      }
+    });
   }
 
-  void _applyScreenshotProtection() {
-    if (Platform.isAndroid) {
-      bool enabled = ModelSetting.get("screenshot_protection", "no") == "yes";
-      if (enabled) {
-        FlutterWindowManagerPlus.addFlags(FlutterWindowManagerPlus.FLAG_SECURE);
-      } else {
-        FlutterWindowManagerPlus.clearFlags(FlutterWindowManagerPlus.FLAG_SECURE);
-      }
+  void _setupQuickActions() {
+    if (Platform.isAndroid || Platform.isIOS) {
+      _updateQuickActions();
+      _quickActions.initialize((shortcutType) {
+        if (shortcutType.endsWith('_new')) {
+          EventStream()
+              .publish(AppEvent(type: EventType.navigateToGroup, value: 'new'));
+        } else {
+          final groupId = shortcutType.replaceFirst(RegExp(r'^_'), '');
+          EventStream().publish(
+              AppEvent(type: EventType.navigateToGroup, value: groupId));
+        }
+      });
     }
   }
 
   Future<void> _updateQuickActions() async {
-    final pinnedGroups = await ModelGroup.getPinned();
-    logger.info("Found ${pinnedGroups.length} pinned groups for shortcuts.");
-    final shortcuts = <ShortcutItem>[
-      const ShortcutItem(
-        type: 'action_new_group',
-        localizedTitle: 'New Group',
-        icon: 'ic_launcher',
-      ),
-    ];
-
-    for (var group in pinnedGroups.take(3)) {
-      shortcuts.add(ShortcutItem(
-        type: 'group_${group.id}',
-        localizedTitle: group.title,
-        icon: 'ic_launcher',
+    if (!(Platform.isAndroid || Platform.isIOS)) return;
+    try {
+      final groups = await ModelGroup.allAvailable();
+      final shortcuts = <ShortcutItem>[];
+      shortcuts.add(const ShortcutItem(
+        type: '_new',
+        localizedTitle: 'New Note Group',
+        icon: 'ic_new_note',
       ));
+      for (final group in groups.take(3)) {
+        shortcuts.add(ShortcutItem(
+          type: '_${group.id}',
+          localizedTitle: group.title,
+          icon: 'ic_note',
+        ));
+      }
+      await _quickActions.setShortcutItems(shortcuts);
+    } catch (e, s) {
+      logger.error("Quick Actions setup", error: e, stackTrace: s);
     }
-
-    await Future.delayed(const Duration(milliseconds: 500));
-    _quickActions.setShortcutItems(shortcuts);
-    logger.info("Shortcuts updated with ${shortcuts.length} items");
   }
+
+  bool _wasArtificiallyLockedForPrivacy = false;
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Prevent lifecycle events from triggering auth when already authenticating
     if (AuthGuard.isAuthenticating) {
-      logger.info("Lifecycle change ignored due to active authentication: $state");
+      logger.info(
+          "Lifecycle change ignored due to active authentication: $state");
       return;
+    }
+
+    // Obscure app in recents/app switcher if screenshot protection is enabled.
+    if (state == AppLifecycleState.inactive || state == AppLifecycleState.hidden) {
+      if (ModelSetting.get("screenshot_protection", "no") == "yes") {
+        if (!AuthGuard.isLocked.value) {
+          _wasArtificiallyLockedForPrivacy = true;
+          AuthGuard.isLocked.value = true;
+        }
+      }
     }
 
     if (state == AppLifecycleState.paused) {
       _lastBackgroundAt = DateTime.now();
       AuthGuard.lastActiveAt = DateTime.now(); // Mark last active time when leaving
-      
+
+      // Ensure artificial locks persist if screenshot protection hides it here
+      if (ModelSetting.get("screenshot_protection", "no") == "yes") {
+        if (!AuthGuard.isLocked.value) {
+          _wasArtificiallyLockedForPrivacy = true;
+          AuthGuard.isLocked.value = true;
+        }
+      }
+
       if (ModelSetting.get("local_auth", "no") == "yes") {
         int graceMinutes = int.parse(
             ModelSetting.get("biometric_grace_period", "0").toString());
-        
+
         // If Grace Period is 0 (Immediate), lock directly on paused
         if (graceMinutes == 0) {
-           AuthGuard.isLocked.value = true;
+          AuthGuard.isLocked.value = true;
+          _wasArtificiallyLockedForPrivacy = false; // Escalate to a real lock
         }
       }
-      
+
       SyncUtils().stopAutoSync();
       logger.info("Started Background (Paused)");
     }
@@ -404,20 +459,35 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
         if (_lastBackgroundAt != null) {
           int graceMinutes = int.parse(
               ModelSetting.get("biometric_grace_period", "0").toString());
-          
+
           if (DateTime.now().difference(_lastBackgroundAt!).inMinutes >=
               graceMinutes) {
             AuthGuard.isLocked.value = true;
+            _wasArtificiallyLockedForPrivacy = false; // Escalate to a real lock
           }
         }
-        
-        if (AuthGuard.isLocked.value) {
+
+        // Revert any artificial lock if grace period didn't force a real lock
+        if (_wasArtificiallyLockedForPrivacy) {
+          AuthGuard.isLocked.value = false;
+          _wasArtificiallyLockedForPrivacy = false;
+        }
+
+        // Only publish auth event if locked AND not already authenticating
+        if (AuthGuard.isLocked.value && !AuthGuard.isAuthenticating) {
           EventStream().publish(AppEvent(type: EventType.authorise));
         }
+      } else {
+        // If local_auth is off, always revert artificial privacy locks
+        if (_wasArtificiallyLockedForPrivacy) {
+          AuthGuard.isLocked.value = false;
+          _wasArtificiallyLockedForPrivacy = false;
+        }
       }
-      
+
       SyncUtils().startAutoSync();
       _applyScreenshotProtection();
+      _applyImmersiveMode();
       logger.info("App Resumed, Locked: ${AuthGuard.isLocked.value}");
     }
   }
@@ -441,7 +511,12 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
         _fontFamily = ModelSetting.get("font_family", "Inter");
       });
     } else if (event.type == EventType.authorise) {
-      _authenticate();
+      // Only authenticate if not already in progress
+      if (!AuthGuard.isAuthenticating) {
+        _authenticate();
+      }
+    } else if (event.type == EventType.exitSettings) {
+      _applyImmersiveMode();
     }
   }
 
@@ -458,7 +533,8 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
     setState(() {
       _useDynamicColor = !_useDynamicColor;
     });
-    await ModelSetting.set("use_dynamic_color", _useDynamicColor ? "yes" : "no");
+    await ModelSetting.set(
+        "use_dynamic_color", _useDynamicColor ? "yes" : "no");
   }
 
   // Handle accent color change
@@ -466,7 +542,8 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
     setState(() {
       _accentColor = color;
     });
-    await ModelSetting.set("accent_color", colorToHex(color));
+    await ModelSetting.set("accent_color",
+        '#${color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2)}');
   }
 
   @override
@@ -554,6 +631,7 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
             home: page,
             navigatorObservers: [
               SentryNavigatorObserver(),
+              ImmersiveRouteObserver(onRoutePop: _applyImmersiveMode),
             ],
             debugShowCheckedModeBanner: false,
           );
@@ -605,7 +683,10 @@ class PrivacyShield extends StatelessWidget {
       backgroundColor: Theme.of(context).colorScheme.surface,
       body: GestureDetector(
         onTap: () {
-          EventStream().publish(AppEvent(type: EventType.authorise));
+          // Only trigger auth if not already authenticating
+          if (!AuthGuard.isAuthenticating) {
+            EventStream().publish(AppEvent(type: EventType.authorise));
+          }
         },
         behavior: HitTestBehavior.opaque,
         child: SizedBox(
@@ -619,7 +700,10 @@ class PrivacyShield extends StatelessWidget {
                   width: 100,
                   height: 100,
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .primary
+                        .withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(24),
                   ),
                   child: Icon(
@@ -640,7 +724,11 @@ class PrivacyShield extends StatelessWidget {
                 const SizedBox(height: 24),
                 FilledButton.icon(
                   onPressed: () {
-                    EventStream().publish(AppEvent(type: EventType.authorise));
+                    // Only trigger auth if not already authenticating
+                    if (!AuthGuard.isAuthenticating) {
+                      EventStream()
+                          .publish(AppEvent(type: EventType.authorise));
+                    }
                   },
                   icon: const Icon(LucideIcons.unlock, size: 18),
                   label: const Text("Unlock"),
@@ -651,5 +739,23 @@ class PrivacyShield extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class ImmersiveRouteObserver extends NavigatorObserver {
+  final VoidCallback onRoutePop;
+
+  ImmersiveRouteObserver({required this.onRoutePop});
+
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    super.didPop(route, previousRoute);
+    onRoutePop();
+  }
+
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    super.didPush(route, previousRoute);
+    onRoutePop();
   }
 }

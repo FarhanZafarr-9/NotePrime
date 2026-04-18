@@ -42,16 +42,17 @@ class AppThemes {
         surfaceTintColor: Colors.transparent,
       ),
       bottomSheetTheme: BottomSheetThemeData(
-        backgroundColor: colorScheme.surfaceContainerHigh,
-        modalBackgroundColor: colorScheme.surfaceContainerHigh,
-        elevation: 4,
-        shadowColor: colorScheme.shadow.withValues(alpha: 0.3),
+        backgroundColor: colorScheme.surfaceContainerLow,
+        modalBackgroundColor: colorScheme.surfaceContainerLow,
+        surfaceTintColor: colorScheme.surfaceTint,
+        elevation: 0,
         shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
+        clipBehavior: Clip.antiAlias,
         showDragHandle: true,
-        dragHandleColor: colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
-        dragHandleSize: const Size(36, 4),
+        dragHandleColor: colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+        dragHandleSize: const Size(40, 4),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(

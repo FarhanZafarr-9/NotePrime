@@ -352,10 +352,6 @@ class _PageCategoryGroupsState extends State<PageCategoryGroups> {
   void _showOptions(BuildContext context, ModelGroup group) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
       builder: (BuildContext context) {
         return SafeArea(
           child: Padding(
@@ -427,10 +423,10 @@ class _PageCategoryGroupsState extends State<PageCategoryGroups> {
     final cs = Theme.of(context).colorScheme;
     final color = isDanger ? cs.error : cs.onSurfaceVariant;
     return Material(
-      color: cs.onSurface.withValues(alpha: 0.06),
-      borderRadius: BorderRadius.circular(12),
+      color: cs.onSurface.withValues(alpha: 0.04),
+      borderRadius: BorderRadius.circular(16),
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -469,16 +465,34 @@ class _PageCategoryGroupsState extends State<PageCategoryGroups> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: Text(
-            _isReordering
-                ? "Reordering"
-                : loadedSharedContents || widget.sharedContents.isEmpty
-                    ? category.title
-                    : "Select...",
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 18,
-            ),
+          title: Row(
+            children: [
+              if (!_isReordering && (loadedSharedContents || widget.sharedContents.isEmpty)) ...[
+                WidgetCategoryGroupAvatar(
+                  type: "category",
+                  size: 32,
+                  color: category.color,
+                  title: category.title,
+                  thumbnail: category.thumbnail,
+                  icon: category.icon,
+                ),
+                const SizedBox(width: 12),
+              ],
+              Expanded(
+                child: Text(
+                  _isReordering
+                      ? "Reordering"
+                      : loadedSharedContents || widget.sharedContents.isEmpty
+                          ? category.title
+                          : "Select...",
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
           ),
           actions: [
             Padding(

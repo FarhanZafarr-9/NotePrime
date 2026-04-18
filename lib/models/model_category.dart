@@ -26,6 +26,7 @@ class ModelCategory {
   int? groupCount;
   int? updatedAt;
   int? at;
+  String? icon;
 
   ModelCategory({
     this.id,
@@ -39,6 +40,7 @@ class ModelCategory {
     this.groupCount,
     this.updatedAt,
     this.at,
+    this.icon,
   });
 
   Map<String, dynamic> toMap() {
@@ -53,6 +55,7 @@ class ModelCategory {
       'archived_at': archivedAt,
       'updated_at': updatedAt,
       'at': at,
+      'icon': icon,
     };
   }
 
@@ -87,9 +90,10 @@ class ModelCategory {
       position:
           getValueFromMap(map, 'position', defaultValue: positionCount * 1000),
       archivedAt: getValueFromMap(map, 'archived_at', defaultValue: 0),
-      groupCount: groupCount,
       at: getValueFromMap(map, "at", defaultValue: utcNow),
       updatedAt: getValueFromMap(map, "updated_at", defaultValue: utcNow),
+      groupCount: groupCount,
+      icon: getValueFromMap(map, 'icon'),
     );
   }
 

@@ -106,8 +106,9 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
   bool canScrollToBottom = false;
 
   bool _isCreatingTask = false;
-  bool showDateTime = true;
-  bool showNoteBorder = true;
+  bool showDate = true;
+  bool showTime = true;
+  bool showNoteBorder = false;
   bool linkPreview = true;
   bool sortOldestFirst = false;
   bool mediaGallery = false;
@@ -133,7 +134,6 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
 
   final Set<String> _fetchingItemIds = {};
   final RegExp _linkRegExp = RegExp(r'(https?://[^\s]+)');
-
 
   @override
   void initState() {
@@ -232,8 +232,17 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
     if (mounted) {
       setState(() {
         if (useGroupSettings && data != null) {
+          if (data.containsKey("show_date")) {
+            showDate = data["show_date"] == 1;
+          }
+          if (data.containsKey("show_time")) {
+            showTime = data["show_time"] == 1;
+          }
+          // Compatibility
           if (data.containsKey("date_time")) {
-            showDateTime = data["date_time"] == 1;
+            bool val = data["date_time"] == 1;
+            showDate = val;
+            showTime = val;
           }
           if (data.containsKey("note_border")) {
             showNoteBorder = data["note_border"] == 1;
@@ -260,12 +269,11 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                 ModelSetting.get("privacy_shield_enabled", "no") == "yes";
           }
         } else {
-          showDateTime =
-              ModelSetting.get("global_show_date_time", "yes") == "yes";
+          showDate = ModelSetting.get("global_show_date", "yes") == "yes";
+          showTime = ModelSetting.get("global_show_time", "yes") == "yes";
           showNoteBorder =
               ModelSetting.get("global_show_note_border", "yes") == "yes";
-          linkPreview =
-              ModelSetting.get("global_link_preview", "yes") == "yes";
+          linkPreview = ModelSetting.get("global_link_preview", "yes") == "yes";
           sortOldestFirst =
               ModelSetting.get("global_sort_order", "newest") == "oldest";
           mediaGallery =
@@ -424,9 +432,11 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
         // Try to clean up dangling date pills
         if (sortOldestFirst) {
           // Date pill is ABOVE item
-          if (itemIndex > 0 && _displayItemList[itemIndex - 1].type == ItemType.date) {
-            bool isLastInDateGroup = (itemIndex == _displayItemList.length - 1) ||
-                (_displayItemList[itemIndex + 1].type == ItemType.date);
+          if (itemIndex > 0 &&
+              _displayItemList[itemIndex - 1].type == ItemType.date) {
+            bool isLastInDateGroup =
+                (itemIndex == _displayItemList.length - 1) ||
+                    (_displayItemList[itemIndex + 1].type == ItemType.date);
             if (isLastInDateGroup) {
               _displayItemList.removeAt(itemIndex - 1);
               itemIndex--;
@@ -939,7 +949,8 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                       Text(subtitle,
                           style: TextStyle(
                               fontSize: 12,
-                              color: cs.onSurfaceVariant.withValues(alpha: 0.6))),
+                              color:
+                                  cs.onSurfaceVariant.withValues(alpha: 0.6))),
                   ],
                 ),
               ),
@@ -1033,12 +1044,10 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                     final newContact = fc.Contact();
                     newContact.name.first = contactData["first"] ?? "";
                     newContact.name.last = contactData["last"] ?? "";
-                    newContact.phones = phones
-                        .map((p) => fc.Phone(p.toString()))
-                        .toList();
-                    newContact.emails = emails
-                        .map((e) => fc.Email(e.toString()))
-                        .toList();
+                    newContact.phones =
+                        phones.map((p) => fc.Phone(p.toString())).toList();
+                    newContact.emails =
+                        emails.map((e) => fc.Email(e.toString())).toList();
                     await newContact.insert();
                     if (!context.mounted) return;
                     displaySnackBar(context,
@@ -1128,7 +1137,8 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
     }
   }
 
-  Future<void> checkFetchUrlMetadata(ModelItem item, {bool force = false}) async {
+  Future<void> checkFetchUrlMetadata(ModelItem item,
+      {bool force = false}) async {
     if (!linkPreview) return;
     if (item.id == null) return;
     if (_fetchingItemIds.contains(item.id)) return;
@@ -1518,62 +1528,64 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
         child: PopupMenuButton<int>(
           icon: _buildIconBadge(LucideIcons.moreVertical),
           padding: EdgeInsets.zero,
-        onSelected: (value) {
-          if (value == 0) navigateToPageGroupEdit();
-          if (value == 1) _openFilterDialog();
-        },
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(
-            color:
-                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
-            width: 0.75,
-          ),
-        ),
-        color: Theme.of(context).colorScheme.surfaceContainerLowest,
-        elevation: 4,
-        constraints: const BoxConstraints(minWidth: 180, maxWidth: 220),
-        itemBuilder: (context) => [
-          PopupMenuItem<int>(
-            value: 0,
-            padding: EdgeInsets.zero,
-            height: 0,
-            child: _menuItem(
-              context: context,
-              value: 0,
-              icon: LucideIcons.edit3,
-              label: 'Edit',
-              extraTopRadius: true,
-            ),
-          ),
-          PopupMenuItem(
-            enabled: false,
-            height: 0,
-            padding: EdgeInsets.zero,
-            child: Divider(
-              height: 6,
-              thickness: 0.75,
+          onSelected: (value) {
+            if (value == 0) navigateToPageGroupEdit();
+            if (value == 1) _openFilterDialog();
+          },
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(
               color: Theme.of(context)
                   .colorScheme
                   .onSurface
                   .withValues(alpha: 0.1),
+              width: 0.75,
             ),
           ),
-          PopupMenuItem<int>(
-            value: 1,
-            padding: EdgeInsets.zero,
-            height: 0,
-            child: _menuItem(
-              context: context,
+          color: Theme.of(context).colorScheme.surfaceContainerLowest,
+          elevation: 4,
+          constraints: const BoxConstraints(minWidth: 180, maxWidth: 220),
+          itemBuilder: (context) => [
+            PopupMenuItem<int>(
+              value: 0,
+              padding: EdgeInsets.zero,
+              height: 0,
+              child: _menuItem(
+                context: context,
+                value: 0,
+                icon: LucideIcons.edit3,
+                label: 'Edit',
+                extraTopRadius: true,
+              ),
+            ),
+            PopupMenuItem(
+              enabled: false,
+              height: 0,
+              padding: EdgeInsets.zero,
+              child: Divider(
+                height: 6,
+                thickness: 0.75,
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.1),
+              ),
+            ),
+            PopupMenuItem<int>(
               value: 1,
-              icon: LucideIcons.filter,
-              label: 'Filters',
-              extraBottomRadius: true,
+              padding: EdgeInsets.zero,
+              height: 0,
+              child: _menuItem(
+                context: context,
+                value: 1,
+                icon: LucideIcons.filter,
+                label: 'Filters',
+                extraBottomRadius: true,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
     ];
   }
 
@@ -1752,10 +1764,28 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
       appBar: AppBar(
         automaticallyImplyLeading: !widget.runningOnDesktop,
         actions: _buildAppbarDefaultOptions(),
-        title: Text(
-          noteGroup == null ? "" : noteGroup!.title,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+        title: Row(
+          children: [
+            if (noteGroup != null) ...[
+              WidgetCategoryGroupAvatar(
+                type: "group",
+                size: 32,
+                color: noteGroup!.color,
+                title: noteGroup!.title,
+                thumbnail: noteGroup!.thumbnail,
+                icon: noteGroup!.icon,
+              ),
+              const SizedBox(width: 12),
+            ],
+            Expanded(
+              child: Text(
+                noteGroup == null ? "" : noteGroup!.title,
+                overflow: TextOverflow.ellipsis,
+                style:
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+              ),
+            ),
+          ],
         ),
       ),
       body: Padding(
@@ -1802,7 +1832,8 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                         if (lastIndexInGroup == _displayItemList.length - 1) {
                           showTimePill = true;
                         } else {
-                          final olderItem = _displayItemList[lastIndexInGroup + 1];
+                          final olderItem =
+                              _displayItemList[lastIndexInGroup + 1];
                           if (olderItem.type == ItemType.date) {
                             showTimePill = true;
                           } else {
@@ -1834,7 +1865,7 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
 
                         Widget mainItem;
                         if (item.type == ItemType.date) {
-                          mainItem = showDateTime
+                          mainItem = showDate
                               ? ItemWidgetDate(item: item)
                               : const SizedBox.shrink();
                         } else {
@@ -1966,11 +1997,13 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                                                         index: index),
                                                     if (linkPreview &&
                                                         (urlInfo != null ||
-                                                            (item.data != null &&
+                                                            (item.data !=
+                                                                    null &&
                                                                 (item.data!.containsKey(
                                                                         "url_info_list") ||
-                                                                    item.data!.containsKey(
-                                                                        "url_metadata_state"))) ||
+                                                                    item.data!
+                                                                        .containsKey(
+                                                                            "url_metadata_state"))) ||
                                                             _linkRegExp
                                                                 .hasMatch(
                                                                     item.text)))
@@ -1992,33 +2025,34 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                                                           }
                                                         },
                                                         child: Column(
-                                                          mainAxisSize: MainAxisSize.min,
+                                                          mainAxisSize:
+                                                              MainAxisSize.min,
                                                           children: [
-                                                            const SizedBox(height: 8),
+                                                            const SizedBox(
+                                                                height: 8),
                                                             NoteUrlPreview(
                                                               urlInfo: urlInfo,
-                                                              urlInfoList:
-                                                                  item.data?[
-                                                                      "url_info_list"],
-                                                              urlMetadataState:
-                                                                  item.data?[
-                                                                          "url_metadata_state"] ??
-                                                                      (urlInfo ==
-                                                                                  null &&
-                                                                              item.data?[
-                                                                                      "url_info_list"] ==
-                                                                                  null &&
-                                                                              _linkRegExp.hasMatch(
-                                                                                  item.text)
-                                                                          ? "none"
-                                                                          : null),
+                                                              urlInfoList: item
+                                                                      .data?[
+                                                                  "url_info_list"],
+                                                              urlMetadataState: item
+                                                                          .data?[
+                                                                      "url_metadata_state"] ??
+                                                                  (urlInfo == null &&
+                                                                          item.data?["url_info_list"] ==
+                                                                              null &&
+                                                                          _linkRegExp
+                                                                              .hasMatch(item.text)
+                                                                      ? "none"
+                                                                      : null),
                                                               imageDirectory:
                                                                   imageDirPath,
                                                               itemId: item.id!,
                                                               onRetry: () =>
                                                                   checkFetchUrlMetadata(
                                                                       item,
-                                                                      force: true),
+                                                                      force:
+                                                                          true),
                                                             ),
                                                           ],
                                                         ),
@@ -2039,7 +2073,7 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                         }
 
                         if (showTimePill &&
-                            showDateTime &&
+                            showTime &&
                             item.type != ItemType.date) {
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -2193,8 +2227,7 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
 
   Widget _buildGalleryCell(ModelItem mediaItem, double width) {
     final bool isVideo = mediaItem.type == ItemType.video;
-    final bool isDownloadable =
-        mediaItem.state == SyncState.downloadable.value;
+    final bool isDownloadable = mediaItem.state == SyncState.downloadable.value;
     final cs = Theme.of(context).colorScheme;
 
     return SizedBox(
@@ -2206,90 +2239,90 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
         borderRadius: BorderRadius.circular(10),
         child: GestureDetector(
           onTap: () {
-          if (_hasNotesSelected) {
-            onItemTapped(mediaItem);
-          } else {
-            viewImageVideo(mediaItem);
-          }
-        },
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
-            color: _selectedItems.contains(mediaItem)
-                ? cs.onSurface.withValues(alpha: 0.1)
-                : Colors.transparent,
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                if (mediaItem.thumbnail != null)
-                  Image.memory(
-                    mediaItem.thumbnail!,
-                    fit: BoxFit.cover,
-                    height: width,
-                    width: width,
-                  )
-                else
-                  Container(
-                    height: width,
-                    width: width,
-                    color: cs.onSurface.withValues(alpha: 0.05),
-                    child: Icon(
-                      isVideo ? LucideIcons.video : LucideIcons.image,
-                      color: cs.onSurfaceVariant.withValues(alpha: 0.4),
+            if (_hasNotesSelected) {
+              onItemTapped(mediaItem);
+            } else {
+              viewImageVideo(mediaItem);
+            }
+          },
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(10),
+              color: _selectedItems.contains(mediaItem)
+                  ? cs.onSurface.withValues(alpha: 0.1)
+                  : Colors.transparent,
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  if (mediaItem.thumbnail != null)
+                    Image.memory(
+                      mediaItem.thumbnail!,
+                      fit: BoxFit.cover,
+                      height: width,
+                      width: width,
+                    )
+                  else
+                    Container(
+                      height: width,
+                      width: width,
+                      color: cs.onSurface.withValues(alpha: 0.05),
+                      child: Icon(
+                        isVideo ? LucideIcons.video : LucideIcons.image,
+                        color: cs.onSurfaceVariant.withValues(alpha: 0.4),
+                      ),
                     ),
-                  ),
-                // Overlay for video or downloadable state
-                if (isVideo || isDownloadable)
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.4),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      isDownloadable
-                          ? LucideIcons.arrowDown
-                          : LucideIcons.play,
-                      color: Colors.white,
-                      size: 18,
-                    ),
-                  ),
-                // Corner video icon always present if it's a video
-                if (isVideo)
-                  Positioned(
-                    top: 6,
-                    left: 6,
-                    child: Container(
-                      padding: const EdgeInsets.all(3),
+                  // Overlay for video or downloadable state
+                  if (isVideo || isDownloadable)
+                    Container(
+                      width: 36,
+                      height: 36,
                       decoration: BoxDecoration(
                         color: Colors.black.withValues(alpha: 0.4),
-                        borderRadius: BorderRadius.circular(4),
+                        shape: BoxShape.circle,
                       ),
-                      child: const Icon(
-                        LucideIcons.video,
+                      child: Icon(
+                        isDownloadable
+                            ? LucideIcons.arrowDown
+                            : LucideIcons.play,
                         color: Colors.white,
-                        size: 10,
+                        size: 18,
                       ),
                     ),
-                  ),
-                // Selection overlay
-                if (_selectedItems.contains(mediaItem))
-                  Container(
-                    color: cs.primary.withValues(alpha: 0.2),
-                    child: const Center(
-                      child: Icon(Icons.check_circle, color: Colors.white),
+                  // Corner video icon always present if it's a video
+                  if (isVideo)
+                    Positioned(
+                      top: 6,
+                      left: 6,
+                      child: Container(
+                        padding: const EdgeInsets.all(3),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.4),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Icon(
+                          LucideIcons.video,
+                          color: Colors.white,
+                          size: 10,
+                        ),
+                      ),
                     ),
-                  ),
-              ],
+                  // Selection overlay
+                  if (_selectedItems.contains(mediaItem))
+                    Container(
+                      color: cs.primary.withValues(alpha: 0.2),
+                      child: const Center(
+                        child: Icon(Icons.check_circle, color: Colors.white),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
         ),
       ),
-    ),
     );
   }
 
@@ -2678,7 +2711,8 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                             ),
                           ),
                           onChanged: _onInputTextChanged,
-                          contentInsertionConfiguration: ContentInsertionConfiguration(
+                          contentInsertionConfiguration:
+                              ContentInsertionConfiguration(
                             allowedMimeTypes: const <String>[
                               'image/png',
                               'image/jpeg',
@@ -2710,13 +2744,8 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
 
   // ── Attachment bottom sheet ───────────────────────────────────────────────
   void _showAttachmentOptions() {
-    final cs = Theme.of(context).colorScheme;
     showModalBottomSheet(
       context: context,
-      backgroundColor: cs.surfaceContainerHigh,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
       builder: (BuildContext context) {
         return SafeArea(
           child: Padding(
@@ -2777,34 +2806,31 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
     bool active = false,
   }) {
     final cs = Theme.of(context).colorScheme;
-    final color = cs.onSurfaceVariant;
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              color: active
-                  ? cs.onSurface.withValues(alpha: 0.12)
-                  : cs.onSurface.withValues(alpha: 0.06),
-              borderRadius: BorderRadius.circular(14),
-              border: active
-                  ? Border.all(
-                      color: cs.onSurface.withValues(alpha: 0.2), width: 0.75)
-                  : null,
+    final color = active ? cs.primary : cs.onSurfaceVariant;
+    return Material(
+      color: active
+          ? cs.primary.withValues(alpha: 0.12)
+          : cs.onSurface.withValues(alpha: 0.04),
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 24, color: color),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                color: color,
+                fontWeight: active ? FontWeight.w600 : FontWeight.normal,
+              ),
+              textAlign: TextAlign.center,
             ),
-            child: Icon(icon, size: 22, color: color),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            label,
-            style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
-            textAlign: TextAlign.center,
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
