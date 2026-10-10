@@ -417,58 +417,62 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
       return;
     }
 
-    // Obscure app in recents/app switcher if screenshot protection is enabled.
-    if (state == AppLifecycleState.inactive || state == AppLifecycleState.hidden) {
-      if (ModelSetting.get("screenshot_protection", "no") == "yes") {
-        if (!AuthGuard.isLocked.value) {
-          _wasArtificiallyLockedForPrivacy = true;
-          AuthGuard.isLocked.value = true;
-        }
+    final bool localAuthEnabled =
+        ModelSetting.get("local_auth", "no") == "yes";
+    final bool screenshotProtection =
+        ModelSetting.get("screenshot_protection", "no") == "yes";
+    final int graceMinutes = int.tryParse(
+            ModelSetting.get("biometric_grace_period", "0").toString()) ??
+        0;
+
+    // ── Transient overlays (notification shade, system UI, app switcher) ──
+    // These are NOT real backgrounding. Only hide content behind the privacy
+    // shield if screenshot protection is on, and never start the lock timer.
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.hidden) {
+      if (screenshotProtection && !AuthGuard.isLocked.value) {
+        _wasArtificiallyLockedForPrivacy = true;
+        AuthGuard.isLocked.value = true;
       }
+      return;
     }
 
+    // ── Real backgrounding: the ONLY place the grace timer starts ──
     if (state == AppLifecycleState.paused) {
-      _lastBackgroundAt = DateTime.now();
-      AuthGuard.lastActiveAt = DateTime.now(); // Mark last active time when leaving
+      AuthGuard.lastActiveAt = DateTime.now();
+      _lastBackgroundAt = localAuthEnabled ? DateTime.now() : null;
 
-      // Ensure artificial locks persist if screenshot protection hides it here
-      if (ModelSetting.get("screenshot_protection", "no") == "yes") {
-        if (!AuthGuard.isLocked.value) {
-          _wasArtificiallyLockedForPrivacy = true;
-          AuthGuard.isLocked.value = true;
-        }
+      if (screenshotProtection && !AuthGuard.isLocked.value) {
+        _wasArtificiallyLockedForPrivacy = true;
+        AuthGuard.isLocked.value = true;
       }
 
-      if (ModelSetting.get("local_auth", "no") == "yes") {
-        int graceMinutes = int.parse(
-            ModelSetting.get("biometric_grace_period", "0").toString());
-
-        // If Grace Period is 0 (Immediate), lock directly on paused
-        if (graceMinutes == 0) {
-          AuthGuard.isLocked.value = true;
-          _wasArtificiallyLockedForPrivacy = false; // Escalate to a real lock
-        }
+      // Grace period of 0 means lock immediately on backgrounding.
+      if (localAuthEnabled && graceMinutes == 0) {
+        AuthGuard.isLocked.value = true;
+        _wasArtificiallyLockedForPrivacy = false;
       }
 
       SyncUtils().stopAutoSync();
       logger.info("Started Background (Paused)");
+      return;
     }
 
     if (state == AppLifecycleState.resumed) {
-      if (ModelSetting.get("local_auth", "no") == "yes") {
-        if (_lastBackgroundAt != null) {
-          int graceMinutes = int.parse(
-              ModelSetting.get("biometric_grace_period", "0").toString());
+      if (localAuthEnabled) {
+        final DateTime? backgroundedAt = _lastBackgroundAt;
+        // Always clear so a later transient resume cannot re-trigger a lock.
+        _lastBackgroundAt = null;
 
-          if (DateTime.now().difference(_lastBackgroundAt!).inMinutes >=
-              graceMinutes) {
-            AuthGuard.isLocked.value = true;
-            _wasArtificiallyLockedForPrivacy = false; // Escalate to a real lock
-          }
-        }
+        final bool requireLock = backgroundedAt != null &&
+            DateTime.now().difference(backgroundedAt).inMinutes >= graceMinutes;
 
-        // Revert any artificial lock if grace period didn't force a real lock
-        if (_wasArtificiallyLockedForPrivacy) {
+        if (requireLock) {
+          AuthGuard.isLocked.value = true;
+          _wasArtificiallyLockedForPrivacy = false;
+        } else if (_wasArtificiallyLockedForPrivacy) {
+          // Only a privacy shield (screenshot protection) was shown; no real
+          // lock is needed, so reveal the content again.
           AuthGuard.isLocked.value = false;
           _wasArtificiallyLockedForPrivacy = false;
         }
@@ -477,12 +481,10 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
         if (AuthGuard.isLocked.value && !AuthGuard.isAuthenticating) {
           EventStream().publish(AppEvent(type: EventType.authorise));
         }
-      } else {
+      } else if (_wasArtificiallyLockedForPrivacy) {
         // If local_auth is off, always revert artificial privacy locks
-        if (_wasArtificiallyLockedForPrivacy) {
-          AuthGuard.isLocked.value = false;
-          _wasArtificiallyLockedForPrivacy = false;
-        }
+        AuthGuard.isLocked.value = false;
+        _wasArtificiallyLockedForPrivacy = false;
       }
 
       SyncUtils().startAutoSync();
