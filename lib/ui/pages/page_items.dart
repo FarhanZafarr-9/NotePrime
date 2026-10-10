@@ -915,14 +915,16 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
     required VoidCallback onTap,
     String? subtitle,
     Color? color,
+    BorderRadius? borderRadius,
   }) {
     final cs = Theme.of(context).colorScheme;
     final tileColor = color ?? cs.onSurfaceVariant;
+    final radius = borderRadius ?? BorderRadius.circular(12);
     return Material(
       color: cs.onSurface.withValues(alpha: 0.06),
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: radius,
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: radius,
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -979,90 +981,107 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(name,
-                  style: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 20),
-              if (phones.isNotEmpty) ...[
-                _bottomSheetTile(
-                  context: context,
-                  icon: LucideIcons.phone,
-                  label: "Call",
-                  subtitle: phones.first.toString(),
-                  color: cs.primary,
-                  onTap: () {
-                    Navigator.pop(context);
-                    launchUrl(Uri.parse("tel:${phones.first}"));
-                  },
-                ),
-                const SizedBox(height: 8),
-                _bottomSheetTile(
-                  context: context,
-                  icon: LucideIcons.messageSquare,
-                  label: "Send SMS",
-                  color: cs.secondary,
-                  onTap: () {
-                    Navigator.pop(context);
-                    launchUrl(Uri.parse("sms:${phones.first}"));
-                  },
-                ),
-                const SizedBox(height: 8),
-              ],
-              if (emails.isNotEmpty) ...[
-                _bottomSheetTile(
-                  context: context,
-                  icon: LucideIcons.mail,
-                  label: "Email",
-                  subtitle: emails.first.toString(),
-                  color: cs.tertiary,
-                  onTap: () {
-                    Navigator.pop(context);
-                    launchUrl(Uri.parse("mailto:${emails.first}"));
-                  },
-                ),
-                const SizedBox(height: 8),
-              ],
-              _bottomSheetTile(
-                context: context,
-                icon: LucideIcons.userPlus,
-                label: "Add to System Contacts",
-                onTap: () async {
-                  Navigator.pop(context);
-                  try {
-                    if (!await fc.FlutterContacts.requestPermission()) {
-                      if (!context.mounted) return;
-                      displaySnackBar(context,
-                          message: "Contacts permission denied", seconds: 2);
-                      return;
-                    }
-                    final newContact = fc.Contact();
-                    newContact.name.first = contactData["first"] ?? "";
-                    newContact.name.last = contactData["last"] ?? "";
-                    newContact.phones =
-                        phones.map((p) => fc.Phone(p.toString())).toList();
-                    newContact.emails =
-                        emails.map((e) => fc.Email(e.toString())).toList();
-                    await newContact.insert();
-                    if (!context.mounted) return;
-                    displaySnackBar(context,
-                        message: "Added to contacts", seconds: 1);
-                  } catch (e) {
-                    if (!context.mounted) return;
-                    displaySnackBar(context,
-                        message: "Failed to add contact", seconds: 2);
-                  }
-                },
-              ),
-            ],
+      builder: (context) {
+        final tiles = <({
+          IconData icon,
+          String label,
+          String? subtitle,
+          Color? color,
+          VoidCallback onTap
+        })>[
+          if (phones.isNotEmpty)
+            (
+              icon: LucideIcons.phone,
+              label: "Call",
+              subtitle: phones.first.toString(),
+              color: cs.primary,
+              onTap: () {
+                Navigator.pop(context);
+                launchUrl(Uri.parse("tel:${phones.first}"));
+              },
+            ),
+          if (phones.isNotEmpty)
+            (
+              icon: LucideIcons.messageSquare,
+              label: "Send SMS",
+              subtitle: null,
+              color: cs.secondary,
+              onTap: () {
+                Navigator.pop(context);
+                launchUrl(Uri.parse("sms:${phones.first}"));
+              },
+            ),
+          if (emails.isNotEmpty)
+            (
+              icon: LucideIcons.mail,
+              label: "Email",
+              subtitle: emails.first.toString(),
+              color: cs.tertiary,
+              onTap: () {
+                Navigator.pop(context);
+                launchUrl(Uri.parse("mailto:${emails.first}"));
+              },
+            ),
+          (
+            icon: LucideIcons.userPlus,
+            label: "Add to System Contacts",
+            subtitle: null,
+            color: null,
+            onTap: () async {
+              Navigator.pop(context);
+              try {
+                if (!await fc.FlutterContacts.requestPermission()) {
+                  if (!context.mounted) return;
+                  displaySnackBar(context,
+                      message: "Contacts permission denied", seconds: 2);
+                  return;
+                }
+                final newContact = fc.Contact();
+                newContact.name.first = contactData["first"] ?? "";
+                newContact.name.last = contactData["last"] ?? "";
+                newContact.phones =
+                    phones.map((p) => fc.Phone(p.toString())).toList();
+                newContact.emails =
+                    emails.map((e) => fc.Email(e.toString())).toList();
+                await newContact.insert();
+                if (!context.mounted) return;
+                displaySnackBar(context,
+                    message: "Added to contacts", seconds: 1);
+              } catch (e) {
+                if (!context.mounted) return;
+                displaySnackBar(context,
+                    message: "Failed to add contact", seconds: 2);
+              }
+            },
           ),
-        ),
-      ),
+        ];
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(name,
+                    style: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 20),
+                for (int i = 0; i < tiles.length; i++) ...[
+                  if (i > 0) const SizedBox(height: 3),
+                  _bottomSheetTile(
+                    context: context,
+                    icon: tiles[i].icon,
+                    label: tiles[i].label,
+                    subtitle: tiles[i].subtitle,
+                    color: tiles[i].color,
+                    borderRadius: listRowRadius(i, tiles.length),
+                    onTap: tiles[i].onTap,
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 

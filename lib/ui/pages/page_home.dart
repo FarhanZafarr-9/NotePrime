@@ -1177,6 +1177,8 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
     showModalBottomSheet(
       context: context,
       builder: (BuildContext context) {
+        final bool hasPin = categoryGroup.type == "group";
+        final int count = hasPin ? 4 : 3;
         return SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -1187,6 +1189,7 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
                   context: context,
                   icon: Icons.reorder,
                   label: 'Reorder',
+                  borderRadius: listRowRadius(0, count),
                   onTap: () {
                     Navigator.pop(context);
                     setState(() => _isReordering = true);
@@ -1197,6 +1200,7 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
                   context: context,
                   icon: LucideIcons.edit3,
                   label: 'Edit',
+                  borderRadius: listRowRadius(1, count),
                   onTap: () {
                     Navigator.pop(context);
                     editCategoryGroup(categoryGroup);
@@ -1212,6 +1216,7 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
                     label: categoryGroup.group!.pinned == 1
                         ? 'Unpin from Shortcut'
                         : 'Pin to Shortcut',
+                    borderRadius: listRowRadius(2, count),
                     onTap: () async {
                       Navigator.pop(context);
                       categoryGroup.group!.pinned =
@@ -1225,6 +1230,7 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
                   icon: LucideIcons.trash,
                   label: 'Delete',
                   isDanger: true,
+                  borderRadius: listRowRadius(hasPin ? 3 : 2, count),
                   onTap: () {
                     Navigator.pop(context);
                     archiveCategoryGroup(categoryGroup);
@@ -1246,14 +1252,16 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
     required String label,
     required VoidCallback onTap,
     bool isDanger = false,
+    BorderRadius? borderRadius,
   }) {
     final cs = Theme.of(context).colorScheme;
     final color = isDanger ? cs.error : cs.onSurfaceVariant;
+    final radius = borderRadius ?? BorderRadius.circular(16);
     return Material(
       color: cs.onSurface.withValues(alpha: 0.04),
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: radius,
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: radius,
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -1389,6 +1397,12 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
     );
   }
 
+  /// Rows adopt the same corner language as the settings groups via
+  /// [listRowRadius]: a larger radius at the outer edges and a smaller radius
+  /// where adjacent rows meet, so the list reads as one connected stack.
+  BorderRadius _rowRadius(int index, int length) =>
+      listRowRadius(index, length);
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -1429,14 +1443,16 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
                 itemCount: _categoriesGroupsDisplayList.length,
                 itemBuilder: (context, index) {
                   final item = _categoriesGroupsDisplayList[index];
+                  final radius =
+                      _rowRadius(index, _categoriesGroupsDisplayList.length);
                   return Container(
                       key: ValueKey(item.id),
                       margin: const EdgeInsets.only(bottom: 3),
                       child: Material(
                         color: cs.onSurface.withValues(alpha: 0.06),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: radius,
                         child: InkWell(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: radius,
                           onTap: () {
                             String dragTitle = "Drag handle to re-order";
                             if (Platform.isAndroid || Platform.isIOS) {
@@ -1483,13 +1499,16 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
                                     selectedGroup != null &&
                                     selectedGroup!.id == item.group!.id;
 
+                                final radius = _rowRadius(
+                                    index, _categoriesGroupsDisplayList.length);
+
                                 return Material(
                                   color: isSelected
                                       ? cs.onSurface.withValues(alpha: 0.1)
                                       : cs.onSurface.withValues(alpha: 0.06),
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: radius,
                                   child: InkWell(
-                                    borderRadius: BorderRadius.circular(12),
+                                    borderRadius: radius,
                                     onTap: () => navigateToNotesOrGroups(item),
                                     onLongPress: () =>
                                         _showOptions(context, item),

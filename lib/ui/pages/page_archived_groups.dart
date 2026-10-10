@@ -129,6 +129,7 @@ class _PageArchivedGroupsState extends State<PageArchivedGroups> {
       itemBuilder: (context, index) {
         final archivedGroup = _archivedGroups[index];
         final isSelected = _selection.contains(archivedGroup);
+        final radius = listRowRadius(index, _archivedGroups.length);
         final categoryGroup = ModelCategoryGroup(
           id: archivedGroup.id!,
           type: "group",
@@ -143,7 +144,7 @@ class _PageArchivedGroupsState extends State<PageArchivedGroups> {
             color: isSelected
                 ? cs.onSurface.withValues(alpha: 0.1)
                 : cs.onSurface.withValues(alpha: 0.06),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: radius,
             child: WidgetCategoryGroup(
               categoryGroup: categoryGroup,
               showSummary: false,

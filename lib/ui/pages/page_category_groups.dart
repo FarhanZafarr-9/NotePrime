@@ -216,8 +216,7 @@ class _PageCategoryGroupsState extends State<PageCategoryGroups> {
         isGroupLocked = data["group_lock"] == 1;
       }
     } else {
-      isGroupLocked =
-          ModelSetting.get("global_group_lock", "no") == "yes";
+      isGroupLocked = ModelSetting.get("global_group_lock", "no") == "yes";
     }
 
     if (isGroupLocked) {
@@ -363,6 +362,7 @@ class _PageCategoryGroupsState extends State<PageCategoryGroups> {
                   context: context,
                   icon: Icons.reorder,
                   label: 'Reorder',
+                  borderRadius: listRowRadius(0, 4),
                   onTap: () {
                     Navigator.pop(context);
                     setState(() {
@@ -370,35 +370,39 @@ class _PageCategoryGroupsState extends State<PageCategoryGroups> {
                     });
                   },
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 3),
                 _bottomSheetTile(
                   context: context,
                   icon: LucideIcons.edit3,
                   label: 'Edit',
+                  borderRadius: listRowRadius(1, 4),
                   onTap: () {
                     Navigator.pop(context);
                     navigateToGroupAddEdit(group, category);
                   },
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 3),
                 _bottomSheetTile(
                   context: context,
-                  icon: group.pinned == 1 ? LucideIcons.pinOff : LucideIcons.pin,
+                  icon:
+                      group.pinned == 1 ? LucideIcons.pinOff : LucideIcons.pin,
                   label: group.pinned == 1
                       ? 'Unpin from Shortcut'
                       : 'Pin to Shortcut',
+                  borderRadius: listRowRadius(2, 4),
                   onTap: () async {
                     Navigator.pop(context);
                     group.pinned = group.pinned == 1 ? 0 : 1;
                     await group.update(["pinned"]);
                   },
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 3),
                 _bottomSheetTile(
                   context: context,
                   icon: LucideIcons.trash,
                   label: 'Delete',
                   isDanger: true,
+                  borderRadius: listRowRadius(3, 4),
                   onTap: () {
                     Navigator.pop(context);
                     archiveGroup(group);
@@ -419,14 +423,16 @@ class _PageCategoryGroupsState extends State<PageCategoryGroups> {
     required String label,
     required VoidCallback onTap,
     bool isDanger = false,
+    BorderRadius? borderRadius,
   }) {
     final cs = Theme.of(context).colorScheme;
     final color = isDanger ? cs.error : cs.onSurfaceVariant;
+    final radius = borderRadius ?? BorderRadius.circular(16);
     return Material(
       color: cs.onSurface.withValues(alpha: 0.04),
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: radius,
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: radius,
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -467,7 +473,8 @@ class _PageCategoryGroupsState extends State<PageCategoryGroups> {
         appBar: AppBar(
           title: Row(
             children: [
-              if (!_isReordering && (loadedSharedContents || widget.sharedContents.isEmpty)) ...[
+              if (!_isReordering &&
+                  (loadedSharedContents || widget.sharedContents.isEmpty)) ...[
                 WidgetCategoryGroupAvatar(
                   type: "category",
                   size: 32,
@@ -511,7 +518,8 @@ class _PageCategoryGroupsState extends State<PageCategoryGroups> {
               // Lines 491-537: Replace the ReorderableListView.builder with this:
 
               ? ReorderableListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   itemCount: categoryGroupsDisplayList.length,
                   itemBuilder: (context, index) {
                     final cs = Theme.of(context).colorScheme;
@@ -524,30 +532,31 @@ class _PageCategoryGroupsState extends State<PageCategoryGroups> {
                         thumbnail: group.thumbnail,
                         color: group.color,
                         title: group.title);
+                    final radius =
+                        listRowRadius(index, categoryGroupsDisplayList.length);
                     return Container(
-                      key: ValueKey(group.id),
-                      margin: const EdgeInsets.only(bottom: 3),
-                      child: Material(
-                        color: cs.onSurface.withValues(alpha: 0.06),
-                        borderRadius: BorderRadius.circular(12),
-                        child: InkWell(
-                        borderRadius: BorderRadius.circular(12),
-                        onTap: () {
-                          String dragTitle = "Drag handle to re-order";
-                          if (Platform.isAndroid || Platform.isIOS) {
-                            dragTitle = "Hold and drag to re-order";
-                          }
-                          displaySnackBar(context,
-                              message: dragTitle, seconds: 1);
-                        },
-                        child: WidgetCategoryGroup(
-                          categoryGroup: categoryGroup,
-                          showSummary: true,
-                          showCategorySign: false,
-                        ),
-                      ),
-                    )
-                  );
+                        key: ValueKey(group.id),
+                        margin: const EdgeInsets.only(bottom: 3),
+                        child: Material(
+                          color: cs.onSurface.withValues(alpha: 0.06),
+                          borderRadius: radius,
+                          child: InkWell(
+                            borderRadius: radius,
+                            onTap: () {
+                              String dragTitle = "Drag handle to re-order";
+                              if (Platform.isAndroid || Platform.isIOS) {
+                                dragTitle = "Hold and drag to re-order";
+                              }
+                              displaySnackBar(context,
+                                  message: dragTitle, seconds: 1);
+                            },
+                            child: WidgetCategoryGroup(
+                              categoryGroup: categoryGroup,
+                              showSummary: true,
+                              showCategorySign: false,
+                            ),
+                          ),
+                        ));
                   },
                   onReorder: (int oldIndex, int newIndex) {
                     setState(() {
@@ -573,29 +582,36 @@ class _PageCategoryGroupsState extends State<PageCategoryGroups> {
                       ? RefreshIndicator(
                           onRefresh: () async => loadGroups(),
                           child: ListView.separated(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
                             itemCount: categoryGroupsDisplayList.length,
-                            separatorBuilder: (_, __) => const SizedBox(height: 3),
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: 3),
                             itemBuilder: (context, index) {
                               final cs = Theme.of(context).colorScheme;
-                              final ModelGroup group = categoryGroupsDisplayList[index];
-                              final ModelCategoryGroup categoryGroup = ModelCategoryGroup(
-                                  id: group.id!,
-                                  type: "group",
-                                  group: group,
-                                  position: group.position!,
-                                  thumbnail: group.thumbnail,
-                                  color: group.color,
-                                  title: group.title);
-                              final bool isSelected = selectedGroup != null && selectedGroup!.id == group.id;
+                              final ModelGroup group =
+                                  categoryGroupsDisplayList[index];
+                              final ModelCategoryGroup categoryGroup =
+                                  ModelCategoryGroup(
+                                      id: group.id!,
+                                      type: "group",
+                                      group: group,
+                                      position: group.position!,
+                                      thumbnail: group.thumbnail,
+                                      color: group.color,
+                                      title: group.title);
+                              final bool isSelected = selectedGroup != null &&
+                                  selectedGroup!.id == group.id;
+                              final radius = listRowRadius(
+                                  index, categoryGroupsDisplayList.length);
 
                               return Material(
                                 color: isSelected
                                     ? cs.onSurface.withValues(alpha: 0.1)
                                     : cs.onSurface.withValues(alpha: 0.06),
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: radius,
                                 child: InkWell(
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: radius,
                                   onTap: () {
                                     navigateToNotes(group, false);
                                   },
@@ -625,8 +641,8 @@ class _PageCategoryGroupsState extends State<PageCategoryGroups> {
               navigateToGroupAddEdit(null, category);
             }
           },
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           child: Icon(_isReordering ? LucideIcons.check : LucideIcons.plus),
         ),
       ),
