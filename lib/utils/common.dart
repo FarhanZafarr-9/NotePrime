@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
+import 'dart:ui' show ImageFilter;
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:crypto/crypto.dart';
@@ -177,44 +178,82 @@ void showAlertMessage(BuildContext context, String title, String message) {
 }
 
 void showProcessingDialog(BuildContext context) {
-  showDialog(
+  showGeneralDialog(
     context: context,
     barrierDismissible: false,
-    builder: (BuildContext context) {
-      return Dialog(
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        elevation: 0,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(28.0)),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 32.0, horizontal: 24.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const ShapeShifterLoader(size: 48),
-              const SizedBox(height: 24),
-              Text(
-                "Processing",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: Theme.of(context).colorScheme.onSurface,
-                  letterSpacing: 0.2,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                "Please wait a moment...",
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
+    barrierLabel: 'Processing',
+    barrierColor: Colors.black.withValues(alpha: 0.25),
+    transitionDuration: const Duration(milliseconds: 220),
+    pageBuilder: (BuildContext context, Animation<double> animation,
+        Animation<double> secondaryAnimation) {
+      return Stack(
+        children: [
+          Positioned.fill(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 8.0, sigmaY: 8.0),
+              child: const SizedBox.expand(),
+            ),
           ),
-        ),
+          Center(
+            child: Dialog(
+              backgroundColor: Theme.of(context).colorScheme.surface,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(28.0)),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                    vertical: 32.0, horizontal: 24.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const ShapeShifterLoader(size: 48),
+                    const SizedBox(height: 24),
+                    Text(
+                      "Processing",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.onSurface,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      "Please wait a moment...",
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       );
     },
+    transitionBuilder: (BuildContext context, Animation<double> animation,
+        Animation<double> secondaryAnimation, Widget child) {
+      return FadeTransition(opacity: animation, child: child);
+    },
+  );
+}
+
+/// Returns the corner radius for the row at [index] within a list of [length]
+/// items, using the same "connected stack" language as the settings groups:
+/// a larger radius at the outer edges and a smaller one where adjacent rows
+/// meet, so the list reads as one connected unit.
+BorderRadius listRowRadius(int index, int length,
+    {double edge = 12, double seam = 5}) {
+  final isFirst = index == 0;
+  final isLast = index == length - 1;
+  final isOnly = length == 1;
+  return BorderRadius.only(
+    topLeft: Radius.circular(isFirst || isOnly ? edge : seam),
+    topRight: Radius.circular(isFirst || isOnly ? edge : seam),
+    bottomLeft: Radius.circular(isLast || isOnly ? edge : seam),
+    bottomRight: Radius.circular(isLast || isOnly ? edge : seam),
   );
 }
 

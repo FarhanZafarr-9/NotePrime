@@ -61,57 +61,62 @@ class _ShapeShifterLoaderState extends State<ShapeShifterLoader>
       animation: Listenable.merge(
           [_rotationController, _morphController, _pulseController]),
       builder: (context, child) {
-        return Stack(
-          alignment: Alignment.center,
-          children: [
-            // Outer dynamic glow
-            Container(
-              width: widget.size * (1.1 + (_pulseController.value * 0.2)),
-              height: widget.size * (1.1 + (_pulseController.value * 0.2)),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: cs.primary.withValues(alpha: 0.15),
-                    blurRadius: 20,
-                    spreadRadius: 5 * _pulseController.value,
-                  ),
-                  BoxShadow(
-                    color: cs.tertiary.withValues(alpha: 0.1),
-                    blurRadius: 15,
-                    spreadRadius: 2 * _pulseController.value,
-                  ),
-                ],
-              ),
-            ),
-            // The Shape-Shifter
-            Transform.rotate(
-              angle: _rotationController.value * 2 * pi,
-              child: Container(
-                width: widget.size,
-                height: widget.size,
+        return SizedBox(
+          width: widget.size * 1.3,
+          height: widget.size * 1.3,
+          child: Stack(
+            alignment: Alignment.center,
+            clipBehavior: Clip.none,
+            children: [
+              // Outer dynamic glow
+              Container(
+                width: widget.size * (1.1 + (_pulseController.value * 0.2)),
+                height: widget.size * (1.1 + (_pulseController.value * 0.2)),
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(
-                    widget.size * (0.1 + (_morphController.value * 0.4)),
-                  ),
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      cs.primary,
-                      cs.tertiary,
-                      cs.secondary,
-                    ],
-                    stops: [
-                      0.0,
-                      0.5 * _morphController.value,
-                      1.0,
-                    ],
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: cs.primary.withValues(alpha: 0.15),
+                      blurRadius: 20,
+                      spreadRadius: 5 * _pulseController.value,
+                    ),
+                    BoxShadow(
+                      color: cs.tertiary.withValues(alpha: 0.1),
+                      blurRadius: 15,
+                      spreadRadius: 2 * _pulseController.value,
+                    ),
+                  ],
+                ),
+              ),
+              // The Shape-Shifter
+              Transform.rotate(
+                angle: _rotationController.value * 2 * pi,
+                child: Container(
+                  width: widget.size,
+                  height: widget.size,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(
+                      widget.size * (0.1 + (_morphController.value * 0.4)),
+                    ),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        cs.primary,
+                        cs.tertiary,
+                        cs.secondary,
+                      ],
+                      stops: [
+                        0.0,
+                        0.5 * _morphController.value,
+                        1.0,
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         );
       },
     );
