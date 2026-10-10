@@ -97,7 +97,8 @@ class _PrivacyShieldState extends State<PrivacyShield> {
       child: TweenAnimationBuilder<double>(
         duration: const Duration(milliseconds: 400),
         curve: Curves.easeInOut,
-        tween: Tween<double>(begin: _isRevealed ? 0 : 1, end: _isRevealed ? 0 : 1),
+        tween:
+            Tween<double>(begin: _isRevealed ? 0 : 1, end: _isRevealed ? 0 : 1),
         builder: (context, value, child) {
           final sigma = value * 16.0;
           return Stack(
@@ -152,7 +153,6 @@ class _PrivacyShieldState extends State<PrivacyShield> {
   }
 }
 
-
 class FloatingActionButtonWithBadge extends StatelessWidget {
   final int filterCount;
   final VoidCallback onPressed;
@@ -176,8 +176,8 @@ class FloatingActionButtonWithBadge extends StatelessWidget {
       children: [
         FloatingActionButton(
           heroTag: heroTag,
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           onPressed: onPressed,
           child: icon,
         ),
@@ -307,9 +307,11 @@ class WidgetCategoryGroupAvatar extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: thumbnail != null ? Colors.transparent : parsedColor.withValues(alpha: 0.12),
+        color: thumbnail != null
+            ? Colors.transparent
+            : parsedColor.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(10),
-        border: thumbnail != null 
+        border: thumbnail != null
             ? Border.all(color: parsedColor.withValues(alpha: 0.2), width: 1)
             : null,
       ),
@@ -331,7 +333,7 @@ class WidgetCategoryGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    double size = 40;
+    const double size = 40;
     return ListTile(
       leading: WidgetCategoryGroupAvatar(
         type: categoryGroup.type,
@@ -375,7 +377,7 @@ class WidgetCategoryGroup extends StatelessWidget {
                       fontSize: 12,
                       color: Theme.of(context).colorScheme.onSurfaceVariant),
                 )
-          : const SizedBox.shrink(),
+          : null,
       trailing: categoryGroup.type == "category"
           ? showCategorySign
               ? Icon(
@@ -384,6 +386,109 @@ class WidgetCategoryGroup extends StatelessWidget {
                 )
               : const SizedBox.shrink()
           : const SizedBox.shrink(),
+    );
+  }
+}
+
+/// A collapsible section rendered as one connected stack: the header row and
+/// its option rows share the app-wide edge/seam corner language (see
+/// [listRowRadius]) with 3px gaps between rows. [topRadius]/[bottomRadius]
+/// control the outer corners so adjacent sections can read as one stack.
+class WidgetSectionStack extends StatefulWidget {
+  final String label;
+  final IconData icon;
+  final List<Widget> children;
+  final bool initiallyExpanded;
+  final double topRadius;
+  final double bottomRadius;
+
+  const WidgetSectionStack({
+    super.key,
+    required this.label,
+    required this.icon,
+    required this.children,
+    this.initiallyExpanded = false,
+    this.topRadius = 12,
+    this.bottomRadius = 12,
+  });
+
+  @override
+  State<WidgetSectionStack> createState() => _WidgetSectionStackState();
+}
+
+class _WidgetSectionStackState extends State<WidgetSectionStack> {
+  static const double _seam = 5;
+  late bool _expanded = widget.initiallyExpanded;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final BorderRadius headerRadius = BorderRadius.only(
+      topLeft: Radius.circular(widget.topRadius),
+      topRight: Radius.circular(widget.topRadius),
+      bottomLeft: Radius.circular(_expanded ? _seam : widget.bottomRadius),
+      bottomRight: Radius.circular(_expanded ? _seam : widget.bottomRadius),
+    );
+    final int count = widget.children.length;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Material(
+          color: cs.onSurface.withValues(alpha: 0.06),
+          borderRadius: headerRadius,
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: () => setState(() => _expanded = !_expanded),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 32,
+                    child: Center(
+                      child: Icon(widget.icon, size: 18, color: cs.primary),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      widget.label,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: cs.onSurface,
+                      ),
+                    ),
+                  ),
+                  AnimatedRotation(
+                    turns: _expanded ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 200),
+                    child: Icon(LucideIcons.chevronDown,
+                        size: 18, color: cs.onSurfaceVariant),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        if (_expanded)
+          for (int i = 0; i < count; i++) ...[
+            const SizedBox(height: 3),
+            Material(
+              color: cs.onSurface.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.only(
+                topLeft: const Radius.circular(_seam),
+                topRight: const Radius.circular(_seam),
+                bottomLeft: Radius.circular(
+                    i == count - 1 ? widget.bottomRadius : _seam),
+                bottomRight: Radius.circular(
+                    i == count - 1 ? widget.bottomRadius : _seam),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: widget.children[i],
+            ),
+          ],
+      ],
     );
   }
 }
@@ -814,7 +919,8 @@ class _WidgetAudioState extends State<WidgetAudio> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        mediaFileDurationFromSeconds(_currentPosition.inSeconds),
+                        mediaFileDurationFromSeconds(
+                            _currentPosition.inSeconds),
                         style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w600,
@@ -1501,7 +1607,8 @@ class _DownloadButtonState extends State<DownloadButton> {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.15),
+          color:
+              Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.15),
           width: 0.75,
         ),
       ),
@@ -1614,11 +1721,320 @@ class WidgetEmojiPicker extends StatefulWidget {
 class _WidgetEmojiPickerState extends State<WidgetEmojiPicker> {
   final Map<String, List<String>> emojiCategories = {
     'Recent': ['📁', '📂', '📑', '📔', '📝', '📓', '🎨', '✈️', '🚀', '🌟'],
-    'Smiles': ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🥸', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕'],
-    'Office': ['📁', '📂', '🗂️', '📅', '📆', '🗒️', '🗓️', '📖', '📘', '📗', '📙', '📓', '📒', '📜', '📄', '📰', '📑', '🔖', '🏷️', '💰', '💳', '💎', '⚖️', '⚙️', '🛠️', '⚒️', '⛏️', '🔩', '🔧', '🧱', '⛓️', '🪑', '🛏️', '🛋️', '⌛', '⏳', '⌚', '⏰', '⏱️', '⏲️', '🕯️', '💡', '🔦', '🏮', '🔍', '🔎'],
-    'Nature': ['🌱', '🪴', '🌲', '🌳', '🌴', '🌵', '🌾', '🌿', '☘️', '🍀', '🍁', '🍂', '🍃', '🍄', '🐚', '🌎', '🌍', '🌏', '🌕', '🌖', '🌗', '🌘', '🌑', '🌓', '🌙', '☀️', '🌝', '🌞', '🪐', '🌟', '🌠', '🌌', '☁️', '⛅', '⛈️', '🌤️', '🌥️', '🌦️', '🌧️', '🌨️', '🌩️', '🌪️', '🌫️', '🌬️', '🌀', '🌈', '🌅', '🌄'],
-    'Travel': ['🚗', '🚕', '🚙', '🚌', '🚎', '🏎️', '🚓', '🚑', '🚒', '🚐', '🛻', '🚚', '🚛', '🚜', '🛵', '🏍️', '🚲', '🛴', '✈️', '🛫', '🛬', '🚁', '🚀', '🛸', '🛰️', '⛵', '🛶', '🚤', '🛳️', '⛴️', '🚢', '⚓', '⛽', '🚧', '🛑', '🚥', '🚦', '🗺️', '🗼', '🏰', '🏯', '🏟️', '🎡', '🎢'],
-    'Shapes': ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '☮️', '✝️', '☪️', '🕉️', '☸️', '✡️', '🔯', '☯️', '☦️', '🛐', '♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑', '♒', '♓', '🆔', '⚛️', '☢️', '☣️', '📴', '📳', '➕', '➖', '✖️', '➗', '♾️', '‼️', '⁉️', '❓', '❔', '❕', '❗', '〰️', '💱', '💲', '🔱', '📛', '🔰', '⭕', '✅', '✔️', '❌', '❎', '➰', '➿', '〽️', '✳️', '✴️', '❇️', '©️', '®️', '™️'],
+    'Smiles': [
+      '😀',
+      '😃',
+      '😄',
+      '😁',
+      '😆',
+      '😅',
+      '😂',
+      '🤣',
+      '😊',
+      '😇',
+      '🙂',
+      '🙃',
+      '😉',
+      '😌',
+      '😍',
+      '🥰',
+      '😘',
+      '😗',
+      '😙',
+      '😚',
+      '😋',
+      '😛',
+      '😝',
+      '😜',
+      '🤪',
+      '🤨',
+      '🧐',
+      '🤓',
+      '😎',
+      '🥸',
+      '🤩',
+      '🥳',
+      '😏',
+      '😒',
+      '😞',
+      '😔',
+      '😟',
+      '😕',
+      '🙁',
+      '☹️',
+      '😣',
+      '😖',
+      '😫',
+      '😩',
+      '🥺',
+      '😢',
+      '😭',
+      '😤',
+      '😠',
+      '😡',
+      '🤬',
+      '🤯',
+      '😳',
+      '🥵',
+      '🥶',
+      '😱',
+      '😨',
+      '😰',
+      '😥',
+      '😓',
+      '🤗',
+      '🤔',
+      '🤭',
+      '🤫',
+      '🤥',
+      '😶',
+      '😐',
+      '😑',
+      '😬',
+      '🙄',
+      '😯',
+      '😦',
+      '😧',
+      '😮',
+      '😲',
+      '🥱',
+      '😴',
+      '🤤',
+      '😪',
+      '😵',
+      '🤐',
+      '🥴',
+      '🤢',
+      '🤮',
+      '🤧',
+      '😷',
+      '🤒',
+      '🤕'
+    ],
+    'Office': [
+      '📁',
+      '📂',
+      '🗂️',
+      '📅',
+      '📆',
+      '🗒️',
+      '🗓️',
+      '📖',
+      '📘',
+      '📗',
+      '📙',
+      '📓',
+      '📒',
+      '📜',
+      '📄',
+      '📰',
+      '📑',
+      '🔖',
+      '🏷️',
+      '💰',
+      '💳',
+      '💎',
+      '⚖️',
+      '⚙️',
+      '🛠️',
+      '⚒️',
+      '⛏️',
+      '🔩',
+      '🔧',
+      '🧱',
+      '⛓️',
+      '🪑',
+      '🛏️',
+      '🛋️',
+      '⌛',
+      '⏳',
+      '⌚',
+      '⏰',
+      '⏱️',
+      '⏲️',
+      '🕯️',
+      '💡',
+      '🔦',
+      '🏮',
+      '🔍',
+      '🔎'
+    ],
+    'Nature': [
+      '🌱',
+      '🪴',
+      '🌲',
+      '🌳',
+      '🌴',
+      '🌵',
+      '🌾',
+      '🌿',
+      '☘️',
+      '🍀',
+      '🍁',
+      '🍂',
+      '🍃',
+      '🍄',
+      '🐚',
+      '🌎',
+      '🌍',
+      '🌏',
+      '🌕',
+      '🌖',
+      '🌗',
+      '🌘',
+      '🌑',
+      '🌓',
+      '🌙',
+      '☀️',
+      '🌝',
+      '🌞',
+      '🪐',
+      '🌟',
+      '🌠',
+      '🌌',
+      '☁️',
+      '⛅',
+      '⛈️',
+      '🌤️',
+      '🌥️',
+      '🌦️',
+      '🌧️',
+      '🌨️',
+      '🌩️',
+      '🌪️',
+      '🌫️',
+      '🌬️',
+      '🌀',
+      '🌈',
+      '🌅',
+      '🌄'
+    ],
+    'Travel': [
+      '🚗',
+      '🚕',
+      '🚙',
+      '🚌',
+      '🚎',
+      '🏎️',
+      '🚓',
+      '🚑',
+      '🚒',
+      '🚐',
+      '🛻',
+      '🚚',
+      '🚛',
+      '🚜',
+      '🛵',
+      '🏍️',
+      '🚲',
+      '🛴',
+      '✈️',
+      '🛫',
+      '🛬',
+      '🚁',
+      '🚀',
+      '🛸',
+      '🛰️',
+      '⛵',
+      '🛶',
+      '🚤',
+      '🛳️',
+      '⛴️',
+      '🚢',
+      '⚓',
+      '⛽',
+      '🚧',
+      '🛑',
+      '🚥',
+      '🚦',
+      '🗺️',
+      '🗼',
+      '🏰',
+      '🏯',
+      '🏟️',
+      '🎡',
+      '🎢'
+    ],
+    'Shapes': [
+      '❤️',
+      '🧡',
+      '💛',
+      '💚',
+      '💙',
+      '💜',
+      '🖤',
+      '🤍',
+      '🤎',
+      '💔',
+      '❣️',
+      '💕',
+      '💞',
+      '💓',
+      '💗',
+      '💖',
+      '💘',
+      '💝',
+      '💟',
+      '☮️',
+      '✝️',
+      '☪️',
+      '🕉️',
+      '☸️',
+      '✡️',
+      '🔯',
+      '☯️',
+      '☦️',
+      '🛐',
+      '♈',
+      '♉',
+      '♊',
+      '♋',
+      '♌',
+      '♍',
+      '♎',
+      '♏',
+      '♐',
+      '♑',
+      '♒',
+      '♓',
+      '🆔',
+      '⚛️',
+      '☢️',
+      '☣️',
+      '📴',
+      '📳',
+      '➕',
+      '➖',
+      '✖️',
+      '➗',
+      '♾️',
+      '‼️',
+      '⁉️',
+      '❓',
+      '❔',
+      '❕',
+      '❗',
+      '〰️',
+      '💱',
+      '💲',
+      '🔱',
+      '📛',
+      '🔰',
+      '⭕',
+      '✅',
+      '✔️',
+      '❌',
+      '❎',
+      '➰',
+      '➿',
+      '〽️',
+      '✳️',
+      '✴️',
+      '❇️',
+      '©️',
+      '®️',
+      '™️'
+    ],
   };
 
   String selectedCategory = 'Smiles';
@@ -1663,7 +2079,8 @@ class _WidgetEmojiPickerState extends State<WidgetEmojiPicker> {
                   const Spacer(),
                   IconButton(
                     onPressed: () => Navigator.pop(context),
-                    icon: Icon(LucideIcons.x, size: 20, color: cs.onSurfaceVariant),
+                    icon: Icon(LucideIcons.x,
+                        size: 20, color: cs.onSurfaceVariant),
                     style: IconButton.styleFrom(
                       backgroundColor: cs.onSurface.withValues(alpha: 0.05),
                       padding: const EdgeInsets.all(8),
@@ -1687,12 +2104,15 @@ class _WidgetEmojiPickerState extends State<WidgetEmojiPicker> {
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
                         margin: const EdgeInsets.only(right: 8),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
                         decoration: BoxDecoration(
                           color: isSelected ? cs.primary : Colors.transparent,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: isSelected ? Colors.transparent : cs.onSurface.withValues(alpha: 0.1),
+                            color: isSelected
+                                ? Colors.transparent
+                                : cs.onSurface.withValues(alpha: 0.1),
                             width: 1,
                           ),
                         ),
@@ -1700,8 +2120,10 @@ class _WidgetEmojiPickerState extends State<WidgetEmojiPicker> {
                           cat,
                           style: TextStyle(
                             fontSize: 13,
-                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                            color: isSelected ? cs.onPrimary : cs.onSurfaceVariant,
+                            fontWeight:
+                                isSelected ? FontWeight.w600 : FontWeight.w400,
+                            color:
+                                isSelected ? cs.onPrimary : cs.onSurfaceVariant,
                           ),
                         ),
                       ),
@@ -1720,7 +2142,8 @@ class _WidgetEmojiPickerState extends State<WidgetEmojiPicker> {
                 decoration: BoxDecoration(
                   color: cs.onSurface.withValues(alpha: 0.03),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: cs.onSurface.withValues(alpha: 0.05)),
+                  border:
+                      Border.all(color: cs.onSurface.withValues(alpha: 0.05)),
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: GridView.builder(

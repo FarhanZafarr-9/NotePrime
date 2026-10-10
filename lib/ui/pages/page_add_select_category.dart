@@ -116,13 +116,14 @@ class PageAddSelectCategoryState extends State<PageAddSelectCategory> {
                   color: category.color,
                   title: category.title);
               final cs = Theme.of(context).colorScheme;
+              final radius = listRowRadius(index, categories.length);
               return Container(
                 margin: const EdgeInsets.only(bottom: 3),
                 child: Material(
                   color: cs.onSurface.withValues(alpha: 0.06),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: radius,
                   child: InkWell(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: radius,
                     onTap: () {
                       selectCategory(category.id!);
                     },
@@ -141,8 +142,7 @@ class PageAddSelectCategoryState extends State<PageAddSelectCategory> {
         onPressed: () {
           addCategory();
         },
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: const Icon(LucideIcons.plus),
       ),
     );

@@ -194,44 +194,6 @@ class _PageCategoryAddEditState extends State<PageCategoryAddEdit> {
     );
   }
 
-  Widget _collapsibleSection({
-    required BuildContext context,
-    required String label,
-    required IconData icon,
-    required List<Widget> children,
-  }) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: cs.onSurface.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Theme(
-        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16), side: BorderSide.none),
-          collapsedShape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16), side: BorderSide.none),
-          visualDensity: VisualDensity.compact,
-          initiallyExpanded: false,
-          leading: Icon(icon, size: 18, color: cs.primary),
-          title: Text(
-            label,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: cs.onSurface,
-            ),
-          ),
-          childrenPadding: const EdgeInsets.only(bottom: 8),
-          children: children,
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     String task = category == null ? "Add" : "Edit";
@@ -294,7 +256,8 @@ class _PageCategoryAddEditState extends State<PageCategoryAddEdit> {
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(
-                        color: cs.onSurface.withValues(alpha: 0.15), width: 0.75),
+                        color: cs.onSurface.withValues(alpha: 0.15),
+                        width: 0.75),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -309,8 +272,7 @@ class _PageCategoryAddEditState extends State<PageCategoryAddEdit> {
                 },
               ),
               const SizedBox(height: 24),
-              _collapsibleSection(
-                context: context,
+              WidgetSectionStack(
                 label: "Identity",
                 icon: LucideIcons.fingerprint,
                 children: [
@@ -351,8 +313,7 @@ class _PageCategoryAddEditState extends State<PageCategoryAddEdit> {
                         ? Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text(icon!,
-                                  style: const TextStyle(fontSize: 16)),
+                              Text(icon!, style: const TextStyle(fontSize: 16)),
                               const SizedBox(width: 8),
                               Icon(LucideIcons.checkCircle2,
                                   size: 18, color: cs.primary),
@@ -396,8 +357,7 @@ class _PageCategoryAddEditState extends State<PageCategoryAddEdit> {
       floatingActionButton: FloatingActionButton(
         heroTag: "save_new_category",
         onPressed: () => saveCategory(categoryController.text),
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         backgroundColor: cs.primary,
         foregroundColor: cs.onPrimary,
         elevation: 4,

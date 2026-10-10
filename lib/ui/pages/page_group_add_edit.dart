@@ -13,7 +13,6 @@ import '../common_widgets.dart';
 import '../../models/model_item_group.dart';
 import '../../models/model_setting.dart';
 
-
 class PageGroupAddEdit extends StatefulWidget {
   final bool runningOnDesktop;
   final Function(PageType, bool, PageParams)? setShowHidePage;
@@ -206,8 +205,8 @@ class PageGroupAddEditState extends State<PageGroupAddEdit> {
         widget.group!.color = colorCode ?? widget.group!.color;
         widget.group!.data = groupData;
         widget.group!.icon = icon;
-        await widget.group!
-            .update(["thumbnail", "title", "category_id", "color", "data", "icon"]);
+        await widget.group!.update(
+            ["thumbnail", "title", "category_id", "color", "data", "icon"]);
 
         EventStream().publish(
             AppEvent(type: EventType.changedGroupId, value: widget.group!.id));
@@ -466,44 +465,6 @@ class PageGroupAddEditState extends State<PageGroupAddEdit> {
     );
   }
 
-  Widget _collapsibleSection({
-    required BuildContext context,
-    required String label,
-    required IconData icon,
-    required List<Widget> children,
-  }) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: cs.onSurface.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Theme(
-        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16), side: BorderSide.none),
-          collapsedShape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16), side: BorderSide.none),
-          visualDensity: VisualDensity.compact,
-          initiallyExpanded: false,
-          leading: Icon(icon, size: 18, color: cs.primary),
-          title: Text(
-            label,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: cs.onSurface,
-            ),
-          ),
-          childrenPadding: const EdgeInsets.only(bottom: 8),
-          children: children,
-        ),
-      ),
-    );
-  }
-
   // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
@@ -557,7 +518,8 @@ class PageGroupAddEditState extends State<PageGroupAddEdit> {
                 textCapitalization: TextCapitalization.sentences,
                 autofocus: false,
                 style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface, fontSize: 16),
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontSize: 16),
                 textInputAction: TextInputAction.done,
                 onSubmitted: saveGroup,
                 decoration: InputDecoration(
@@ -599,8 +561,7 @@ class PageGroupAddEditState extends State<PageGroupAddEdit> {
                 },
               ),
               const SizedBox(height: 24),
-              _collapsibleSection(
-                context: context,
+              WidgetSectionStack(
                 label: "Identity",
                 icon: LucideIcons.fingerprint,
                 children: [
@@ -640,8 +601,7 @@ class PageGroupAddEditState extends State<PageGroupAddEdit> {
                         ? Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text(icon!,
-                                  style: const TextStyle(fontSize: 16)),
+                              Text(icon!, style: const TextStyle(fontSize: 16)),
                               const SizedBox(width: 8),
                               Icon(LucideIcons.checkCircle2,
                                   size: 18, color: cs.primary),
@@ -671,7 +631,8 @@ class PageGroupAddEditState extends State<PageGroupAddEdit> {
                           itemChanged = true;
                         });
                       },
-                      leading: _buildLeadingIcon(LucideIcons.trash2, color: cs.error),
+                      leading: _buildLeadingIcon(LucideIcons.trash2,
+                          color: cs.error),
                       label: "Reset to default icon",
                       labelColor: cs.error,
                     ),
@@ -708,10 +669,10 @@ class PageGroupAddEditState extends State<PageGroupAddEdit> {
               const SizedBox(height: 24),
               _sectionLabel("Group Settings"),
               const SizedBox(height: 12),
-              _collapsibleSection(
-                context: context,
+              WidgetSectionStack(
                 label: "Appearance",
                 icon: LucideIcons.palette,
+                bottomRadius: 5,
                 children: [
                   _settingsToggleTile(
                     context: context,
@@ -755,10 +716,12 @@ class PageGroupAddEditState extends State<PageGroupAddEdit> {
                   ),
                 ],
               ),
-              _collapsibleSection(
-                context: context,
+              const SizedBox(height: 3),
+              WidgetSectionStack(
                 label: "Layout & Preferences",
                 icon: LucideIcons.layers,
+                topRadius: 5,
+                bottomRadius: 5,
                 children: [
                   _settingsToggleTile(
                     context: context,
@@ -782,10 +745,11 @@ class PageGroupAddEditState extends State<PageGroupAddEdit> {
                   ),
                 ],
               ),
-              _collapsibleSection(
-                context: context,
+              const SizedBox(height: 3),
+              WidgetSectionStack(
                 label: "Security & Privacy",
                 icon: LucideIcons.shieldCheck,
+                topRadius: 5,
                 children: [
                   _settingsToggleTile(
                     context: context,
@@ -835,8 +799,10 @@ class PageGroupAddEditState extends State<PageGroupAddEdit> {
                   ),
                   label: 'Delete group',
                   labelColor: Theme.of(context).colorScheme.error,
-                  tileColor:
-                      Theme.of(context).colorScheme.error.withValues(alpha: 0.06),
+                  tileColor: Theme.of(context)
+                      .colorScheme
+                      .error
+                      .withValues(alpha: 0.06),
                 ),
               const SizedBox(height: 80),
             ],
@@ -846,8 +812,7 @@ class PageGroupAddEditState extends State<PageGroupAddEdit> {
       floatingActionButton: FloatingActionButton(
         heroTag: "save_new_group",
         onPressed: () async => saveGroup(titleController.text),
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         backgroundColor: cs.primary,
         foregroundColor: cs.onPrimary,
         elevation: 4,
