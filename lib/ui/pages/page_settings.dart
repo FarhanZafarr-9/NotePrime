@@ -88,25 +88,23 @@ class SettingsPageState extends State<SettingsPage> {
 
     // Initialize display overrides
     useGroupSettings = ModelSetting.get("use_group_settings", "yes") == "yes";
-    globalShowDate =
-        ModelSetting.get("global_show_date", "yes") == "yes";
-    globalShowTime =
-        ModelSetting.get("global_show_time", "yes") == "yes";
+    globalShowDate = ModelSetting.get("global_show_date", "yes") == "yes";
+    globalShowTime = ModelSetting.get("global_show_time", "yes") == "yes";
     globalShowNoteBorder =
         ModelSetting.get("global_show_note_border", "no") == "yes";
-    globalLinkPreview =
-        ModelSetting.get("global_link_preview", "yes") == "yes";
+    globalLinkPreview = ModelSetting.get("global_link_preview", "yes") == "yes";
     globalSortOldestFirst =
         ModelSetting.get("global_sort_order", "newest") == "oldest";
     globalMediaGallery =
         ModelSetting.get("global_media_gallery", "no") == "yes";
-    globalGroupLock =
-        ModelSetting.get("global_group_lock", "no") == "yes";
+    globalGroupLock = ModelSetting.get("global_group_lock", "no") == "yes";
     privacyShieldEnabled =
         ModelSetting.get("privacy_shield_enabled", "no") == "yes";
     immersiveMode = ModelSetting.get("immersive_mode", "no") == "yes";
-    screenshotProtection = ModelSetting.get("screenshot_protection", "no") == "yes";
-    biometricGracePeriod = int.parse(ModelSetting.get("biometric_grace_period", "0").toString());
+    screenshotProtection =
+        ModelSetting.get("screenshot_protection", "no") == "yes";
+    biometricGracePeriod =
+        int.parse(ModelSetting.get("biometric_grace_period", "0").toString());
     fontFamily = ModelSetting.get("font_family", "Inter");
     autoDownloadMedia = ModelSetting.get("auto_download_media", "yes") == "yes";
     mediaNetworkType = ModelSetting.get("media_network_type", "wifi");
@@ -119,7 +117,7 @@ class SettingsPageState extends State<SettingsPage> {
     try {
       final docDir = await getApplicationDocumentsDirectory();
       final cacheDir = await getTemporaryDirectory();
-      
+
       String? mediaDirName = await secureStorage.read(key: "media_dir");
       if (mediaDirName != null) {
         final mediaDir = Directory(path.join(docDir.path, mediaDirName));
@@ -127,11 +125,11 @@ class SettingsPageState extends State<SettingsPage> {
           totalSize += await _getDirSize(mediaDir);
         }
       }
-      
+
       if (await cacheDir.exists()) {
         totalSize += await _getDirSize(cacheDir);
       }
-      
+
       setState(() {
         _cacheSize = readableFileSizeFromBytes(totalSize);
       });
@@ -242,9 +240,11 @@ class SettingsPageState extends State<SettingsPage> {
     await ModelSetting.set("screenshot_protection", value ? "yes" : "no");
     if (Platform.isAndroid) {
       if (value) {
-        await FlutterWindowManagerPlus.addFlags(FlutterWindowManagerPlus.FLAG_SECURE);
+        await FlutterWindowManagerPlus.addFlags(
+            FlutterWindowManagerPlus.FLAG_SECURE);
       } else {
-        await FlutterWindowManagerPlus.clearFlags(FlutterWindowManagerPlus.FLAG_SECURE);
+        await FlutterWindowManagerPlus.clearFlags(
+            FlutterWindowManagerPlus.FLAG_SECURE);
       }
     }
   }
@@ -444,14 +444,17 @@ class SettingsPageState extends State<SettingsPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text("Clear Cache?"),
-        content: const Text("This will delete all locally cached media and link previews. Files on the cloud will not be affected."),
+        content: const Text(
+            "This will delete all locally cached media and link previews. Files on the cloud will not be affected."),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Cancel")),
           TextButton(
-            style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
-            onPressed: () => Navigator.pop(context, true), 
-            child: const Text("Clear")
-          ),
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text("Cancel")),
+          TextButton(
+              style: TextButton.styleFrom(
+                  foregroundColor: Theme.of(context).colorScheme.error),
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text("Clear")),
         ],
       ),
     );
@@ -461,7 +464,7 @@ class SettingsPageState extends State<SettingsPage> {
       try {
         final docDir = await getApplicationDocumentsDirectory();
         final cacheDir = await getTemporaryDirectory();
-        
+
         String? mediaDirName = await secureStorage.read(key: "media_dir");
         if (mediaDirName != null) {
           final mediaDir = Directory(path.join(docDir.path, mediaDirName));
@@ -470,12 +473,12 @@ class SettingsPageState extends State<SettingsPage> {
             await mediaDir.create();
           }
         }
-        
+
         if (await cacheDir.exists()) {
           await cacheDir.delete(recursive: true);
           await cacheDir.create();
         }
-        
+
         await _calculateCacheSize();
       } catch (e) {
         logger.error("Error clearing cache", error: e);
@@ -493,19 +496,24 @@ class SettingsPageState extends State<SettingsPage> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            children: fonts.map((f) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: _bottomSheetTile(
-                context: context,
-                icon: LucideIcons.type,
-                label: f,
-                color: fontFamily == f ? Theme.of(context).colorScheme.primary : null,
-                onTap: () {
-                  _setFontFamily(f);
-                  Navigator.pop(context);
-                },
-              ),
-            )).toList(),
+            children: fonts.indexed
+                .map((entry) => Padding(
+                      padding: const EdgeInsets.only(bottom: 3),
+                      child: _bottomSheetTile(
+                        context: context,
+                        icon: LucideIcons.type,
+                        label: entry.$2,
+                        color: fontFamily == entry.$2
+                            ? Theme.of(context).colorScheme.primary
+                            : null,
+                        borderRadius: listRowRadius(entry.$1, fonts.length),
+                        onTap: () {
+                          _setFontFamily(entry.$2);
+                          Navigator.pop(context);
+                        },
+                      ),
+                    ))
+                .toList(),
           ),
         ),
       ),
@@ -537,15 +545,19 @@ class SettingsPageState extends State<SettingsPage> {
                 style: TextStyle(fontSize: 14, color: cs.onSurfaceVariant),
               ),
               const SizedBox(height: 20),
-              ...periods.map((p) => Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
+              ...periods.indexed.map((entry) => Padding(
+                    padding: const EdgeInsets.only(bottom: 3),
                     child: _bottomSheetTile(
                       context: context,
                       icon: LucideIcons.timer,
-                      label: p == 0 ? "Immediate Lock" : "$p Minutes",
-                      color: biometricGracePeriod == p ? cs.primary : null,
+                      label: entry.$2 == 0
+                          ? "Immediate Lock"
+                          : "${entry.$2} Minutes",
+                      color:
+                          biometricGracePeriod == entry.$2 ? cs.primary : null,
+                      borderRadius: listRowRadius(entry.$1, periods.length),
                       onTap: () {
-                        _setBiometricGracePeriod(p);
+                        _setBiometricGracePeriod(entry.$2);
                         Navigator.pop(context);
                       },
                     ),
@@ -580,17 +592,19 @@ class SettingsPageState extends State<SettingsPage> {
                 icon: LucideIcons.wifi,
                 label: "Wi-Fi Only",
                 color: mediaNetworkType == "wifi" ? cs.primary : null,
+                borderRadius: listRowRadius(0, 2),
                 onTap: () {
                   _setMediaNetworkType("wifi");
                   Navigator.pop(context);
                 },
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 3),
               _bottomSheetTile(
                 context: context,
                 icon: LucideIcons.globe,
                 label: "Wi-Fi & Cellular",
                 color: mediaNetworkType == "all" ? cs.primary : null,
+                borderRadius: listRowRadius(1, 2),
                 onTap: () {
                   _setMediaNetworkType("all");
                   Navigator.pop(context);
@@ -808,15 +822,21 @@ class SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Widget _buildDevCard() {
+  Widget _buildDevCard({double topRadius = 20, double bottomRadius = 20}) {
     final cs = Theme.of(context).colorScheme;
+    final radius = BorderRadius.only(
+      topLeft: Radius.circular(topRadius),
+      topRight: Radius.circular(topRadius),
+      bottomLeft: Radius.circular(bottomRadius),
+      bottomRight: Radius.circular(bottomRadius),
+    );
     return Container(
-      margin: const EdgeInsets.only(top: 12, bottom: 8),
+      margin: const EdgeInsets.only(top: 12, bottom: 0),
       child: Material(
         color: cs.primary.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: radius,
         child: InkWell(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: radius,
           onTap: () {
             const url = 'https://github.com/FarhanZafarr-9/NotePrime';
             openURL(url);
@@ -830,7 +850,8 @@ class SettingsPageState extends State<SettingsPage> {
                   height: 56,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: cs.primary.withValues(alpha: 0.2), width: 2),
+                    border: Border.all(
+                        color: cs.primary.withValues(alpha: 0.2), width: 2),
                     image: const DecorationImage(
                       image: AssetImage('assets/avatar.png'),
                       fit: BoxFit.cover,
@@ -854,14 +875,18 @@ class SettingsPageState extends State<SettingsPage> {
                           ),
                           const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 2),
                             decoration: BoxDecoration(
                               color: cs.primary.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Text(
                               "v$_appVersion",
-                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: cs.primary),
+                              style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: cs.primary),
                             ),
                           ),
                         ],
@@ -886,7 +911,8 @@ class SettingsPageState extends State<SettingsPage> {
                     ],
                   ),
                 ),
-                Icon(LucideIcons.github, size: 24, color: cs.primary.withValues(alpha: 0.8)),
+                Icon(LucideIcons.github,
+                    size: 24, color: cs.primary.withValues(alpha: 0.8)),
               ],
             ),
           ),
@@ -926,7 +952,7 @@ class SettingsPageState extends State<SettingsPage> {
             ),
           ),
           const Spacer(),
-Row(
+          Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
@@ -955,6 +981,38 @@ Row(
     );
   }
 
+  static const double _groupEdgeRadius = 12;
+  static const double _groupSeamRadius = 5;
+
+  /// Builds a single settings tile with the given corner radius.
+  Widget _buildGroupTile(_SettingsTile tile, BorderRadius radius) {
+    return Material(
+      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.06),
+      borderRadius: radius,
+      child: InkWell(
+        borderRadius: radius,
+        onTap: tile.enabled ? tile.onTap : null,
+        child: Opacity(
+          opacity: tile.enabled ? 1.0 : 0.5,
+          child: ClipRRect(
+            borderRadius: radius,
+            child: ListTile(
+              leading: tile.leading,
+              title: tile.title,
+              subtitle: tile.subtitle,
+              trailing: tile.trailing,
+              enabled: tile.enabled,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 2,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   /// Wraps a list of tiles so that:
   ///   - first tile  → large top corners    (12), small bottom corners (5)
   ///   - last tile   → small top corners    (5),  large bottom corners (12)
@@ -969,52 +1027,51 @@ Row(
         final isLast = i == tiles.length - 1;
         final isOnly = tiles.length == 1;
 
-        const double large = 12;
-        const double small = 5;
-
         final radius = BorderRadius.only(
-          topLeft: Radius.circular(isFirst || isOnly ? large : small),
-          topRight: Radius.circular(isFirst || isOnly ? large : small),
-          bottomLeft: Radius.circular(isLast || isOnly ? large : small),
-          bottomRight: Radius.circular(isLast || isOnly ? large : small),
+          topLeft: Radius.circular(
+              isFirst || isOnly ? _groupEdgeRadius : _groupSeamRadius),
+          topRight: Radius.circular(
+              isFirst || isOnly ? _groupEdgeRadius : _groupSeamRadius),
+          bottomLeft: Radius.circular(
+              isLast || isOnly ? _groupEdgeRadius : _groupSeamRadius),
+          bottomRight: Radius.circular(
+              isLast || isOnly ? _groupEdgeRadius : _groupSeamRadius),
         );
-
-        final tile = tiles[i];
 
         return Column(
           children: [
-            Material(
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.06),
-              borderRadius: radius,
-              child: InkWell(
-                borderRadius: radius,
-                onTap: tile.enabled ? tile.onTap : null,
-                child: Opacity(
-                  opacity: tile.enabled ? 1.0 : 0.5,
-                  child: ClipRRect(
-                    borderRadius: radius,
-                    child: ListTile(
-                      leading: tile.leading,
-                      title: tile.title,
-                      subtitle: tile.subtitle,
-                      trailing: tile.trailing,
-                      enabled: tile.enabled,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 2,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
+            _buildGroupTile(tiles[i], radius),
             if (!isLast) const SizedBox(height: 3),
           ],
         );
       }),
+    );
+  }
+
+  /// The hero card sitting directly on top of the "What's New" row, styled so
+  /// the two read as a single connected settings group.
+  Widget _buildHeroAndWhatsNew() {
+    final cs = Theme.of(context).colorScheme;
+    return Column(
+      children: [
+        _buildDevCard(topRadius: 16, bottomRadius: _groupSeamRadius),
+        const SizedBox(height: 3),
+        _buildGroupTile(
+          _SettingsTile(
+            leading: _buildLeadingIcon(LucideIcons.sparkles, cs.primary),
+            title: const Text("What's New"),
+            subtitle: const Text("Explore latest NotePrime features"),
+            trailing: _buildTrailingChevron(),
+            onTap: _showChangelog,
+          ),
+          const BorderRadius.only(
+            topLeft: Radius.circular(_groupSeamRadius),
+            topRight: Radius.circular(_groupSeamRadius),
+            bottomLeft: Radius.circular(_groupEdgeRadius),
+            bottomRight: Radius.circular(_groupEdgeRadius),
+          ),
+        ),
+      ],
     );
   }
 
@@ -1045,16 +1102,7 @@ Row(
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
         children: <Widget>[
-          _buildDevCard(),
-          _buildSettingsGroup([
-            _SettingsTile(
-              leading: _buildLeadingIcon(LucideIcons.sparkles, Theme.of(context).colorScheme.primary),
-              title: const Text("What's New"),
-              subtitle: const Text("Explore latest NotePrime features"),
-              trailing: _buildTrailingChevron(),
-              onTap: _showChangelog,
-            ),
-          ]),
+          _buildHeroAndWhatsNew(),
           // ── Appearance ────────────────────────────────────────────────────
           _buildSectionHeader("Appearance"),
           _buildSettingsGroup([
@@ -1127,6 +1175,7 @@ Row(
             _SettingsTile(
               leading: _buildLeadingIcon(LucideIcons.type, cs.tertiary),
               title: const Text("Font Size"),
+              subtitle: const Text("Adjust text size across the app"),
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -1150,7 +1199,7 @@ Row(
           ]),
 
           // ── Interface ─────────────────────────────────────────────────────
-_buildSectionHeader("Interface"),
+          _buildSectionHeader("Interface"),
           _buildSettingsGroup([
             _SettingsTile(
               leading:
@@ -1165,128 +1214,131 @@ _buildSectionHeader("Interface"),
             ),
           ]),
 
-          _buildSubHeaderWithStatus("Display", useGroupSettings),
-          _buildSettingsGroup([
-            _SettingsTile(
-              enabled: !useGroupSettings,
-              leading:
-                  _buildLeadingIcon(LucideIcons.calendar, cs.onSurfaceVariant),
-              title: const Text("Show Dates"),
-              subtitle: const Text("Display date separators in chat"),
-              trailing: Switch(
-                value: globalShowDate,
-                onChanged: !useGroupSettings ? _setGlobalShowDate : null,
+          if (!useGroupSettings) ...[
+            _buildSubHeaderWithStatus("Display", false),
+            _buildSettingsGroup([
+              _SettingsTile(
+                enabled: !useGroupSettings,
+                leading: _buildLeadingIcon(
+                    LucideIcons.calendar, cs.onSurfaceVariant),
+                title: const Text("Show Dates"),
+                subtitle: const Text("Display date separators in chat"),
+                trailing: Switch(
+                  value: globalShowDate,
+                  onChanged: !useGroupSettings ? _setGlobalShowDate : null,
+                ),
+                onTap: !useGroupSettings
+                    ? () => _setGlobalShowDate(!globalShowDate)
+                    : null,
               ),
-              onTap: !useGroupSettings
-                  ? () => _setGlobalShowDate(!globalShowDate)
-                  : null,
-            ),
-            _SettingsTile(
-              enabled: !useGroupSettings,
-              leading:
-                  _buildLeadingIcon(LucideIcons.clock, cs.onSurfaceVariant),
-              title: const Text("Show Time Pills"),
-              subtitle: const Text("Display timestamp on messages"),
-              trailing: Switch(
-                value: globalShowTime,
-                onChanged: !useGroupSettings ? _setGlobalShowTime : null,
+              _SettingsTile(
+                enabled: !useGroupSettings,
+                leading:
+                    _buildLeadingIcon(LucideIcons.clock, cs.onSurfaceVariant),
+                title: const Text("Show Time Pills"),
+                subtitle: const Text("Display timestamp on messages"),
+                trailing: Switch(
+                  value: globalShowTime,
+                  onChanged: !useGroupSettings ? _setGlobalShowTime : null,
+                ),
+                onTap: !useGroupSettings
+                    ? () => _setGlobalShowTime(!globalShowTime)
+                    : null,
               ),
-              onTap: !useGroupSettings
-                  ? () => _setGlobalShowTime(!globalShowTime)
-                  : null,
-            ),
-            _SettingsTile(
-              enabled: !useGroupSettings,
-              leading: _buildLeadingIcon(
-                  LucideIcons.rectangleHorizontal, cs.onSurfaceVariant),
-              title: const Text("Show Note Borders"),
-              subtitle: const Text("Display bubble outlines"),
-              trailing: Switch(
-                value: globalShowNoteBorder,
-                onChanged: !useGroupSettings ? _setGlobalShowNoteBorder : null,
+              _SettingsTile(
+                enabled: !useGroupSettings,
+                leading: _buildLeadingIcon(
+                    LucideIcons.rectangleHorizontal, cs.onSurfaceVariant),
+                title: const Text("Show Note Borders"),
+                subtitle: const Text("Display bubble outlines"),
+                trailing: Switch(
+                  value: globalShowNoteBorder,
+                  onChanged:
+                      !useGroupSettings ? _setGlobalShowNoteBorder : null,
+                ),
+                onTap: !useGroupSettings
+                    ? () => _setGlobalShowNoteBorder(!globalShowNoteBorder)
+                    : null,
               ),
-              onTap: !useGroupSettings
-                  ? () => _setGlobalShowNoteBorder(!globalShowNoteBorder)
-                  : null,
-            ),
-            _SettingsTile(
-              enabled: !useGroupSettings,
-              leading: _buildLeadingIcon(
-                  LucideIcons.layoutGrid, cs.onSurfaceVariant),
-              title: const Text("Media Gallery"),
-              subtitle: const Text("Group consecutive images"),
-              trailing: Switch(
-                value: globalMediaGallery,
-                onChanged: !useGroupSettings ? _setGlobalMediaGallery : null,
+              _SettingsTile(
+                enabled: !useGroupSettings,
+                leading: _buildLeadingIcon(
+                    LucideIcons.layoutGrid, cs.onSurfaceVariant),
+                title: const Text("Media Gallery"),
+                subtitle: const Text("Group consecutive images"),
+                trailing: Switch(
+                  value: globalMediaGallery,
+                  onChanged: !useGroupSettings ? _setGlobalMediaGallery : null,
+                ),
+                onTap: !useGroupSettings
+                    ? () => _setGlobalMediaGallery(!globalMediaGallery)
+                    : null,
               ),
-              onTap: !useGroupSettings
-                  ? () => _setGlobalMediaGallery(!globalMediaGallery)
-                  : null,
-            ),
-          ]),
-
-          _buildSubHeaderWithStatus("Behavior", useGroupSettings),
-          _buildSettingsGroup([
-            _SettingsTile(
-              enabled: !useGroupSettings,
-              leading: _buildLeadingIcon(
-                  LucideIcons.arrowUpDown, cs.onSurfaceVariant),
-              title: const Text("Sort Order"),
-              subtitle:
-                  Text(globalSortOldestFirst ? "Oldest first" : "Newest first"),
-              trailing: Switch(
-                value: globalSortOldestFirst,
-                onChanged: !useGroupSettings ? _setGlobalSortOrder : null,
+            ]),
+            _buildSubHeaderWithStatus("Behavior", useGroupSettings),
+            _buildSettingsGroup([
+              _SettingsTile(
+                enabled: !useGroupSettings,
+                leading: _buildLeadingIcon(
+                    LucideIcons.arrowUpDown, cs.onSurfaceVariant),
+                title: const Text("Sort Order"),
+                subtitle: Text(
+                    globalSortOldestFirst ? "Oldest first" : "Newest first"),
+                trailing: Switch(
+                  value: globalSortOldestFirst,
+                  onChanged: !useGroupSettings ? _setGlobalSortOrder : null,
+                ),
+                onTap: !useGroupSettings
+                    ? () => _setGlobalSortOrder(!globalSortOldestFirst)
+                    : null,
               ),
-              onTap: !useGroupSettings
-                  ? () => _setGlobalSortOrder(!globalSortOldestFirst)
-                  : null,
-            ),
-            _SettingsTile(
-              enabled: !useGroupSettings,
-              leading: _buildLeadingIcon(LucideIcons.link, cs.onSurfaceVariant),
-              title: const Text("Link Previews"),
-              subtitle: const Text("Auto-fetch URL metadata"),
-              trailing: Switch(
-                value: globalLinkPreview,
-                onChanged: !useGroupSettings ? _setGlobalLinkPreview : null,
+              _SettingsTile(
+                enabled: !useGroupSettings,
+                leading:
+                    _buildLeadingIcon(LucideIcons.link, cs.onSurfaceVariant),
+                title: const Text("Link Previews"),
+                subtitle: const Text("Auto-fetch URL metadata"),
+                trailing: Switch(
+                  value: globalLinkPreview,
+                  onChanged: !useGroupSettings ? _setGlobalLinkPreview : null,
+                ),
+                onTap: !useGroupSettings
+                    ? () => _setGlobalLinkPreview(!globalLinkPreview)
+                    : null,
               ),
-              onTap: !useGroupSettings
-                  ? () => _setGlobalLinkPreview(!globalLinkPreview)
-                  : null,
-            ),
-          ]),
-
-          _buildSubHeaderWithStatus("Privacy", useGroupSettings),
-          _buildSettingsGroup([
-            _SettingsTile(
-              enabled: !useGroupSettings,
-              leading: _buildLeadingIcon(LucideIcons.lock, cs.onSurfaceVariant),
-              title: const Text("Lock All Groups"),
-              subtitle: const Text("Require auth to open any group"),
-              trailing: Switch(
-                value: globalGroupLock,
-                onChanged: !useGroupSettings ? _setGlobalGroupLock : null,
+            ]),
+            _buildSubHeaderWithStatus("Privacy", useGroupSettings),
+            _buildSettingsGroup([
+              _SettingsTile(
+                enabled: !useGroupSettings,
+                leading:
+                    _buildLeadingIcon(LucideIcons.lock, cs.onSurfaceVariant),
+                title: const Text("Lock All Groups"),
+                subtitle: const Text("Require auth to open any group"),
+                trailing: Switch(
+                  value: globalGroupLock,
+                  onChanged: !useGroupSettings ? _setGlobalGroupLock : null,
+                ),
+                onTap: !useGroupSettings
+                    ? () => _setGlobalGroupLock(!globalGroupLock)
+                    : null,
               ),
-              onTap: !useGroupSettings
-                  ? () => _setGlobalGroupLock(!globalGroupLock)
-                  : null,
-            ),
-            _SettingsTile(
-              enabled: !useGroupSettings,
-              leading:
-                  _buildLeadingIcon(LucideIcons.eyeOff, cs.onSurfaceVariant),
-              title: const Text("Privacy Shield"),
-              subtitle: const Text("Gradient blur until tapped"),
-              trailing: Switch(
-                value: privacyShieldEnabled,
-                onChanged: !useGroupSettings ? _setPrivacyShield : null,
+              _SettingsTile(
+                enabled: !useGroupSettings,
+                leading:
+                    _buildLeadingIcon(LucideIcons.eyeOff, cs.onSurfaceVariant),
+                title: const Text("Privacy Shield"),
+                subtitle: const Text("Gradient blur until tapped"),
+                trailing: Switch(
+                  value: privacyShieldEnabled,
+                  onChanged: !useGroupSettings ? _setPrivacyShield : null,
+                ),
+                onTap: !useGroupSettings
+                    ? () => _setPrivacyShield(!privacyShieldEnabled)
+                    : null,
               ),
-              onTap: !useGroupSettings
-                  ? () => _setPrivacyShield(!privacyShieldEnabled)
-                  : null,
-            ),
-          ]),
+            ]),
+          ],
 
           // ── Privacy & Security ───────────────────────────────────────────
           _buildSectionHeader("Privacy & Security"),
@@ -1378,6 +1430,7 @@ _buildSectionHeader("Interface"),
             _SettingsTile(
               leading: _buildLeadingIcon(LucideIcons.watch, cs.primary),
               title: const Text('Time Format'),
+              subtitle: const Text('Choose 12-hour or 24-hour clock'),
               trailing: DropdownButton<String>(
                 value: timeFormat,
                 underline: const SizedBox(),
@@ -1396,8 +1449,8 @@ _buildSectionHeader("Interface"),
             _buildSectionHeader("Storage"),
             _buildSettingsGroup([
               _SettingsTile(
-                leading: _buildLeadingIcon(
-                    LucideIcons.databaseBackup, cs.secondary),
+                leading:
+                    _buildLeadingIcon(LucideIcons.databaseBackup, cs.secondary),
                 title: const Text('Backup Data'),
                 subtitle: const Text("Export your notes as zip"),
                 trailing: _buildTrailingChevron(),
@@ -1442,6 +1495,7 @@ _buildSectionHeader("Interface"),
             _SettingsTile(
               leading: _buildLeadingIcon(LucideIcons.list, cs.primary),
               title: const Text("Developer Logging"),
+              subtitle: const Text("Record diagnostic logs for support"),
               trailing: Switch(
                 value: loggingEnabled,
                 onChanged: _setLogging,
@@ -1450,6 +1504,7 @@ _buildSectionHeader("Interface"),
             _SettingsTile(
               leading: _buildLeadingIcon(LucideIcons.info, cs.secondary),
               title: const Text('App Version'),
+              subtitle: const Text('Material You build'),
               trailing: Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -1622,14 +1677,16 @@ _buildSectionHeader("Interface"),
     required VoidCallback onTap,
     String? subtitle,
     Color? color,
+    BorderRadius? borderRadius,
   }) {
     final cs = Theme.of(context).colorScheme;
     final tileColor = color ?? cs.onSurfaceVariant;
+    final radius = borderRadius ?? BorderRadius.circular(16);
     return Material(
       color: cs.onSurface.withValues(alpha: 0.04),
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: radius,
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: radius,
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -1652,13 +1709,13 @@ _buildSectionHeader("Interface"),
                   children: [
                     Text(label,
                         style: TextStyle(
-                            fontSize: 15,
-                            color: color ?? cs.onSurface)),
+                            fontSize: 15, color: color ?? cs.onSurface)),
                     if (subtitle != null)
                       Text(subtitle,
                           style: TextStyle(
                               fontSize: 12,
-                              color: cs.onSurfaceVariant.withValues(alpha: 0.6))),
+                              color:
+                                  cs.onSurfaceVariant.withValues(alpha: 0.6))),
                   ],
                 ),
               ),
