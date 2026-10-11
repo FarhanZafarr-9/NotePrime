@@ -362,6 +362,7 @@ class _PageCategoryGroupsState extends State<PageCategoryGroups> {
                   context: context,
                   icon: Icons.reorder,
                   label: 'Reorder',
+                  subtitle: 'Drag to rearrange',
                   borderRadius: listRowRadius(0, 4),
                   onTap: () {
                     Navigator.pop(context);
@@ -375,6 +376,7 @@ class _PageCategoryGroupsState extends State<PageCategoryGroups> {
                   context: context,
                   icon: LucideIcons.edit3,
                   label: 'Edit',
+                  subtitle: 'Change name, color and settings',
                   borderRadius: listRowRadius(1, 4),
                   onTap: () {
                     Navigator.pop(context);
@@ -389,6 +391,9 @@ class _PageCategoryGroupsState extends State<PageCategoryGroups> {
                   label: group.pinned == 1
                       ? 'Unpin from Shortcut'
                       : 'Pin to Shortcut',
+                  subtitle: group.pinned == 1
+                      ? 'Remove from Home'
+                      : 'Show on Home',
                   borderRadius: listRowRadius(2, 4),
                   onTap: () async {
                     Navigator.pop(context);
@@ -401,6 +406,7 @@ class _PageCategoryGroupsState extends State<PageCategoryGroups> {
                   context: context,
                   icon: LucideIcons.trash,
                   label: 'Delete',
+                  subtitle: 'Move to trash',
                   isDanger: true,
                   borderRadius: listRowRadius(3, 4),
                   onTap: () {
@@ -421,6 +427,7 @@ class _PageCategoryGroupsState extends State<PageCategoryGroups> {
     required BuildContext context,
     required IconData icon,
     required String label,
+    String? subtitle,
     required VoidCallback onTap,
     bool isDanger = false,
     BorderRadius? borderRadius,
@@ -448,9 +455,26 @@ class _PageCategoryGroupsState extends State<PageCategoryGroups> {
                 child: Icon(icon, size: 18, color: color),
               ),
               const SizedBox(width: 14),
-              Text(label,
-                  style: TextStyle(
-                      fontSize: 15, color: isDanger ? cs.error : cs.onSurface)),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(label,
+                        style: TextStyle(
+                            fontSize: 15,
+                            color: isDanger ? cs.error : cs.onSurface)),
+                    if (subtitle != null)
+                      Text(subtitle,
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: isDanger
+                                  ? cs.error.withValues(alpha: 0.7)
+                                  : cs.onSurfaceVariant
+                                      .withValues(alpha: 0.6))),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
