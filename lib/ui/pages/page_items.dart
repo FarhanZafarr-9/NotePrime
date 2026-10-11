@@ -236,17 +236,20 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
     if (mounted) {
       setState(() {
         if (useGroupSettings && data != null) {
+          // Compatibility for old "date_time" key: only used when the newer
+          // per-setting keys are absent, so they take precedence once set.
+          final bool hasLegacyDateTime = data.containsKey("date_time");
+          final bool legacyDateTime =
+              hasLegacyDateTime ? data["date_time"] == 1 : false;
           if (data.containsKey("show_date")) {
             showDate = data["show_date"] == 1;
+          } else if (hasLegacyDateTime) {
+            showDate = legacyDateTime;
           }
           if (data.containsKey("show_time")) {
             showTime = data["show_time"] == 1;
-          }
-          // Compatibility
-          if (data.containsKey("date_time")) {
-            bool val = data["date_time"] == 1;
-            showDate = val;
-            showTime = val;
+          } else if (hasLegacyDateTime) {
+            showTime = legacyDateTime;
           }
           if (data.containsKey("note_border")) {
             showNoteBorder = data["note_border"] == 1;
@@ -962,7 +965,7 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
             (
               icon: LucideIcons.messageSquare,
               label: "Send SMS",
-              subtitle: null,
+              subtitle: phones.first.toString(),
               color: cs.secondary,
               onTap: () {
                 Navigator.pop(context);
@@ -983,7 +986,7 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
           (
             icon: LucideIcons.userPlus,
             label: "Add to System Contacts",
-            subtitle: null,
+            subtitle: "Save to your device's contacts",
             color: null,
             onTap: () async {
               Navigator.pop(context);
@@ -1792,6 +1795,7 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                     },
                     child: ScrollablePositionedList.builder(
                       reverse: true,
+                      padding: const EdgeInsets.only(bottom: 12),
                       itemScrollController: _itemScrollController,
                       itemPositionsListener: _itemPositionsListener,
                       physics: privacyShield
@@ -1842,7 +1846,8 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                         // grouping window. Of two joined neighbours the OLDER
                         // message always takes the bottom-right seam and the
                         // NEWER one the top-right seam (display-sort agnostic).
-                        final bool isTextItem = item.type == ItemType.text;
+                        final bool isTextItem =
+                            item.type == ItemType.text || _isTaskItem(item);
                         final bool galleryRow =
                             mediaGallery && _isMediaItem(item);
                         final bool seamable = _canSeam(item);
@@ -1947,7 +1952,8 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                                           left: 12,
                                         ),
                                         child: PrivacyShield(
-                                          isEnabled: privacyShield && !galleryRow,
+                                          isEnabled:
+                                              privacyShield && !galleryRow,
                                           onLongPress: () =>
                                               onItemLongPressed(item),
                                           borderRadius: bubbleBorder,
@@ -2213,16 +2219,29 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
       item.type == ItemType.location ||
       item.type == ItemType.contact;
 
+  bool _isTaskItem(ModelItem item) =>
+      item.type == ItemType.task || item.type == ItemType.completedTask;
+
   /// Gallery tiles are a grid with their own gutters, so they never seam.
+  /// Checklist bubbles join the seam logic like text bubbles.
   bool _canSeam(ModelItem item) =>
       item.type == ItemType.text ||
+      _isTaskItem(item) ||
       (_isAttachmentItem(item) && !(mediaGallery && _isMediaItem(item)));
 
-  /// Text seams with text, attachments with attachments; never across families.
+  /// Seam family id so each kind of bubble only connects with its own kind:
+  /// text with text, checklists with checklists, attachments with attachments.
+  int _seamFamilyId(ModelItem item) {
+    if (item.type == ItemType.text) return 0;
+    if (_isTaskItem(item)) return 1;
+    return 2;
+  }
+
+  /// Never seam across families, only within the same family.
   bool _sameSeamFamily(ModelItem a, ModelItem b) =>
       _canSeam(a) &&
       _canSeam(b) &&
-      (a.type == ItemType.text) == (b.type == ItemType.text);
+      _seamFamilyId(a) == _seamFamilyId(b);
 
   bool _hasLinkPreview(ModelItem item) {
     if (!linkPreview) return false;
@@ -2628,6 +2647,24 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
   // ── Input bar ─────────────────────────────────────────────────────────────
   Widget widgetBottomSection() {
     final cs = Theme.of(context).colorScheme;
+    // Connected-stack corner language (see listRowRadius): when a reply
+    // preview sits above the input, the two share a seamed corner (5) so they
+    // read as one unit, keeping the pill radius on the outer edges.
+    final bool hasReply = replyOnItem != null;
+    const BorderRadius replyPreviewRadius = BorderRadius.only(
+      topLeft: Radius.circular(16),
+      topRight: Radius.circular(16),
+      bottomLeft: Radius.circular(5),
+      bottomRight: Radius.circular(5),
+    );
+    final BorderRadius inputRadius = hasReply
+        ? const BorderRadius.only(
+            topLeft: Radius.circular(5),
+            topRight: Radius.circular(5),
+            bottomLeft: Radius.circular(22),
+            bottomRight: Radius.circular(22),
+          )
+        : BorderRadius.circular(22);
     return Container(
       padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
       decoration: BoxDecoration(
@@ -2669,10 +2706,10 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                       children: [
                         if (replyOnItem != null)
                           Container(
-                            margin: const EdgeInsets.only(bottom: 6),
+                            margin: const EdgeInsets.only(bottom: 3),
                             decoration: BoxDecoration(
                               color: cs.onSurface.withValues(alpha: 0.04),
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: replyPreviewRadius,
                               border: Border.all(
                                 color: cs.onSurface.withValues(alpha: 0.1),
                                 width: 0.75,
@@ -2732,15 +2769,15 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                             fillColor: cs.onSurface.withValues(alpha: 0.06),
                             hoverColor: Colors.transparent,
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(22),
+                              borderRadius: inputRadius,
                               borderSide: BorderSide.none,
                             ),
                             focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(22),
+                              borderRadius: inputRadius,
                               borderSide: BorderSide.none,
                             ),
                             enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(22),
+                              borderRadius: inputRadius,
                               borderSide: BorderSide.none,
                             ),
                             contentPadding: const EdgeInsets.symmetric(
