@@ -940,7 +940,7 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
       context: context,
       backgroundColor: cs.surfaceContainerHigh,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
       ),
       builder: (context) {
         final tiles = <({
@@ -1629,7 +1629,7 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
             decoration: BoxDecoration(
               color: cs.surface,
               borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(20)),
+                  const BorderRadius.vertical(top: Radius.circular(12)),
             ),
             child: Material(
               color: Colors.transparent,
