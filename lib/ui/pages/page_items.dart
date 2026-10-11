@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:math' as math;
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
@@ -111,6 +110,10 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
   bool showNoteBorder = false;
   bool linkPreview = true;
   bool sortOldestFirst = false;
+  // List runs top→bottom oldest→newest when "newest first" is selected.
+  bool get _listAsc => !sortOldestFirst;
+  // The list is reversed (bottom-anchored), so controller indices are flipped.
+  int _toListIndex(int dataIndex) => _displayItemList.length - 1 - dataIndex;
   bool mediaGallery = false;
   bool privacyShield = false;
 
@@ -228,6 +231,7 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
     bool useGroupSettings =
         ModelSetting.get("use_group_settings", "yes") == "yes";
     Map<String, dynamic>? data = group.data;
+    final bool oldSort = sortOldestFirst;
 
     if (mounted) {
       setState(() {
@@ -288,12 +292,14 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
         }
       });
     }
+    if (mounted && oldSort != sortOldestFirst && _displayItemList.isNotEmpty) {
+      await fetchItems(null);
+    }
   }
 
   Future<void> fetchItems(String? itemId) async {
-    List<ModelItem> newItems = await ModelItem.getInGroup(
-        noteGroup!.id!, _filters,
-        sortAsc: sortOldestFirst);
+    List<ModelItem> newItems =
+        await ModelItem.getInGroup(noteGroup!.id!, _filters, sortAsc: _listAsc);
     canScrollToBottom = itemId != null;
     _displayItemList.clear();
     await _addItemsToDisplayList(newItems, true);
@@ -313,7 +319,8 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               Future.delayed(const Duration(milliseconds: 80), () {
                 if (mounted) {
-                  _itemScrollController.jumpTo(index: indexOfItem);
+                  _itemScrollController.jumpTo(
+                      index: _toListIndex(indexOfItem));
                   triggerItemBlink();
                 }
               });
@@ -322,7 +329,8 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
         } else {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted && _displayItemList.isNotEmpty) {
-              _itemScrollController.jumpTo(index: 0);
+              _itemScrollController.jumpTo(
+                  index: _listAsc ? 0 : _displayItemList.length - 1);
             }
           });
         }
@@ -339,85 +347,50 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
     if (mounted) setState(() => imageDirPath = path.dirname(filePath));
   }
 
+  Future<ModelItem> _makeDatePill(ModelItem item) => ModelItem.fromMap({
+        "group_id": noteGroup!.id,
+        "text": getReadableDate(getLocalDateFromUtcMilliSeconds(item.at!)),
+        "type": 170000,
+        "at": _listAsc ? item.at! - 1 : item.at! + 1,
+      });
+
   Future<void> _addItemsToDisplayList(
       List<ModelItem> items, bool addOlder) async {
     if (items.isEmpty) return;
 
     if (addOlder) {
-      // Initial load or loading more (cleared list)
       DateTime? lastDate;
-      for (var item in items) {
+      for (final item in items) {
         final currentDate = getLocalDateFromUtcMilliSeconds(item.at!);
-
-        if (sortOldestFirst) {
-          // [Date1, Msg1, Date2, Msg2...]
-          if (currentDate != lastDate) {
-            final dateItem = await ModelItem.fromMap({
-              "group_id": noteGroup!.id,
-              "text": getReadableDate(currentDate),
-              "type": 170000,
-              "at": item.at! - 1
-            });
-            _displayItemList.add(dateItem);
-          }
-          _displayItemList.add(item);
-        } else {
-          // [MsgN, MsgN-1, DateN, MsgN-2...] - Reversed view
-          _displayItemList.add(item);
-          final nextIndex = items.indexOf(item) + 1;
-          final nextItemDate = nextIndex < items.length
-              ? getLocalDateFromUtcMilliSeconds(items[nextIndex].at!)
-              : null;
-
-          if (currentDate != nextItemDate) {
-            final dateItem = await ModelItem.fromMap({
-              "group_id": noteGroup!.id,
-              "text": getReadableDate(currentDate),
-              "type": 170000,
-              "at": item.at! - 1
-            });
-            _displayItemList.add(dateItem);
-          }
+        if (currentDate != lastDate) {
+          _displayItemList.add(await _makeDatePill(item));
         }
+        _displayItemList.add(item);
         lastDate = currentDate;
       }
     } else {
-      // Adding a single new item (e.g. from input bar)
-      for (var item in items) {
+      for (final item in items) {
         final currentDate = getLocalDateFromUtcMilliSeconds(item.at!);
-
-        if (sortOldestFirst) {
-          // Add to END. Check if we need a new date pill.
-          DateTime? lastDisplayDate = _displayItemList.isEmpty
+        if (_listAsc) {
+          final DateTime? lastDisplayDate = _displayItemList.isEmpty
               ? null
               : getLocalDateFromUtcMilliSeconds(_displayItemList.last.at!);
-
           if (currentDate != lastDisplayDate) {
-            final dateItem = await ModelItem.fromMap({
-              "group_id": noteGroup!.id,
-              "text": getReadableDate(currentDate),
-              "type": 170000,
-              "at": item.at! - 1
-            });
-            _displayItemList.add(dateItem);
+            _displayItemList.add(await _makeDatePill(item));
           }
           _displayItemList.add(item);
         } else {
-          // Add to START (Index 0). Check if we need a new date pill below it.
-          DateTime? firstDisplayDate = _displayItemList.isEmpty
+          final ModelItem? firstReal =
+              _displayItemList.length > 1 ? _displayItemList[1] : null;
+          final DateTime? firstDate = firstReal == null
               ? null
-              : getLocalDateFromUtcMilliSeconds(_displayItemList.first.at!);
-
-          if (currentDate != firstDisplayDate) {
-            final dateItem = await ModelItem.fromMap({
-              "group_id": noteGroup!.id,
-              "text": getReadableDate(currentDate),
-              "type": 170000,
-              "at": item.at! - 1
-            });
-            _displayItemList.insert(0, dateItem);
+              : getLocalDateFromUtcMilliSeconds(firstReal.at!);
+          if (currentDate != firstDate) {
+            _displayItemList.insert(0, item);
+            _displayItemList.insert(0, await _makeDatePill(item));
+          } else {
+            _displayItemList.insert(1, item);
           }
-          _displayItemList.insert(0, item);
         }
       }
     }
@@ -425,32 +398,17 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
 
   void _removeItemsFromDisplayList(List<ModelItem> items) {
     setState(() {
-      for (ModelItem item in items) {
+      for (final item in items) {
         int itemIndex = _displayItemList.indexOf(item);
         if (itemIndex == -1) continue;
-
-        // Try to clean up dangling date pills
-        if (sortOldestFirst) {
-          // Date pill is ABOVE item
-          if (itemIndex > 0 &&
-              _displayItemList[itemIndex - 1].type == ItemType.date) {
-            bool isLastInDateGroup =
-                (itemIndex == _displayItemList.length - 1) ||
-                    (_displayItemList[itemIndex + 1].type == ItemType.date);
-            if (isLastInDateGroup) {
-              _displayItemList.removeAt(itemIndex - 1);
-              itemIndex--;
-            }
-          }
-        } else {
-          // Date pill is BELOW item (in reversed list)
-          if (itemIndex < _displayItemList.length - 1 &&
-              _displayItemList[itemIndex + 1].type == ItemType.date) {
-            bool isLastInDateGroup = (itemIndex == 0) ||
-                (_displayItemList[itemIndex - 1].type == ItemType.date);
-            if (isLastInDateGroup) {
-              _displayItemList.removeAt(itemIndex + 1);
-            }
+        if (itemIndex > 0 &&
+            _displayItemList[itemIndex - 1].type == ItemType.date) {
+          final bool isLastInDateGroup =
+              itemIndex == _displayItemList.length - 1 ||
+                  _displayItemList[itemIndex + 1].type == ItemType.date;
+          if (isLastInDateGroup) {
+            _displayItemList.removeAt(itemIndex - 1);
+            itemIndex--;
           }
         }
         _displayItemList.removeAt(itemIndex);
@@ -1114,6 +1072,18 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
     if (mounted) setState(() {});
   }
 
+  void _scrollToLatest() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted ||
+          !_itemScrollController.isAttached ||
+          _displayItemList.isEmpty) {
+        return;
+      }
+      _itemScrollController.jumpTo(
+          index: _listAsc ? 0 : _displayItemList.length - 1);
+    });
+  }
+
   void _addItemToDbAndDisplayList(
     String text,
     ItemType type,
@@ -1141,6 +1111,7 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
       }
       replyOnItem = null;
     });
+    _scrollToLatest();
     if (type == ItemType.text) checkFetchUrlMetadata(item);
   }
 
@@ -1744,9 +1715,9 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
   Future<void> showHideScrollToBottomButton(ScrollMetrics metrics) async {
     bool requiresUpdate = false;
     final double scrolledHeight = metrics.pixels;
-    final bool isAtBottom = sortOldestFirst
-        ? metrics.maxScrollExtent - scrolledHeight <= 100
-        : scrolledHeight <= 100;
+    final bool isAtBottom = _listAsc
+        ? scrolledHeight <= 100
+        : metrics.maxScrollExtent - scrolledHeight <= 100;
 
     if (!isAtBottom && !canScrollToBottom) {
       canScrollToBottom = true;
@@ -1820,15 +1791,17 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                       return false;
                     },
                     child: ScrollablePositionedList.builder(
+                      reverse: true,
                       itemScrollController: _itemScrollController,
                       itemPositionsListener: _itemPositionsListener,
                       physics: privacyShield
                           ? const ClampingScrollPhysics()
                           : const BouncingScrollPhysics(
                               parent: AlwaysScrollableScrollPhysics()),
-                      reverse: !sortOldestFirst,
                       itemCount: _displayItemList.length,
-                      itemBuilder: (context, index) {
+                      itemBuilder: (context, listIndex) {
+                        final int index =
+                            _displayItemList.length - 1 - listIndex;
                         if (index < 0 || index >= _displayItemList.length) {
                           return const SizedBox.shrink();
                         }
@@ -1841,30 +1814,18 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                           }
                         }
 
-                        bool showTimePill = false;
-                        int lastIndexInGroup = index;
-                        if (mediaGallery && _isMediaItem(item)) {
-                          final (_, runEnd) = _findMediaRunForIndex(index);
-                          lastIndexInGroup = math.min(index + 1, runEnd);
-                        }
-
-                        if (lastIndexInGroup == _displayItemList.length - 1) {
-                          showTimePill = true;
-                        } else {
-                          final olderItem =
-                              _displayItemList[lastIndexInGroup + 1];
-                          if (olderItem.type == ItemType.date) {
-                            showTimePill = true;
-                          } else {
-                            final diff = DateTime.fromMillisecondsSinceEpoch(
-                                    _displayItemList[lastIndexInGroup].at!,
-                                    isUtc: true)
-                                .difference(DateTime.fromMillisecondsSinceEpoch(
-                                    olderItem.at!,
-                                    isUtc: true));
-                            if (diff.abs().inMinutes >= 5) showTimePill = true;
-                          }
-                        }
+                        // A time pill marks the START of a group: show it only
+                        // when this item begins a fresh group in display order
+                        // (nothing above it, a date above it, or a >10 minute
+                        // gap from the item above). Keying off the item ABOVE
+                        // keeps pills aligned with the bubble seam corners,
+                        // instead of landing between connected bubbles.
+                        final bool showTimePill = item.type != ItemType.date
+                            ? (index == 0 ||
+                                _displayItemList[index - 1].type ==
+                                    ItemType.date ||
+                                !_withinGroupWindow(index - 1, index))
+                            : false;
 
                         final bool isAttachment = item.type == ItemType.image ||
                             item.type == ItemType.video ||
@@ -1874,13 +1835,31 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                             item.type == ItemType.contact;
 
                         // Dynamic radius: short text → pill (22), long → flat (10).
-                        final double bubbleRadius = () {
-                          if (isAttachment) return 14.0;
-                          final int len = item.text.length;
-                          if (len <= 20) return 22.0;
-                          if (len >= 120) return 10.0;
-                          return 22.0 - (len - 20) / (120 - 20) * 12.0;
-                        }();
+                        final double bubbleRadius = _bubbleRadius(item);
+
+                        // Connected text bubbles: a message flattens the corner
+                        // it shares with a neighbour within the 10-minute
+                        // grouping window. Of two joined neighbours the OLDER
+                        // message always takes the bottom-right seam and the
+                        // NEWER one the top-right seam (display-sort agnostic).
+                        final bool isTextItem = item.type == ItemType.text;
+                        final bool galleryRow =
+                            mediaGallery && _isMediaItem(item);
+                        final bool seamable = _canSeam(item);
+                        final bool connAbove =
+                            seamable && _textConnectsAbove(index);
+                        final bool connBelow =
+                            seamable && _textConnectsBelow(index);
+                        final BorderRadius bubbleBorder = seamable
+                            ? BorderRadius.only(
+                                topLeft: Radius.circular(bubbleRadius),
+                                topRight: Radius.circular(
+                                    connAbove ? 5 : bubbleRadius),
+                                bottomLeft: Radius.circular(bubbleRadius),
+                                bottomRight: Radius.circular(
+                                    connBelow ? 5 : bubbleRadius),
+                              )
+                            : BorderRadius.circular(bubbleRadius);
 
                         Widget mainItem;
                         if (item.type == ItemType.date) {
@@ -1958,8 +1937,12 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                                       alignment: Alignment.centerRight,
                                       child: Container(
                                         margin: EdgeInsets.only(
-                                          top: item.replyOn != null ? 0 : 2,
-                                          bottom: 2,
+                                          top: item.replyOn != null
+                                              ? 0
+                                              : (connAbove
+                                                  ? 2
+                                                  : (isTextItem ? 6 : 2)),
+                                          bottom: connBelow ? 0 : 2,
                                           right: 12,
                                           left: 12,
                                         ),
@@ -1967,15 +1950,12 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                                           isEnabled: privacyShield,
                                           onLongPress: () =>
                                               onItemLongPressed(item),
-                                          borderRadius: BorderRadius.circular(
-                                              bubbleRadius),
+                                          borderRadius: bubbleBorder,
                                           child: Material(
                                             color: Colors.transparent,
                                             elevation: 0,
                                             shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(
-                                                      bubbleRadius),
+                                              borderRadius: bubbleBorder,
                                               side: (!isAttachment &&
                                                       showNoteBorder)
                                                   ? BorderSide(
@@ -1988,19 +1968,28 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                                             ),
                                             child: Container(
                                               decoration: BoxDecoration(
-                                                borderRadius:
-                                                    BorderRadius.circular(
-                                                        bubbleRadius),
+                                                borderRadius: bubbleBorder,
                                                 color: isAttachment
                                                     ? Colors.transparent
                                                     : cs.onSurface.withValues(
                                                         alpha: 0.07),
                                               ),
                                               child: Container(
-                                                margin: EdgeInsets.symmetric(
-                                                    vertical:
-                                                        isAttachment ? 2 : 8,
-                                                    horizontal:
+                                                margin: EdgeInsets.only(
+                                                    top: !isAttachment
+                                                        ? 8
+                                                        : (galleryRow ||
+                                                                connAbove
+                                                            ? 0
+                                                            : 2),
+                                                    bottom: !isAttachment
+                                                        ? 8
+                                                        : (galleryRow ||
+                                                                connBelow
+                                                            ? 0
+                                                            : 2),
+                                                    left: isAttachment ? 0 : 8,
+                                                    right:
                                                         isAttachment ? 0 : 8),
                                                 padding: EdgeInsets.symmetric(
                                                   vertical:
@@ -2013,19 +2002,13 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                                                       CrossAxisAlignment.start,
                                                   children: [
                                                     _buildNoteItem(item,
-                                                        index: index),
-                                                    if (linkPreview &&
-                                                        (urlInfo != null ||
-                                                            (item.data !=
-                                                                    null &&
-                                                                (item.data!.containsKey(
-                                                                        "url_info_list") ||
-                                                                    item.data!
-                                                                        .containsKey(
-                                                                            "url_metadata_state"))) ||
-                                                            _linkRegExp
-                                                                .hasMatch(
-                                                                    item.text)))
+                                                        index: index,
+                                                        borderRadius:
+                                                            isAttachment &&
+                                                                    seamable
+                                                                ? bubbleBorder
+                                                                : null),
+                                                    if (_hasLinkPreview(item))
                                                       GestureDetector(
                                                         onTap: () async {
                                                           if (_hasNotesSelected) {
@@ -2118,9 +2101,8 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                         mini: true,
                         onPressed: () {
                           clearSelection();
-                          if (sortOldestFirst && _displayItemList.isNotEmpty) {
-                            _itemScrollController.jumpTo(
-                                index: _displayItemList.length - 1);
+                          if (_listAsc && _displayItemList.isNotEmpty) {
+                            _itemScrollController.jumpTo(index: 0);
                           } else {
                             fetchItems(null);
                           }
@@ -2129,7 +2111,9 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                             borderRadius: BorderRadius.circular(16)),
                         backgroundColor: cs.onSurface,
                         foregroundColor: cs.surface,
-                        child: const Icon(LucideIcons.chevronsDown),
+                        child: Icon(_listAsc
+                            ? LucideIcons.chevronsDown
+                            : LucideIcons.chevronsUp),
                       ),
                     ),
 
@@ -2164,23 +2148,102 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
 
   /// Finds the consecutive run of image/video items around [index].
   /// Returns (startIndex, endIndex) inclusive in the _displayItemList.
-  /// The list is ordered DESC (newest first at index 0) when reverse=true.
   (int, int) _findMediaRunForIndex(int index) {
     int start = index;
     int end = index;
     // Expand upward (toward index 0 = newer items in DESC order)
-    while (start > 0 && _isMediaItem(_displayItemList[start - 1])) {
+    while (start > 0 &&
+        _isMediaItem(_displayItemList[start - 1]) &&
+        _withinGroupWindow(start - 1, start)) {
       start--;
     }
     // Expand downward (toward older items)
     while (end < _displayItemList.length - 1 &&
-        _isMediaItem(_displayItemList[end + 1])) {
+        _isMediaItem(_displayItemList[end + 1]) &&
+        _withinGroupWindow(end, end + 1)) {
       end++;
     }
     return (start, end);
   }
 
-  Widget _buildNoteItem(ModelItem item, {int? index}) {
+  // ── Bubble grouping helpers ─────────────────────────────────────────────
+  /// Grouping window in minutes: adjacent messages closer than this are drawn
+  /// as one connected group.
+  static const int bubbleGroupWindowMinutes = 10;
+
+  /// True when the two adjacent items at [a] and [b] fall inside the grouping
+  /// window.
+  bool _withinGroupWindow(int a, int b) {
+    final int? ta = _displayItemList[a].at;
+    final int? tb = _displayItemList[b].at;
+    if (ta == null || tb == null) return false;
+    final diff = DateTime.fromMillisecondsSinceEpoch(ta, isUtc: true)
+        .difference(DateTime.fromMillisecondsSinceEpoch(tb, isUtc: true));
+    return diff.abs().inMinutes <= bubbleGroupWindowMinutes;
+  }
+
+  /// True when the text bubble at [index] visually connects to the text bubble
+  /// directly above it: the item above is a text bubble and lies within the
+  /// grouping window.
+  bool _textConnectsAbove(int index) {
+    if (index <= 0) return false;
+    if (!_sameSeamFamily(
+        _displayItemList[index], _displayItemList[index - 1])) {
+      return false;
+    }
+    return _withinGroupWindow(index - 1, index);
+  }
+
+  /// True when the bubble at [index] visually connects to the bubble directly
+  /// below it (same seam family, inside the grouping window).
+  bool _textConnectsBelow(int index) {
+    if (index >= _displayItemList.length - 1) return false;
+    if (!_sameSeamFamily(
+        _displayItemList[index], _displayItemList[index + 1])) {
+      return false;
+    }
+    return _withinGroupWindow(index, index + 1);
+  }
+
+  bool _isAttachmentItem(ModelItem item) =>
+      item.type == ItemType.image ||
+      item.type == ItemType.video ||
+      item.type == ItemType.audio ||
+      item.type == ItemType.document ||
+      item.type == ItemType.location ||
+      item.type == ItemType.contact;
+
+  /// Gallery tiles are a grid with their own gutters, so they never seam.
+  bool _canSeam(ModelItem item) =>
+      item.type == ItemType.text ||
+      (_isAttachmentItem(item) && !(mediaGallery && _isMediaItem(item)));
+
+  /// Text seams with text, attachments with attachments; never across families.
+  bool _sameSeamFamily(ModelItem a, ModelItem b) =>
+      _canSeam(a) &&
+      _canSeam(b) &&
+      (a.type == ItemType.text) == (b.type == ItemType.text);
+
+  bool _hasLinkPreview(ModelItem item) {
+    if (!linkPreview) return false;
+    final d = item.data;
+    return (d != null &&
+            (d["url_info"] != null ||
+                d.containsKey("url_info_list") ||
+                d.containsKey("url_metadata_state"))) ||
+        _linkRegExp.hasMatch(item.text);
+  }
+
+  double _bubbleRadius(ModelItem item) {
+    if (_isAttachmentItem(item) || _hasLinkPreview(item)) return 14.0;
+    final int len = item.text.length;
+    if (len <= 20) return 22.0;
+    if (len >= 120) return 10.0;
+    return 22.0 - (len - 20) / (120 - 20) * 12.0;
+  }
+
+  Widget _buildNoteItem(ModelItem item,
+      {int? index, BorderRadius? borderRadius}) {
     // ── Media gallery grouping ───────────────────────────────────────────
     if (mediaGallery && index != null && _isMediaItem(item)) {
       final (runStart, runEnd) = _findMediaRunForIndex(index);
@@ -2199,7 +2262,7 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
       }
 
       return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 2),
+        padding: EdgeInsets.zero,
         child: Wrap(
           spacing: 4,
           runSpacing: 4,
@@ -2221,21 +2284,37 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
         return ItemWidgetText(item: item);
       case ItemType.image:
         return ItemWidgetImage(
-            item: item, onTap: viewImageVideo, showBorder: showNoteBorder);
+            item: item,
+            onTap: viewImageVideo,
+            showBorder: showNoteBorder,
+            borderRadius: borderRadius);
       case ItemType.video:
         return ItemWidgetVideo(
-            item: item, onTap: viewImageVideo, showBorder: showNoteBorder);
+            item: item,
+            onTap: viewImageVideo,
+            showBorder: showNoteBorder,
+            borderRadius: borderRadius);
       case ItemType.audio:
-        return ItemWidgetAudio(item: item, showBorder: showNoteBorder);
+        return ItemWidgetAudio(
+            item: item, showBorder: showNoteBorder, borderRadius: borderRadius);
       case ItemType.document:
         return ItemWidgetDocument(
-            item: item, onTap: openDocument, showBorder: showNoteBorder);
+            item: item,
+            onTap: openDocument,
+            showBorder: showNoteBorder,
+            borderRadius: borderRadius);
       case ItemType.location:
         return ItemWidgetLocation(
-            item: item, onTap: openLocation, showBorder: showNoteBorder);
+            item: item,
+            onTap: openLocation,
+            showBorder: showNoteBorder,
+            borderRadius: borderRadius);
       case ItemType.contact:
         return ItemWidgetContact(
-            item: item, onTap: addToContacts, showBorder: showNoteBorder);
+            item: item,
+            onTap: addToContacts,
+            showBorder: showNoteBorder,
+            borderRadius: borderRadius);
       case ItemType.completedTask:
       case ItemType.task:
         return ItemWidgetTask(item: item);
@@ -2255,7 +2334,7 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
       child: PrivacyShield(
         isEnabled: privacyShield,
         onLongPress: () => onItemLongPressed(mediaItem),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(14),
         child: GestureDetector(
           onTap: () {
             if (_hasNotesSelected) {
@@ -2266,13 +2345,13 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
           },
           child: Container(
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(14),
               color: _selectedItems.contains(mediaItem)
                   ? cs.onSurface.withValues(alpha: 0.1)
                   : Colors.transparent,
             ),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(14),
               child: Stack(
                 alignment: Alignment.center,
                 children: [
@@ -2766,91 +2845,93 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
     showModalBottomSheet(
       context: context,
       builder: (BuildContext context) {
+        final cs = Theme.of(context).colorScheme;
+        final tiles = <({
+          IconData icon,
+          String label,
+          String subtitle,
+          Color? color,
+          VoidCallback onTap
+        })>[
+          if (ImagePicker().supportsImageSource(ImageSource.camera))
+            (
+              icon: LucideIcons.camera,
+              label: "Camera",
+              subtitle: "Capture a photo or video",
+              color: null,
+              onTap: () {
+                Navigator.pop(context);
+                _addMedia("camera_image");
+              },
+            ),
+          (
+            icon: LucideIcons.file,
+            label: "Files",
+            subtitle: "Attach any file from your device",
+            color: null,
+            onTap: () {
+              Navigator.pop(context);
+              _addMedia('files');
+            },
+          ),
+          (
+            icon: LucideIcons.checkCircle,
+            label: "Checklist",
+            subtitle: _isCreatingTask
+                ? "Checklist mode is on"
+                : "Turn your note into a to-do list",
+            color: _isCreatingTask ? cs.primary : null,
+            onTap: () {
+              Navigator.pop(context);
+              setTaskMode();
+            },
+          ),
+          (
+            icon: LucideIcons.mapPin,
+            label: "Location",
+            subtitle: "Share a pinned location",
+            color: null,
+            onTap: () {
+              Navigator.pop(context);
+              _addMedia('location');
+            },
+          ),
+          if (Platform.isAndroid || Platform.isIOS)
+            (
+              icon: LucideIcons.contact,
+              label: "Contact",
+              subtitle: "Share a contact card",
+              color: null,
+              onTap: () {
+                Navigator.pop(context);
+                _addMedia('contact');
+              },
+            ),
+        ];
         return SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                GridView.count(
-                  crossAxisCount: 5,
-                  shrinkWrap: true,
-                  mainAxisSpacing: 8,
-                  crossAxisSpacing: 8,
-                  childAspectRatio: 0.9,
-                  physics: const NeverScrollableScrollPhysics(),
-                  children: [
-                    if (ImagePicker().supportsImageSource(ImageSource.camera))
-                      _attachmentGridItem(context, LucideIcons.camera, "Camera",
-                          () {
-                        Navigator.pop(context);
-                        _addMedia("camera_image");
-                      }),
-                    _attachmentGridItem(context, LucideIcons.file, "Files", () {
-                      Navigator.pop(context);
-                      _addMedia('files');
-                    }),
-                    _attachmentGridItem(
-                        context, LucideIcons.checkCircle, "Checklist", () {
-                      Navigator.pop(context);
-                      setTaskMode();
-                    }, active: _isCreatingTask),
-                    _attachmentGridItem(context, LucideIcons.mapPin, "Location",
-                        () {
-                      Navigator.pop(context);
-                      _addMedia('location');
-                    }),
-                    if (Platform.isAndroid || Platform.isIOS)
-                      _attachmentGridItem(
-                          context, LucideIcons.contact, "Contact", () {
-                        Navigator.pop(context);
-                        _addMedia('contact');
-                      }),
-                  ],
-                ),
+                for (int i = 0; i < tiles.length; i++) ...[
+                  if (i > 0) const SizedBox(height: 3),
+                  _bottomSheetTile(
+                    context: context,
+                    icon: tiles[i].icon,
+                    label: tiles[i].label,
+                    subtitle: tiles[i].subtitle,
+                    color: tiles[i].color,
+                    borderRadius: listRowRadius(i, tiles.length),
+                    onTap: tiles[i].onTap,
+                  ),
+                ],
                 const SizedBox(height: 8),
               ],
             ),
           ),
         );
       },
-    );
-  }
-
-  Widget _attachmentGridItem(
-    BuildContext context,
-    IconData icon,
-    String label,
-    VoidCallback onTap, {
-    bool active = false,
-  }) {
-    final cs = Theme.of(context).colorScheme;
-    final color = active ? cs.primary : cs.onSurfaceVariant;
-    return Material(
-      color: active
-          ? cs.primary.withValues(alpha: 0.12)
-          : cs.onSurface.withValues(alpha: 0.04),
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 24, color: color),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11,
-                color: color,
-                fontWeight: active ? FontWeight.w600 : FontWeight.normal,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
