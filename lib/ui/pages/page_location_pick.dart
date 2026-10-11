@@ -166,9 +166,8 @@ class _LocationPickerState extends State<LocationPicker> {
         ),
         children: [
           TileLayer(
-            urlTemplate:
-                "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
-            subdomains: const ['a', 'b', 'c', 'd'],
+            urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+            maxZoom: 19,
             userAgentPackageName: 'com.ntsapp.notes',
           ),
           MarkerLayer(markers: [
