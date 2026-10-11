@@ -292,15 +292,12 @@ class WidgetImageViewer extends StatelessWidget {
           bool isExceptionallyWide =
               widthFactor >= 1.5 && widthFactor >= heightFactor * 1.8;
 
-          // Exceptionally tall image (e.g., long screenshots) -> Scroll vertically
+          // Exceptionally tall image -> Scroll vertically without pinch-zoom
           if (isExceptionallyTall) {
             return ClipRRect(
               borderRadius: BorderRadius.circular(20),
-              child: InteractiveViewer(
-                constrained: false,
-                minScale: 0.1,
-                maxScale: 10.0,
-                boundaryMargin: EdgeInsets.zero,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.vertical,
                 child: SizedBox(
                   width: constraints.maxWidth,
                   child: Image.file(
@@ -312,15 +309,12 @@ class WidgetImageViewer extends StatelessWidget {
             );
           }
 
-          // Exceptionally wide image (e.g., panorama) -> Scroll horizontally
+          // Exceptionally wide image -> Scroll horizontally without pinch-zoom
           if (isExceptionallyWide) {
             return ClipRRect(
               borderRadius: BorderRadius.circular(20),
-              child: InteractiveViewer(
-                constrained: false,
-                minScale: 0.1,
-                maxScale: 10.0,
-                boundaryMargin: EdgeInsets.zero,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
                 child: SizedBox(
                   height: constraints.maxHeight,
                   child: Image.file(
@@ -336,13 +330,9 @@ class WidgetImageViewer extends StatelessWidget {
         // Regular proportion image
         return ClipRRect(
           borderRadius: BorderRadius.circular(20),
-          child: InteractiveViewer(
-            minScale: 1.0,
-            maxScale: 10.0,
-            child: Image.file(
-              File(imagePath),
-              fit: BoxFit.scaleDown,
-            ),
+          child: Image.file(
+            File(imagePath),
+            fit: BoxFit.scaleDown,
           ),
         );
       },
