@@ -166,7 +166,20 @@ class _PageMediaViewerState extends State<PageMediaViewer> {
             : null,
         actions: [
           IconButton(
+            icon: const Icon(LucideIcons.folderOpen),
+            tooltip: 'Open in gallery/app',
+            onPressed: () {
+              if (currentItem != null && currentItem!.data != null) {
+                final path = currentItem!.data!["path"];
+                if (path != null) {
+                  openMedia(path);
+                }
+              }
+            },
+          ),
+          IconButton(
             icon: const Icon(LucideIcons.download),
+            tooltip: 'Download',
             onPressed: () {
               if (currentItem != null && currentItem!.data != null) {
                 final path = currentItem!.data!["path"];
