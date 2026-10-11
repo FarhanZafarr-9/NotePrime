@@ -286,12 +286,12 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
     try {
       if (ModelSetting.get("local_auth", "no") == "no") {
         isAuthenticated = true;
-        AuthGuard.isLocked.value = false;
+        AuthGuard.shield.value = ShieldState.visible;
         await loadCategoriesGroups();
       } else {
         logger.info("Requires authentication");
         requiresAuthentication = true;
-        AuthGuard.isLocked.value = true;
+        AuthGuard.shield.value = ShieldState.locked;
         await _authenticateOnStart();
       }
     } catch (e, s) {
@@ -350,7 +350,7 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
       );
 
       if (isAuthenticated) {
-        AuthGuard.isLocked.value = false;
+        AuthGuard.shield.value = ShieldState.visible;
         loadCategoriesGroups();
       }
     } catch (e, s) {

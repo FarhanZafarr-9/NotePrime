@@ -4,6 +4,7 @@
 
 import 'dart:async';
 import 'dart:io';
+import 'dart:ui' show ImageFilter;
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:dynamic_color/dynamic_color.dart';
@@ -248,7 +249,7 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
       );
 
       if (isAuthenticated) {
-        AuthGuard.isLocked.value = false;
+        AuthGuard.shield.value = ShieldState.visible;
         AuthGuard.lastActiveAt = DateTime.now();
       }
     } catch (e, s) {
@@ -406,7 +407,26 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
     }
   }
 
-  bool _wasArtificiallyLockedForPrivacy = false;
+  bool _wasObscuredForPrivacy = false;
+
+  /// Hide the UI behind a transient blur when the app leaves the foreground
+  /// (screenshot protection). Unlike a real lock, this never requires auth and
+  /// is dissolved automatically on resume.
+  void _obscureForPrivacy() {
+    if (AuthGuard.shield.value == ShieldState.visible) {
+      AuthGuard.shield.value = ShieldState.obscured;
+      _wasObscuredForPrivacy = true;
+    }
+  }
+
+  /// Remove the transient privacy blur, if one is currently shown.
+  void _clearPrivacyObscure() {
+    if (_wasObscuredForPrivacy &&
+        AuthGuard.shield.value == ShieldState.obscured) {
+      AuthGuard.shield.value = ShieldState.visible;
+    }
+    _wasObscuredForPrivacy = false;
+  }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -417,8 +437,7 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
       return;
     }
 
-    final bool localAuthEnabled =
-        ModelSetting.get("local_auth", "no") == "yes";
+    final bool localAuthEnabled = ModelSetting.get("local_auth", "no") == "yes";
     final bool screenshotProtection =
         ModelSetting.get("screenshot_protection", "no") == "yes";
     final int graceMinutes = int.tryParse(
@@ -426,14 +445,11 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
         0;
 
     // ── Transient overlays (notification shade, system UI, app switcher) ──
-    // These are NOT real backgrounding. Only hide content behind the privacy
-    // shield if screenshot protection is on, and never start the lock timer.
+    // These are NOT real backgrounding. Only blur the content if screenshot
+    // protection is on, and never start the lock timer.
     if (state == AppLifecycleState.inactive ||
         state == AppLifecycleState.hidden) {
-      if (screenshotProtection && !AuthGuard.isLocked.value) {
-        _wasArtificiallyLockedForPrivacy = true;
-        AuthGuard.isLocked.value = true;
-      }
+      if (screenshotProtection) _obscureForPrivacy();
       return;
     }
 
@@ -442,15 +458,12 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
       AuthGuard.lastActiveAt = DateTime.now();
       _lastBackgroundAt = localAuthEnabled ? DateTime.now() : null;
 
-      if (screenshotProtection && !AuthGuard.isLocked.value) {
-        _wasArtificiallyLockedForPrivacy = true;
-        AuthGuard.isLocked.value = true;
-      }
+      if (screenshotProtection) _obscureForPrivacy();
 
       // Grace period of 0 means lock immediately on backgrounding.
       if (localAuthEnabled && graceMinutes == 0) {
-        AuthGuard.isLocked.value = true;
-        _wasArtificiallyLockedForPrivacy = false;
+        AuthGuard.shield.value = ShieldState.locked;
+        _wasObscuredForPrivacy = false;
       }
 
       SyncUtils().stopAutoSync();
@@ -468,29 +481,46 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
             DateTime.now().difference(backgroundedAt).inMinutes >= graceMinutes;
 
         if (requireLock) {
-          AuthGuard.isLocked.value = true;
-          _wasArtificiallyLockedForPrivacy = false;
-        } else if (_wasArtificiallyLockedForPrivacy) {
-          // Only a privacy shield (screenshot protection) was shown; no real
-          // lock is needed, so reveal the content again.
-          AuthGuard.isLocked.value = false;
-          _wasArtificiallyLockedForPrivacy = false;
+          // A real lockout: show the lock screen (not just a blur).
+          AuthGuard.shield.value = ShieldState.locked;
+          _wasObscuredForPrivacy = false;
+        } else {
+          // Within the grace period only a privacy blur was shown; reveal the
+          // content again and never require authentication.
+          _clearPrivacyObscure();
         }
 
         // Only publish auth event if locked AND not already authenticating
-        if (AuthGuard.isLocked.value && !AuthGuard.isAuthenticating) {
+        if (AuthGuard.shield.value == ShieldState.locked &&
+            !AuthGuard.isAuthenticating) {
           EventStream().publish(AppEvent(type: EventType.authorise));
         }
-      } else if (_wasArtificiallyLockedForPrivacy) {
-        // If local_auth is off, always revert artificial privacy locks
-        AuthGuard.isLocked.value = false;
-        _wasArtificiallyLockedForPrivacy = false;
+      } else {
+        // If local_auth is off, always revert a privacy-only blur.
+        _clearPrivacyObscure();
       }
 
       SyncUtils().startAutoSync();
       _applyScreenshotProtection();
       _applyImmersiveMode();
-      logger.info("App Resumed, Locked: ${AuthGuard.isLocked.value}");
+      logger.info("App Resumed, Shield: ${AuthGuard.shield.value}");
+    }
+  }
+
+  @override
+  void didChangeMetrics() {
+    super.didChangeMetrics();
+    // During an Android edge-swipe back gesture (or any transient system UI
+    // reveal) the status bar can flash into view even in immersive mode.
+    // Re-hide the system bars the instant window metrics change so no
+    // flicker is visible; when they are already hidden this is a no-op.
+    if (!Platform.isAndroid && !Platform.isIOS) return;
+    try {
+      if (ModelSetting.get("immersive_mode", "no") == "yes") {
+        SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+      }
+    } catch (e, s) {
+      logger.error("Immersive mode refresh", error: e, stackTrace: s);
     }
   }
 
@@ -611,13 +641,16 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
                 data: MediaQuery.of(context).copyWith(
                   textScaler: textScaler,
                 ),
-                child: ValueListenableBuilder<bool>(
-                  valueListenable: AuthGuard.isLocked,
-                  builder: (context, isLocked, _) {
+                child: ValueListenableBuilder<ShieldState>(
+                  valueListenable: AuthGuard.shield,
+                  builder: (context, shield, _) {
                     return Stack(
                       children: [
                         Positioned.fill(child: child!),
-                        if (isLocked) const PrivacyShield(),
+                        if (shield == ShieldState.obscured)
+                          const Positioned.fill(child: PrivacyBlur()),
+                        if (shield == ShieldState.locked)
+                          const Positioned.fill(child: PrivacyShield()),
                       ],
                     );
                   },
@@ -673,6 +706,25 @@ class DataSync {
       backoffPolicyDelay: Duration(minutes: 15),
     );
     logger.info("Background Task Registered");
+  }
+}
+
+/// A transient, non-interactive blur used to hide content while the app is in
+/// the background (screenshot protection). No authentication is required and
+/// the blur dissolves on resume.
+class PrivacyBlur extends StatelessWidget {
+  const PrivacyBlur({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+        child: Container(
+          color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.35),
+        ),
+      ),
+    );
   }
 }
 
