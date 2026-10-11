@@ -153,6 +153,74 @@ class _PageStarredItemsState extends State<PageStarredItems> {
     });
   }
 
+  // ── Bubble grouping helpers (shared language with the messages page) ─────
+  static const int bubbleGroupWindowMinutes = 10;
+
+  bool _withinGroupWindow(int a, int b) {
+    final int? ta = _items[a].at;
+    final int? tb = _items[b].at;
+    if (ta == null || tb == null) return false;
+    final diff = DateTime.fromMillisecondsSinceEpoch(ta, isUtc: true)
+        .difference(DateTime.fromMillisecondsSinceEpoch(tb, isUtc: true));
+    return diff.abs().inMinutes <= bubbleGroupWindowMinutes;
+  }
+
+  bool _isTaskItem(ModelItem item) =>
+      item.type == ItemType.task || item.type == ItemType.completedTask;
+
+  bool _isAttachmentItem(ModelItem item) =>
+      item.type == ItemType.image ||
+      item.type == ItemType.video ||
+      item.type == ItemType.audio ||
+      item.type == ItemType.document ||
+      item.type == ItemType.location ||
+      item.type == ItemType.contact;
+
+  bool _canSeam(ModelItem item) =>
+      item.type == ItemType.text ||
+      _isTaskItem(item) ||
+      _isAttachmentItem(item);
+
+  int _seamFamilyId(ModelItem item) {
+    if (item.type == ItemType.text) return 0;
+    if (_isTaskItem(item)) return 1;
+    return 2;
+  }
+
+  /// Only seam bubbles from the same conversation: the starred list mixes
+  /// items across many groups, so messages from different chats must never
+  /// visually connect no matter how close in time they are.
+  bool _sameSeamFamily(ModelItem a, ModelItem b) =>
+      a.groupId == b.groupId &&
+      _canSeam(a) &&
+      _canSeam(b) &&
+      _seamFamilyId(a) == _seamFamilyId(b);
+
+  bool _textConnectsAbove(int index) {
+    if (index <= 0) return false;
+    if (!_sameSeamFamily(_items[index], _items[index - 1])) return false;
+    return _withinGroupWindow(index - 1, index);
+  }
+
+  bool _textConnectsBelow(int index) {
+    if (index >= _items.length - 1) return false;
+    if (!_sameSeamFamily(_items[index], _items[index + 1])) return false;
+    return _withinGroupWindow(index, index + 1);
+  }
+
+  double _bubbleRadius(ModelItem item) {
+    if (_isAttachmentItem(item)) return 14.0;
+    if (item.type != ItemType.text &&
+        item.type != ItemType.task &&
+        item.type != ItemType.completedTask) {
+      return 12.0;
+    }
+    final int len = item.text.length;
+    if (len <= 20) return 22.0;
+    if (len >= 120) return 10.0;
+    return 22.0 - (len - 20) / (120 - 20) * 12.0;
+  }
+
   Widget _buildIconBadge(IconData icon) {
     final color = Theme.of(context).colorScheme.onSurfaceVariant;
     return Container(
@@ -221,6 +289,28 @@ class _PageStarredItemsState extends State<PageStarredItems> {
           itemCount: _items.length, // Additional item for the loading indicator
           itemBuilder: (context, index) {
             final item = _items[index];
+            final cs = Theme.of(context).colorScheme;
+
+            // Same connected-stack language as the messages page: a bubble
+            // flattens the corner shared with an adjacent bubble of the same
+            // family within the grouping window, and gaps shrink accordingly.
+            final bool isTextItem =
+                item.type == ItemType.text || _isTaskItem(item);
+            final bool seamable = _canSeam(item);
+            final bool connAbove = seamable && _textConnectsAbove(index);
+            final bool connBelow = seamable && _textConnectsBelow(index);
+            final double bubbleRadius = _bubbleRadius(item);
+            final BorderRadius bubbleBorder = seamable
+                ? BorderRadius.only(
+                    topLeft: Radius.circular(bubbleRadius),
+                    topRight: Radius.circular(
+                        connAbove ? 5 : bubbleRadius),
+                    bottomLeft: Radius.circular(bubbleRadius),
+                    bottomRight: Radius.circular(
+                        connBelow ? 5 : bubbleRadius),
+                  )
+                : BorderRadius.circular(bubbleRadius);
+
             return GestureDetector(
               onLongPress: () {
                 onItemLongPressed(item);
@@ -236,21 +326,22 @@ class _PageStarredItemsState extends State<PageStarredItems> {
                         .onSurface
                         .withValues(alpha: 0.1)
                     : Colors.transparent,
-                margin: const EdgeInsets.symmetric(vertical: 1),
+                padding: EdgeInsets.only(
+                  left: 12,
+                  right: 12,
+                  top: connAbove ? 2 : (isTextItem ? 6 : 2),
+                  bottom: connBelow ? 0 : 2,
+                ),
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: Container(
-                      margin: const EdgeInsets.symmetric(
-                          vertical: 3, horizontal: 12),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.06),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: _buildItem(item)),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: cs.onSurface.withValues(alpha: 0.06),
+                      borderRadius: bubbleBorder,
+                    ),
+                    child: _buildItem(item),
+                  ),
                 ),
               ),
             );
