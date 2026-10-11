@@ -78,17 +78,21 @@ class PageGroupAddEditState extends State<PageGroupAddEdit> {
       groupData = widget.group!.data;
       icon = widget.group!.icon;
       if (groupData != null) {
+        // Compatibility for old "date_time" key: only used when the newer
+        // per-setting keys are absent, so they take precedence once set.
+        final bool hasLegacyDateTime = groupData!.containsKey("date_time");
+        final bool legacyDateTime = hasLegacyDateTime
+            ? groupData!["date_time"] == 1
+            : false;
         if (groupData!.containsKey("show_date")) {
           showDate = groupData!["show_date"] == 1;
+        } else if (hasLegacyDateTime) {
+          showDate = legacyDateTime;
         }
         if (groupData!.containsKey("show_time")) {
           showTime = groupData!["show_time"] == 1;
-        }
-        // Compatibility for old "date_time" key
-        if (groupData!.containsKey("date_time")) {
-          bool val = groupData!["date_time"] == 1;
-          showDate = val;
-          showTime = val;
+        } else if (hasLegacyDateTime) {
+          showTime = legacyDateTime;
         }
         if (groupData!.containsKey("note_border")) {
           int noteBorderInt = groupData!["note_border"];
@@ -275,6 +279,7 @@ class PageGroupAddEditState extends State<PageGroupAddEdit> {
     int val = showDate ? 1 : 0;
     if (groupData != null) {
       groupData!["show_date"] = val;
+      groupData!.remove("date_time");
     } else {
       groupData = {"show_date": val};
     }
@@ -288,6 +293,7 @@ class PageGroupAddEditState extends State<PageGroupAddEdit> {
     int val = showTime ? 1 : 0;
     if (groupData != null) {
       groupData!["show_time"] = val;
+      groupData!.remove("date_time");
     } else {
       groupData = {"show_time": val};
     }
