@@ -40,7 +40,7 @@ class ItemWidgetTimePill extends StatelessWidget {
         mainAxisSize: MainAxisSize.min, // Shrinks to fit the text width
         children: [
           Container(
-            margin: const EdgeInsets.symmetric(vertical: 10),
+            margin: const EdgeInsets.symmetric(vertical: 4),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
               color: cs.onSurfaceVariant.withValues(alpha: 0.08),
@@ -668,13 +668,15 @@ class _ItemWidgetDocumentState extends State<ItemWidgetDocument> {
         : "FILE";
     String size = readableFileSizeFromBytes(widget.item.data!["size"]);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-          decoration: BoxDecoration(
-            color: cs.primary.withValues(alpha: 0.08),
+    return GestureDetector(
+      onTap: () => widget.onTap(widget.item),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+            decoration: BoxDecoration(
+              color: cs.primary.withValues(alpha: 0.08),
             borderRadius:
                 widget.borderRadius ?? BorderRadius.circular(kAttachmentRadius),
             border: widget.showBorder
@@ -750,7 +752,8 @@ class _ItemWidgetDocumentState extends State<ItemWidgetDocument> {
         ),
         WidgetTimeStampPinnedStarred(item: widget.item),
         WidgetPinnedStarredPills(item: widget.item),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -891,19 +894,25 @@ class ItemWidgetContact extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                item.thumbnail != null
-                    ? CircleAvatar(
-                        radius: 18,
-                        backgroundImage: MemoryImage(item.thumbnail!))
-                    : CircleAvatar(
-                        radius: 18,
-                        backgroundColor: avatarColor.withValues(alpha: 0.15),
-                        child: Text(initials,
-                            style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                                color: avatarColor)),
-                      ),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: SizedBox(
+                    width: 36,
+                    height: 36,
+                    child: item.thumbnail != null
+                        ? Image.memory(item.thumbnail!, fit: BoxFit.cover)
+                        : ColoredBox(
+                            color: avatarColor.withValues(alpha: 0.15),
+                            child: Center(
+                              child: Text(initials,
+                                  style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
+                                      color: avatarColor)),
+                            ),
+                          ),
+                  ),
+                ),
                 const SizedBox(width: 10),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
