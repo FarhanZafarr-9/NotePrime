@@ -1189,6 +1189,7 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
                   context: context,
                   icon: Icons.reorder,
                   label: 'Reorder',
+                  subtitle: 'Drag to rearrange',
                   borderRadius: listRowRadius(0, count),
                   onTap: () {
                     Navigator.pop(context);
@@ -1200,6 +1201,7 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
                   context: context,
                   icon: LucideIcons.edit3,
                   label: 'Edit',
+                  subtitle: 'Change name, color and settings',
                   borderRadius: listRowRadius(1, count),
                   onTap: () {
                     Navigator.pop(context);
@@ -1216,6 +1218,9 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
                     label: categoryGroup.group!.pinned == 1
                         ? 'Unpin from Shortcut'
                         : 'Pin to Shortcut',
+                    subtitle: categoryGroup.group!.pinned == 1
+                        ? 'Remove from Home'
+                        : 'Show on Home',
                     borderRadius: listRowRadius(2, count),
                     onTap: () async {
                       Navigator.pop(context);
@@ -1229,6 +1234,7 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
                   context: context,
                   icon: LucideIcons.trash,
                   label: 'Delete',
+                  subtitle: 'Move to trash',
                   isDanger: true,
                   borderRadius: listRowRadius(hasPin ? 3 : 2, count),
                   onTap: () {
@@ -1250,6 +1256,7 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
     required BuildContext context,
     required IconData icon,
     required String label,
+    String? subtitle,
     required VoidCallback onTap,
     bool isDanger = false,
     BorderRadius? borderRadius,
@@ -1277,9 +1284,28 @@ class _PageCategoriesGroupsState extends State<PageCategoriesGroups> {
                 child: Icon(icon, size: 18, color: color),
               ),
               const SizedBox(width: 14),
-              Text(label,
-                  style: TextStyle(
-                      fontSize: 15, color: isDanger ? cs.error : cs.onSurface)),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(label,
+                        style: TextStyle(
+                            fontSize: 15,
+                            color: isDanger
+                                ? cs.error
+                                : cs.onSurface)),
+                    if (subtitle != null)
+                      Text(subtitle,
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: isDanger
+                                  ? cs.error.withValues(alpha: 0.7)
+                                  : cs.onSurfaceVariant
+                                      .withValues(alpha: 0.6))),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
