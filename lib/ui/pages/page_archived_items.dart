@@ -112,6 +112,71 @@ class _PageArchivedItemsState extends State<PageArchivedItems> {
     widget.onSelectionChange(false, 0);
   }
 
+  // ── Bubble grouping helpers (shared language with the messages page) ─────
+  static const int bubbleGroupWindowMinutes = 10;
+
+  bool _withinGroupWindow(int a, int b) {
+    final int? ta = _items[a].at;
+    final int? tb = _items[b].at;
+    if (ta == null || tb == null) return false;
+    final diff = DateTime.fromMillisecondsSinceEpoch(ta, isUtc: true)
+        .difference(DateTime.fromMillisecondsSinceEpoch(tb, isUtc: true));
+    return diff.abs().inMinutes <= bubbleGroupWindowMinutes;
+  }
+
+  bool _isTaskItem(ModelItem item) =>
+      item.type == ItemType.task || item.type == ItemType.completedTask;
+
+  bool _canSeam(ModelItem item) =>
+      item.type == ItemType.text ||
+      _isTaskItem(item) ||
+      item.type == ItemType.image ||
+      item.type == ItemType.video ||
+      item.type == ItemType.audio ||
+      item.type == ItemType.document ||
+      item.type == ItemType.location ||
+      item.type == ItemType.contact;
+
+  int _seamFamilyId(ModelItem item) {
+    if (item.type == ItemType.text) return 0;
+    if (_isTaskItem(item)) return 1;
+    return 2;
+  }
+
+  /// Only seam bubbles from the same conversation: this list mixes items across
+  /// many groups, so messages from different chats must never visually connect
+  /// no matter how close in time they are.
+  bool _sameSeamFamily(ModelItem a, ModelItem b) =>
+      a.groupId == b.groupId &&
+      _canSeam(a) &&
+      _canSeam(b) &&
+      _seamFamilyId(a) == _seamFamilyId(b);
+
+  bool _textConnectsAbove(int index) {
+    if (index <= 0) return false;
+    if (!_sameSeamFamily(_items[index], _items[index - 1])) return false;
+    return _withinGroupWindow(index - 1, index);
+  }
+
+  bool _textConnectsBelow(int index) {
+    if (index >= _items.length - 1) return false;
+    if (!_sameSeamFamily(_items[index], _items[index + 1])) return false;
+    return _withinGroupWindow(index, index + 1);
+  }
+
+  double _bubbleRadius(ModelItem item) {
+    if (_canSeam(item) && _seamFamilyId(item) == 2) return 14.0;
+    if (item.type != ItemType.text &&
+        item.type != ItemType.task &&
+        item.type != ItemType.completedTask) {
+      return 12.0;
+    }
+    final int len = item.text.length;
+    if (len <= 20) return 22.0;
+    if (len >= 120) return 10.0;
+    return 22.0 - (len - 20) / (120 - 20) * 12.0;
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -124,10 +189,9 @@ class _PageArchivedItemsState extends State<PageArchivedItems> {
       );
     }
 
-    return ListView.separated(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(vertical: 8),
       itemCount: _items.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 3),
       itemBuilder: (context, index) {
         final item = _items[index];
         final isSelected = _selection.contains(item);
@@ -138,6 +202,30 @@ class _PageArchivedItemsState extends State<PageArchivedItems> {
             item.type == ItemType.location ||
             item.type == ItemType.contact;
 
+        // Only media (image/video) bleeds to the screen edge; content bubbles
+        // like voice notes stretch to fill their row and must stay inset.
+        final bool isFullBleed =
+            item.type == ItemType.image || item.type == ItemType.video;
+
+        // Same connected-stack language as the messages page: a bubble
+        // flattens the corner shared with an adjacent bubble of the same
+        // family (and same group) within the grouping window, and gaps shrink
+        // accordingly.
+        final bool isTextItem =
+            item.type == ItemType.text || _isTaskItem(item);
+        final bool seamable = _canSeam(item);
+        final bool connAbove = seamable && _textConnectsAbove(index);
+        final bool connBelow = seamable && _textConnectsBelow(index);
+        final double bubbleRadius = _bubbleRadius(item);
+        final BorderRadius bubbleBorder = seamable
+            ? BorderRadius.only(
+                topLeft: Radius.circular(bubbleRadius),
+                topRight: Radius.circular(connAbove ? 5 : bubbleRadius),
+                bottomLeft: Radius.circular(bubbleRadius),
+                bottomRight: Radius.circular(connBelow ? 5 : bubbleRadius),
+              )
+            : BorderRadius.circular(bubbleRadius);
+
         return GestureDetector(
           onTap: () => onItemTapped(item),
           onLongPress: () => onItemTapped(item),
@@ -146,36 +234,34 @@ class _PageArchivedItemsState extends State<PageArchivedItems> {
             color: isSelected
                 ? cs.onSurface.withValues(alpha: 0.1)
                 : Colors.transparent,
+            padding: EdgeInsets.only(
+              right: 12,
+              left: isFullBleed ? 0 : 12,
+              top: connAbove ? 2 : (isTextItem ? 6 : 2),
+              bottom: connBelow ? 0 : 2,
+            ),
             child: Align(
               alignment: Alignment.centerRight,
-              child: Container(
-                margin: EdgeInsets.only(
-                  top: 2,
-                  bottom: 2,
-                  right: 12,
-                  left: isAttachment ? 0 : 12,
+              child: Material(
+                shape: RoundedRectangleBorder(
+                  borderRadius: bubbleBorder,
+                  side: BorderSide(
+                    color: isAttachment
+                        ? Colors.transparent
+                        : cs.onSurface.withValues(alpha: 0.1),
+                    width: 0.5,
+                  ),
                 ),
-                child: Material(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    side: BorderSide(
-                      color: isAttachment
-                          ? Colors.transparent
-                          : cs.onSurface.withValues(alpha: 0.1),
-                      width: 0.5,
-                    ),
+                color: isAttachment
+                    ? Colors.transparent
+                    : cs.onSurface.withValues(alpha: 0.07),
+                child: Container(
+                  margin: EdgeInsets.symmetric(
+                    vertical: isAttachment ? 2 : 8,
+                    horizontal: isAttachment ? 0 : 8,
                   ),
-                  color: isAttachment
-                      ? Colors.transparent
-                      : cs.onSurface.withValues(alpha: 0.07),
-                  child: Container(
-                    margin: EdgeInsets.symmetric(
-                      vertical: isAttachment ? 2 : 8,
-                      horizontal: isAttachment ? 0 : 8,
-                    ),
-                    padding: EdgeInsets.all(isAttachment ? 0 : 6),
-                    child: _buildItem(item),
-                  ),
+                  padding: EdgeInsets.all(isAttachment ? 0 : 6),
+                  child: _buildItem(item),
                 ),
               ),
             ),
