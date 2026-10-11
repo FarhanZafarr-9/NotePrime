@@ -1947,7 +1947,7 @@ class _PageItemsState extends State<PageItems> with TickerProviderStateMixin {
                                           left: 12,
                                         ),
                                         child: PrivacyShield(
-                                          isEnabled: privacyShield,
+                                          isEnabled: privacyShield && !galleryRow,
                                           onLongPress: () =>
                                               onItemLongPressed(item),
                                           borderRadius: bubbleBorder,
