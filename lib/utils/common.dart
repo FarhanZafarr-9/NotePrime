@@ -199,7 +199,7 @@ void showProcessingDialog(BuildContext context) {
               backgroundColor: Theme.of(context).colorScheme.surface,
               elevation: 0,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(28.0)),
+                  borderRadius: BorderRadius.circular(12.0)),
               child: Padding(
                 padding: const EdgeInsets.symmetric(
                     vertical: 32.0, horizontal: 24.0),
