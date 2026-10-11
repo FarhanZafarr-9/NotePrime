@@ -73,7 +73,8 @@ class NoteUrlPreviewShimmer extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: cs.onSurface.withValues(alpha: 0.08), width: 0.75),
+          border: Border.all(
+              color: cs.onSurface.withValues(alpha: 0.08), width: 0.75),
         ),
         clipBehavior: Clip.antiAlias,
         child: IntrinsicHeight(

@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppThemes {
-  static ThemeData getTheme(Brightness brightness, ColorScheme? dynamicColorScheme, {Color? seedColor, String? fontFamily}) {
+  static ThemeData getTheme(
+      Brightness brightness, ColorScheme? dynamicColorScheme,
+      {Color? seedColor, String? fontFamily}) {
     final colorScheme = dynamicColorScheme ??
         ColorScheme.fromSeed(
           seedColor: seedColor ?? const Color(0xFF6750A4),
@@ -15,7 +17,8 @@ class AppThemes {
     );
 
     return baseTheme.copyWith(
-      textTheme: GoogleFonts.getTextTheme(fontFamily ?? 'Inter', baseTheme.textTheme),
+      textTheme:
+          GoogleFonts.getTextTheme(fontFamily ?? 'Inter', baseTheme.textTheme),
       scaffoldBackgroundColor: colorScheme.surfaceContainerLowest,
       appBarTheme: AppBarTheme(
         backgroundColor: colorScheme.surfaceContainerLowest,

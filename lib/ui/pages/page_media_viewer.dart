@@ -10,6 +10,7 @@ import 'package:video_player/video_player.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../models/model_item.dart';
+
 class PageMediaViewer extends StatefulWidget {
   final bool runningOnDesktop;
   final Function(PageType, bool, PageParams)? setShowHidePage;
@@ -77,14 +78,17 @@ class _PageMediaViewerState extends State<PageMediaViewer> {
       File file = File(filePath);
       if (await file.exists()) {
         try {
-          String newPath = "${directory.path}/${DateTime.now().millisecondsSinceEpoch}_${file.uri.pathSegments.last}";
+          String newPath =
+              "${directory.path}/${DateTime.now().millisecondsSinceEpoch}_${file.uri.pathSegments.last}";
           await file.copy(newPath);
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Saved to Downloads!')));
+            ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Saved to Downloads!')));
           }
         } catch (e) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to save file: $e')));
+            ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Failed to save file: $e')));
           }
         }
       }
@@ -270,10 +274,12 @@ class WidgetImageViewer extends StatelessWidget {
 
           // An image is exceptionally tall only if its height substantially exceeds the screen height (>= 1.5x)
           // AND it naturally outstretches vertically much more than it does horizontally compared to the view.
-          bool isExceptionallyTall = heightFactor >= 1.5 && heightFactor >= widthFactor * 1.5;
-          bool isExceptionallyWide = widthFactor >= 1.5 && widthFactor >= heightFactor * 1.8;
+          bool isExceptionallyTall =
+              heightFactor >= 1.5 && heightFactor >= widthFactor * 1.5;
+          bool isExceptionallyWide =
+              widthFactor >= 1.5 && widthFactor >= heightFactor * 1.8;
 
-          // Exceptionally tall image (e.g., long screenshots) -> Scroll vertically 
+          // Exceptionally tall image (e.g., long screenshots) -> Scroll vertically
           if (isExceptionallyTall) {
             return ClipRRect(
               borderRadius: BorderRadius.circular(20),
@@ -330,7 +336,6 @@ class WidgetImageViewer extends StatelessWidget {
     );
   }
 }
-
 
 class WidgetVideoPlayer extends StatefulWidget {
   final String videoPath;

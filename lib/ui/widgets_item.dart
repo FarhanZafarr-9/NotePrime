@@ -223,16 +223,22 @@ class _ItemWidgetTaskState extends State<ItemWidgetTask> {
   }
 }
 
+/// Default outer corner radius shared by attachment widgets. Pages can pass a
+/// per-item [BorderRadius] (e.g. with a flattened seam corner) to override it.
+const double kAttachmentRadius = 14.0;
+
 class ItemWidgetImage extends StatefulWidget {
   final ModelItem item;
   final Function(ModelItem) onTap;
   final bool showBorder;
+  final BorderRadius? borderRadius;
 
   const ItemWidgetImage({
     super.key,
     required this.item,
     required this.onTap,
     this.showBorder = true,
+    this.borderRadius,
   });
 
   @override
@@ -288,7 +294,8 @@ class _ItemWidgetImageState extends State<ItemWidgetImage> {
           if (mounted) setState(() {});
         }
       } catch (e) {
-        AppLogger(prefixes: ["ItemWidgetImage"]).error("Failed to repair thumbnail", error: e);
+        AppLogger(prefixes: ["ItemWidgetImage"])
+            .error("Failed to repair thumbnail", error: e);
       }
     }
   }
@@ -346,7 +353,8 @@ class _ItemWidgetImageState extends State<ItemWidgetImage> {
           Stack(
             children: [
               ClipRRect(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: widget.borderRadius ??
+                    BorderRadius.circular(kAttachmentRadius),
                 child: SizedBox(
                   width: imgW,
                   height: imgH,
@@ -413,12 +421,14 @@ class ItemWidgetVideo extends StatefulWidget {
   final ModelItem item;
   final Function(ModelItem) onTap;
   final bool showBorder;
+  final BorderRadius? borderRadius;
 
   const ItemWidgetVideo({
     super.key,
     required this.item,
     required this.onTap,
     this.showBorder = true,
+    this.borderRadius,
   });
 
   @override
@@ -474,7 +484,8 @@ class _ItemWidgetVideoState extends State<ItemWidgetVideo> {
         }
         extractor.dispose();
       } catch (e) {
-        AppLogger(prefixes: ["ItemWidgetVideo"]).error("Failed to repair thumbnail", error: e);
+        AppLogger(prefixes: ["ItemWidgetVideo"])
+            .error("Failed to repair thumbnail", error: e);
       }
     }
   }
@@ -490,11 +501,13 @@ class _ItemWidgetVideoState extends State<ItemWidgetVideo> {
         children: [
           Container(
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: widget.borderRadius ??
+                  BorderRadius.circular(kAttachmentRadius),
               border: null,
             ),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: widget.borderRadius ??
+                  BorderRadius.circular(kAttachmentRadius),
               child: SizedBox(
                 width: size,
                 height: size / widget.item.data!["aspect"],
@@ -560,10 +573,12 @@ class _ItemWidgetVideoState extends State<ItemWidgetVideo> {
 class ItemWidgetAudio extends StatefulWidget {
   final ModelItem item;
   final bool showBorder;
+  final BorderRadius? borderRadius;
   const ItemWidgetAudio({
     super.key,
     required this.item,
     this.showBorder = true,
+    this.borderRadius,
   });
 
   @override
@@ -576,7 +591,10 @@ class _ItemWidgetAudioState extends State<ItemWidgetAudio> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        WidgetAudio(item: widget.item, showBorder: widget.showBorder),
+        WidgetAudio(
+            item: widget.item,
+            showBorder: widget.showBorder,
+            borderRadius: widget.borderRadius),
         widgetAudioDetails(widget.item),
       ],
     );
@@ -597,12 +615,14 @@ class ItemWidgetDocument extends StatefulWidget {
   final ModelItem item;
   final Function(ModelItem) onTap;
   final bool showBorder;
+  final BorderRadius? borderRadius;
 
   const ItemWidgetDocument({
     super.key,
     required this.item,
     required this.onTap,
     this.showBorder = true,
+    this.borderRadius,
   });
 
   @override
@@ -655,7 +675,8 @@ class _ItemWidgetDocumentState extends State<ItemWidgetDocument> {
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
           decoration: BoxDecoration(
             color: cs.primary.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(10),
+            borderRadius:
+                widget.borderRadius ?? BorderRadius.circular(kAttachmentRadius),
             border: widget.showBorder
                 ? Border.all(
                     color: cs.primary.withValues(alpha: 0.15),
@@ -738,12 +759,14 @@ class ItemWidgetLocation extends StatelessWidget {
   final ModelItem item;
   final Function(ModelItem) onTap;
   final bool showBorder;
+  final BorderRadius? borderRadius;
 
   const ItemWidgetLocation({
     super.key,
     required this.item,
     required this.onTap,
     this.showBorder = true,
+    this.borderRadius,
   });
 
   @override
@@ -758,7 +781,8 @@ class ItemWidgetLocation extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
             decoration: BoxDecoration(
               color: cs.error.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius:
+                  borderRadius ?? BorderRadius.circular(kAttachmentRadius),
               border: showBorder
                   ? Border.all(
                       color: cs.error.withValues(alpha: 0.15), width: 0.75)
@@ -830,12 +854,14 @@ class ItemWidgetContact extends StatelessWidget {
   final ModelItem item;
   final Function(ModelItem) onTap;
   final bool showBorder;
+  final BorderRadius? borderRadius;
 
   const ItemWidgetContact({
     super.key,
     required this.item,
     required this.onTap,
     this.showBorder = true,
+    this.borderRadius,
   });
 
   @override
@@ -855,7 +881,8 @@ class ItemWidgetContact extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
             decoration: BoxDecoration(
               color: cs.tertiary.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius:
+                  borderRadius ?? BorderRadius.circular(kAttachmentRadius),
               border: showBorder
                   ? Border.all(
                       color: cs.tertiary.withValues(alpha: 0.15), width: 0.75)
@@ -1226,7 +1253,6 @@ class _NoteUrlPreviewState extends State<NoteUrlPreview> {
     super.didUpdateWidget(oldWidget);
   }
 
-
   Future<void> remove() async {
     removed = await ModelItem.removeUrlInfo(widget.itemId);
     if (mounted) setState(() {});
@@ -1248,14 +1274,16 @@ class _NoteUrlPreviewState extends State<NoteUrlPreview> {
       return _buildNoPreviewState(context);
     }
 
-    final List<dynamic> previews = widget.urlInfoList ?? (widget.urlInfo != null ? [widget.urlInfo] : []);
+    final List<dynamic> previews =
+        widget.urlInfoList ?? (widget.urlInfo != null ? [widget.urlInfo] : []);
     if (previews.isEmpty) return const SizedBox.shrink();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (previews.length > 1) _buildNavigationHeader(context, previews.length),
+        if (previews.length > 1)
+          _buildNavigationHeader(context, previews.length),
         _PreviewCard(
           urlInfo: previews[_currentPage] as Map<String, dynamic>,
           index: _currentPage,
@@ -1275,7 +1303,8 @@ class _NoteUrlPreviewState extends State<NoteUrlPreview> {
       decoration: BoxDecoration(
         color: cs.surfaceContainerHighest.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: cs.onSurface.withValues(alpha: 0.08), width: 0.75),
+        border: Border.all(
+            color: cs.onSurface.withValues(alpha: 0.08), width: 0.75),
       ),
       child: Row(
         children: [
@@ -1325,9 +1354,8 @@ class _NoteUrlPreviewState extends State<NoteUrlPreview> {
           ),
           const Spacer(),
           IconButton(
-            onPressed: _currentPage > 0
-                ? () => setState(() => _currentPage--)
-                : null,
+            onPressed:
+                _currentPage > 0 ? () => setState(() => _currentPage--) : null,
             icon: const Icon(LucideIcons.chevronLeft, size: 14),
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),
@@ -1447,15 +1475,18 @@ class _PreviewCardState extends State<_PreviewCard> {
         ? File("${widget.imageDirectory}/$imageId-urlimage.png")
         : null;
 
-    final bool isLandscape = imgFile != null && (widget.urlInfo["portrait"] == 0);
-    final bool isPortrait = imgFile != null && (widget.urlInfo["portrait"] != 0);
+    final bool isLandscape =
+        imgFile != null && (widget.urlInfo["portrait"] == 0);
+    final bool isPortrait =
+        imgFile != null && (widget.urlInfo["portrait"] != 0);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 6),
       decoration: BoxDecoration(
         color: cs.onSurface.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: cs.onSurface.withValues(alpha: 0.08), width: 0.75),
+        border: Border.all(
+            color: cs.onSurface.withValues(alpha: 0.08), width: 0.75),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(

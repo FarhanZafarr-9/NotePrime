@@ -706,10 +706,12 @@ class _WidgetMediaKitThumbnailState extends State<WidgetMediaKitThumbnail> {
 class WidgetAudio extends StatefulWidget {
   final ModelItem item;
   final bool showBorder;
+  final BorderRadius? borderRadius;
   const WidgetAudio({
     super.key,
     required this.item,
     this.showBorder = true,
+    this.borderRadius,
   });
 
   @override
@@ -836,7 +838,7 @@ class _WidgetAudioState extends State<WidgetAudio> {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
         color: cs.secondary.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: widget.borderRadius ?? BorderRadius.circular(14),
         border: widget.showBorder
             ? Border.all(
                 color: cs.secondary.withValues(alpha: 0.15),
