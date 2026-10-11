@@ -50,7 +50,7 @@ class AppThemes {
         surfaceTintColor: colorScheme.surfaceTint,
         elevation: 0,
         shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
         ),
         clipBehavior: Clip.antiAlias,
         showDragHandle: true,
