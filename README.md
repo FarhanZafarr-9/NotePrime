@@ -126,11 +126,24 @@ This fork builds on the solid foundation of the original Note Safe app and compl
 
 ## About NotePrime
 
-NotePrime is a secure, open-source note-taking application designed for privacy and reliability. Built with a local-first approach, it works fully offline and lets you backup and restore your data at any time. NotePrime supports all types of multimedia notes with seamless cloud sync for effortless cross-device access.
+NotePrime is a private, open-source notes app where every note lives in a chat-style feed. It is **local-first**: notes are written to the device, the app is fully usable offline, and only encrypted data ever leaves it. Photos, audio, video, files, checklists, locations and contacts can all sit inside a note, and the entire workspace can be exported and restored as a `.zip` backup whenever you want.
 
-What makes NotePrime truly special is its strong cryptographic security, powered by Libsodium APIs — a widely respected, modern, and high-performance encryption library. Libsodium provides end-to-end encryption, meaning only you can access your data, and no one — not even the cloud provider — can decrypt your notes.
+### Privacy by design
 
-With Supabase as the backend and a single Flutter codebase for cross-platform compatibility, NotePrime delivers a smooth, reliable, and highly secure note-taking experience across all devices.
+Notes are encrypted on-device with **Libsodium** — XSalsa20-Poly1305 secret boxes, with keys derived from your password via **Argon2id** and stored in the platform's secure storage. Supabase is only ever handed ciphertext it has no way to read, so neither the backend nor anyone else with access to it can decrypt your notes.
+
+On top of that encryption:
+
+*   **Privacy Shield** — blur an entire group until you tap it, so a screen you hand to someone else stays unreadable.
+*   **Screenshot blocking** — prevents captures of the app window on Android.
+*   **Biometric grace period** — choose how long the app stays unlocked before it asks you again.
+*   **No ads, no selling your data** — free of advertising and third-party content tracking.
+
+### Built for Android first
+
+The interface is Material 3 with **Material You** dynamic colour, so on Android 12+ the app picks up your system palette across every screen, dialog and sheet. It also ships Google Fonts support, an immersive distraction-free mode, granular auto-download rules for Wi-Fi versus cellular, and a cache utility with live size reporting. Other platforms are planned, but Android is what ships today.
+
+Built with Flutter, Supabase for encrypted sync, and Material 3 throughout.
 
 
 ---
