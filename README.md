@@ -1,5 +1,5 @@
 <div>
-  <img src="assets/icon.webp" alt="NotePrime App" width="120">
+  <img src="assets/icon.png" alt="NotePrime App" width="120">
 </div>
 
 # NotePrime — Material You Fork
