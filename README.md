@@ -19,7 +19,7 @@ Notes app with a chat-like interface and end-to-end encrypted cloud backup/sync.
 *   **Android via Obtainium** — Import this repo straight from source and get automatic updates on release.
 *   **Other Platforms (Planned)** — Support for Windows, Linux, macOS, and iOS will be evaluated in the future.
 
-[<img src="https://raw.githubusercontent.com/mateusz-bak/openreads/master/doc/github/get-it-on-github.png"
+[<img src="graphic/get-it-on-github.png"
     alt="Get it on Github"
     height="80">](https://github.com/FarhanZafarr-9/ntsapp/releases/)
 [<img src="graphic/obtainium-badge.png"
