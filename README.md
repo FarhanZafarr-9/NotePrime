@@ -16,11 +16,82 @@ Notes app with a chat-like interface and end-to-end encrypted cloud backup/sync.
 > **Important Migration Notice:** If you are installing this fork seamlessly over the original Note Safe application, **you must safely back up your data first!** Because cryptographic security signatures and local database architectures may incrementally differ, please ensure you export all your notes as a secure `.zip` backup from within the original app *before* overwriting it with this version. You can then instantly restore your data inside the fork!
 
 *   **Android (Fully Supported)** — [GitHub Releases](https://github.com/FarhanZafarr-9/ntsapp/releases/)
+*   **Android via Obtainium** — Import this repo straight from source and get automatic updates on release.
 *   **Other Platforms (Planned)** — Support for Windows, Linux, macOS, and iOS will be evaluated in the future.
 
 [<img src="https://raw.githubusercontent.com/mateusz-bak/openreads/master/doc/github/get-it-on-github.png"
     alt="Get it on Github"
     height="80">](https://github.com/FarhanZafarr-9/ntsapp/releases/)
+[<img src="graphic/obtainium-badge.png"
+    alt="Get it on Obtainium"
+    height="80">](https://apps.obtainium.imranr.dev/#github.com/FarhanZafarr-9/ntsapp)
+
+---
+
+## Screenshots
+
+<p align="center">
+  <img src="screenshots/home.png" width="150" alt="Home">
+  <img src="screenshots/chatFeed.png" width="150" alt="Chat feed">
+  <img src="screenshots/linkPreview.png" width="150" alt="Link preview">
+  <img src="screenshots/attach.png" width="150" alt="Attach">
+  <img src="screenshots/settings.png" width="150" alt="Settings">
+</p>
+
+### Notes
+
+<table>
+<tr>
+<td width="170"><img src="screenshots/home.png" width="160" alt="Home"></td>
+<td><b>Home</b><br>Color-coded groups with previews and nested folders in a clean list.</td>
+</tr>
+<tr>
+<td width="170"><img src="screenshots/chatFeed.png" width="160" alt="Chat feed"></td>
+<td><b>Chat-style feed &amp; Privacy Shield</b><br>Asymmetric bubbles grouped by day and time, with an optional per-group blur that hides messages until you tap.</td>
+</tr>
+<tr>
+<td width="170"><img src="screenshots/linkPreview.png" width="160" alt="Link preview"></td>
+<td><b>Link previews</b><br>Paste a link and get a rich preview inside the note.</td>
+</tr>
+<tr>
+<td width="170"><img src="screenshots/attach.png" width="160" alt="Attach"></td>
+<td><b>Attachments</b><br>Camera, files, checklists, locations and contacts from one sheet.</td>
+</tr>
+</table>
+
+<details>
+<summary><b>Groups &amp; organization</b></summary>
+<br>
+<table>
+<tr>
+<td width="170"><img src="screenshots/addGroup.png" width="160" alt="Add group"></td>
+<td><b>Add group</b><br>Title, category, then appearance, layout and security settings.</td>
+</tr>
+<tr>
+<td width="170"><img src="screenshots/groupMenu.png" width="160" alt="Group menu"></td>
+<td><b>Group menu</b><br>Reorder, edit, pin to a Home shortcut, or move to trash.</td>
+</tr>
+<tr>
+<td width="170"><img src="screenshots/starred.png" width="160" alt="Starred notes"></td>
+<td><b>Starred notes</b><br>Starred and pinned notes in one list.</td>
+</tr>
+</table>
+</details>
+
+<details>
+<summary><b>Customization &amp; privacy</b></summary>
+<br>
+<table>
+<tr>
+<td width="170"><img src="screenshots/settings.png" width="160" alt="Settings"></td>
+<td><b>Settings</b><br>Material You dynamic colors, fonts, immersive mode, per-group settings, screenshot protection and biometric grace period.</td>
+</tr>
+<tr>
+<td width="170"><img src="screenshots/about.png" width="160" alt="About"></td>
+<td><b>About</b><br>What's new in the fork. No data collection, no ads.</td>
+</tr>
+</table>
+</details>
 
 ---
 
